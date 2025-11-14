@@ -16,19 +16,25 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Controlador de animación: dura 2 segundos
+    // Animación de escala (zoom)
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      // IMPORTANTE: si cambiaste esta duración, usa la misma en el Future.delayed
+      duration: const Duration(milliseconds: 1500),
     );
 
-    // Animación de escala suave (0 -> 1)
     _scaleAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.fastOutSlowIn,
     );
 
     _controller.forward();
+
+    // Cuando termina (o casi termina) la animación, navegamos al Login
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/login');
+    });
   }
 
   @override
@@ -40,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // luego podemos cambiar el color
+      backgroundColor: Colors.white, // luego podemos cambiar el color si quieren
       body: Center(
         child: ScaleTransition(
           scale: _scaleAnimation,
