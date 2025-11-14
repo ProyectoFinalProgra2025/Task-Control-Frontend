@@ -1,46 +1,63 @@
 import 'package:flutter/material.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignUpScreenState extends State<SignUpScreen> {
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
+  String? nameError;
   String? emailError;
   String? passwordError;
+  String? confirmPasswordError;
 
   bool _obscurePassword = true;
-  bool _isLoading = false; // Loading del botón
+  bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  // ───────────────────────── VALIDACIÓN EMAIL ─────────────────────────
+  // ───────────────────── VALIDACIÓN EMAIL ─────────────────────
   bool isValidEmail(String email) {
     final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     return regex.hasMatch(email.trim());
   }
 
-  // ───────────────────────── VALIDACIONES GENERALES ─────────────────────────
+  // ───────────────────── VALIDACIONES ─────────────────────
   bool validateInputs() {
     setState(() {
+      nameError = null;
       emailError = null;
       passwordError = null;
+      confirmPasswordError = null;
     });
 
     bool valid = true;
 
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    if (name.isEmpty) {
+      nameError = "El nombre es obligatorio";
+      valid = false;
+    }
 
     if (email.isEmpty) {
       emailError = "El correo es obligatorio";
@@ -53,6 +70,17 @@ class _LoginScreenState extends State<LoginScreen> {
     if (password.isEmpty) {
       passwordError = "La contraseña es obligatoria";
       valid = false;
+    } else if (password.length < 6) {
+      passwordError = "Mínimo 6 caracteres";
+      valid = false;
+    }
+
+    if (confirmPassword.isEmpty) {
+      confirmPasswordError = "Confirma tu contraseña";
+      valid = false;
+    } else if (confirmPassword != password) {
+      confirmPasswordError = "Las contraseñas no coinciden";
+      valid = false;
     }
 
     if (!valid) {
@@ -63,39 +91,38 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
 
-    setState(() {}); // Actualizar UI
+    setState(() {});
     return valid;
   }
 
-  // ───────────────────────── ACCIÓN DE LOGIN ─────────────────────────
-  Future<void> onLoginPressed() async {
-    if (_isLoading) return; // Evita toques dobles
+  // ───────────────────── ACCIÓN DE REGISTRO ─────────────────────
+  Future<void> onSignUpPressed() async {
+    if (_isLoading) return;
     if (!validateInputs()) return;
 
     setState(() {
       _isLoading = true;
     });
 
-    // Simulación de llamada al backend
+    // Simula llamada al backend
     await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
-
     setState(() {
       _isLoading = false;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Intentando iniciar sesión..."),
+        content: Text("Registro aún no implementado (solo UI)"),
       ),
     );
 
-    // En un futuro:
+    // En el futuro, cuando el backend confirme:
     // Navigator.pushReplacementNamed(context, '/home');
   }
 
-  // ───────────────────────── BUILD ─────────────────────────
+  // ───────────────────── BUILD ─────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -117,58 +144,102 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-
-                  // LOGO Y TÍTULO
+                  // TÍTULO
                   Padding(
                     padding: const EdgeInsets.only(top: 0),
                     child: Column(
-                      children: [
-                        Image.asset(
-                          'assets/images/TaskControl_logo.png',
-                          height: 300,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Bienvenido',
+                      children: const [
+                        Text(
+                          'Crear cuenta',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 34,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Regístrate para comenzar a usar TaskControl',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
 
-                  // EMAIL
-                  _buildEmailField(),
+                  // NOMBRE
+                  _buildTextField(
+                    controller: _nameController,
+                    label: 'Nombre completo',
+                    icon: Icons.person_outline,
+                    errorText: nameError,
+                  ),
 
                   const SizedBox(height: 14),
 
-                  // PASSWORD
-                  _buildPasswordField(),
+                  // EMAIL
+                  _buildTextField(
+                    controller: _emailController,
+                    label: 'Correo electrónico',
+                    icon: Icons.email_outlined,
+                    errorText: emailError,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // CONTRASEÑA
+                  _buildPasswordField(
+                    controller: _passwordController,
+                    label: 'Contraseña',
+                    errorText: passwordError,
+                    obscure: _obscurePassword,
+                    onToggleVisibility: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // CONFIRMAR CONTRASEÑA
+                  _buildPasswordField(
+                    controller: _confirmPasswordController,
+                    label: 'Confirmar contraseña',
+                    errorText: confirmPasswordError,
+                    obscure: _obscureConfirmPassword,
+                    onToggleVisibility: () {
+                      setState(() {
+                        _obscureConfirmPassword =
+                            !_obscureConfirmPassword;
+                      });
+                    },
+                  ),
 
                   const SizedBox(height: 20),
 
-                  // BOTÓN LOGIN
+                  // BOTÓN REGISTRAR
                   _buildGradientButton(
-                    text: "Iniciar sesión",
-                    onTap: onLoginPressed,
+                    text: 'Crear cuenta',
+                    onTap: onSignUpPressed,
                     isLoading: _isLoading,
                   ),
 
                   const SizedBox(height: 10),
 
-                  // → IR A SIGNUP
+                  // VOLVER A LOGIN
                   TextButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/signup');
+                      Navigator.pop(context); // vuelve al Login
                     },
                     child: const Text(
-                      '¿No tienes cuenta? Regístrate',
+                      '¿Ya tienes cuenta? Inicia sesión',
                       style: TextStyle(
                         color: Colors.white,
                         decoration: TextDecoration.underline,
@@ -187,42 +258,46 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ───────────────────────── EMAIL FIELD ─────────────────────────
-  Widget _buildEmailField() {
+  // ───────────────────── INPUT TEXTO ─────────────────────
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? errorText,
+    TextInputType? keyboardType,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
-          controller: _emailController,
+          controller: controller,
+          keyboardType: keyboardType,
           style: const TextStyle(color: Colors.white),
           cursorColor: Colors.white,
           decoration: InputDecoration(
-            labelText: 'Correo electrónico',
+            labelText: label,
             labelStyle: const TextStyle(color: Colors.white70),
             filled: true,
             fillColor: Colors.white.withOpacity(0.15),
-            prefixIcon: const Icon(Icons.email_outlined, color: Colors.white),
-
+            prefixIcon: Icon(icon, color: Colors.white),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide.none,
             ),
-
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide(
-                color: emailError != null ? Colors.redAccent : Colors.white70,
+                color: errorText != null ? Colors.redAccent : Colors.white70,
                 width: 1,
               ),
             ),
           ),
         ),
-
-        if (emailError != null)
+        if (errorText != null)
           Padding(
             padding: const EdgeInsets.only(left: 4, top: 4),
             child: Text(
-              emailError!,
+              errorText!,
               style: const TextStyle(
                 color: Colors.redAccent,
                 fontSize: 13,
@@ -234,55 +309,53 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ───────────────────────── PASSWORD FIELD ─────────────────────────
-  Widget _buildPasswordField() {
+  // ───────────────────── INPUT PASSWORD ─────────────────────
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String label,
+    required String? errorText,
+    required bool obscure,
+    required VoidCallback onToggleVisibility,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
-          controller: _passwordController,
-          obscureText: _obscurePassword,
+          controller: controller,
+          obscureText: obscure,
           style: const TextStyle(color: Colors.white),
           cursorColor: Colors.white,
           decoration: InputDecoration(
-            labelText: 'Contraseña',
+            labelText: label,
             labelStyle: const TextStyle(color: Colors.white70),
             filled: true,
             fillColor: Colors.white.withOpacity(0.15),
             prefixIcon: const Icon(Icons.lock_outline, color: Colors.white),
-
             suffixIcon: IconButton(
               icon: Icon(
-                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                obscure ? Icons.visibility_off : Icons.visibility,
                 color: Colors.white,
               ),
-              onPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
-              },
+              onPressed: onToggleVisibility,
             ),
-
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide.none,
             ),
-
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide(
-                color: passwordError != null ? Colors.redAccent : Colors.white70,
+                color: errorText != null ? Colors.redAccent : Colors.white70,
                 width: 1,
               ),
             ),
           ),
         ),
-
-        if (passwordError != null)
+        if (errorText != null)
           Padding(
             padding: const EdgeInsets.only(left: 4, top: 4),
             child: Text(
-              passwordError!,
+              errorText!,
               style: const TextStyle(
                 color: Colors.redAccent,
                 fontSize: 13,
@@ -294,7 +367,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ───────────────────────── BOTÓN ─────────────────────────
+  // ───────────────────── BOTÓN ─────────────────────
   Widget _buildGradientButton({
     required String text,
     required VoidCallback onTap,
