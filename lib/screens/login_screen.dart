@@ -11,6 +11,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  String? emailError;
+  String? passwordError;
+
+  bool _obscurePassword = true; // 👈 NUEVO
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -18,6 +23,61 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // ───────────────────────── VALIDACIÓN EMAIL ─────────────────────────
+  bool isValidEmail(String email) {
+    final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    return regex.hasMatch(email.trim());
+  }
+
+  // ───────────────────────── VALIDACIONES GENERALES ─────────────────────────
+  bool validateInputs() {
+    setState(() {
+      emailError = null;
+      passwordError = null;
+    });
+
+    bool valid = true;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty) {
+      emailError = "El correo es obligatorio";
+      valid = false;
+    } else if (!isValidEmail(email)) {
+      emailError = "Correo inválido";
+      valid = false;
+    }
+
+    if (password.isEmpty) {
+      passwordError = "La contraseña es obligatoria";
+      valid = false;
+    }
+
+    if (!valid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Por favor corrige los errores antes de continuar"),
+        ),
+      );
+    }
+
+    setState(() {});
+    return valid;
+  }
+
+  // ───────────────────────── ACCIÓN DE LOGIN ─────────────────────────
+  void onLoginPressed() {
+    if (validateInputs()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Intentando iniciar sesión..."),
+        ),
+      );
+      // Más adelante: llamar al backend
+    }
+  }
+
+  // ───────────────────────── BUILD ─────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,9 +100,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
 
-                  // LOGO + TÍTULO aún MÁS arriba
+                  // LOGO + TÍTULO (más arriba)
                   Padding(
-                    padding: const EdgeInsets.only(top: 0), // SUBIDO MÁS TODAVÍA
+                    padding: const EdgeInsets.only(top: 0),
                     child: Column(
                       children: [
                         Image.asset(
@@ -50,14 +110,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 300,
                           color: Colors.white,
                         ),
-
-                        const SizedBox(height: 4), // Logito súper pegado al título
-
+                        const SizedBox(height: 4),
                         const Text(
-                          'Bienvenido',           // ← NUEVO TEXTO
+                          'Bienvenido',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 34,        // Tamaño mantenido
+                            fontSize: 34,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -65,41 +123,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 12),  // Formulario subido más
+                  const SizedBox(height: 12),
 
-                  // INPUT Email
+                  // INPUT: EMAIL
                   _buildInputField(
                     controller: _emailController,
                     label: 'Correo electrónico',
                     icon: Icons.email_outlined,
-                    keyboardType: TextInputType.emailAddress,
+                    errorText: emailError,
                   ),
 
                   const SizedBox(height: 14),
 
-                  // INPUT Contraseña
-                  _buildInputField(
-                    controller: _passwordController,
-                    label: 'Contraseña',
-                    icon: Icons.lock_outline,
-                    obscureText: true,
-                  ),
+                  // INPUT: PASSWORD (con mostrar/ocultar)
+                  _buildPasswordField(),
 
                   const SizedBox(height: 20),
 
-                  // BOTÓN Iniciar sesión
+                  // BOTÓN LOGIN
                   _buildGradientButton(
-                    text: 'Iniciar sesión',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Login aún no implementado')),
-                      );
-                    },
+                    text: "Iniciar sesión",
+                    onTap: onLoginPressed,
                   ),
 
                   const SizedBox(height: 10),
 
-                  // Link registro
+                  // LINK REGISTRO
                   TextButton(
                     onPressed: () {},
                     child: const Text(
@@ -122,39 +171,119 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ───────────────────────────── INPUT HELPER ─────────────────────────────
+  // ───────────────────────── PASSWORD FIELD ─────────────────────────
+  Widget _buildPasswordField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _passwordController,
+          obscureText: _obscurePassword,
+          style: const TextStyle(color: Colors.white),
+          cursorColor: Colors.white,
+          decoration: InputDecoration(
+            labelText: 'Contraseña',
+            labelStyle: const TextStyle(color: Colors.white70),
+            filled: true,
+            fillColor: Colors.white.withOpacity(0.15),
+            prefixIcon: const Icon(Icons.lock_outline, color: Colors.white),
+
+            // 👁 BOTÓN MOSTRAR / OCULTAR
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            ),
+
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(
+                color: passwordError != null ? Colors.redAccent : Colors.white70,
+                width: 1,
+              ),
+            ),
+          ),
+        ),
+
+        if (passwordError != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 4, top: 4),
+            child: Text(
+              passwordError!,
+              style: const TextStyle(
+                color: Colors.redAccent,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ───────────────────────── EMAIL FIELD ─────────────────────────
   Widget _buildInputField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    TextInputType? keyboardType,
+    String? errorText,
     bool obscureText = false,
   }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      style: const TextStyle(color: Colors.white),
-      cursorColor: Colors.white,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.white70),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.15),
-        prefixIcon: Icon(icon, color: Colors.white),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide.none,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          obscureText: obscureText,
+          style: const TextStyle(color: Colors.white),
+          cursorColor: Colors.white,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(color: Colors.white70),
+            filled: true,
+            fillColor: Colors.white.withOpacity(0.15),
+            prefixIcon: Icon(icon, color: Colors.white),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(
+                color: errorText != null ? Colors.redAccent : Colors.white70,
+                width: 1,
+              ),
+            ),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Colors.white70, width: 1),
-        ),
-      ),
+
+        if (errorText != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 4, top: 4),
+            child: Text(
+              errorText!,
+              style: const TextStyle(
+                color: Colors.redAccent,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
-  // ───────────────────────────── BOTÓN HELPER ─────────────────────────────
+  // ───────────────────────── BOTÓN HELPER ─────────────────────────
   Widget _buildGradientButton({
     required String text,
     required VoidCallback onTap,
@@ -168,13 +297,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,
