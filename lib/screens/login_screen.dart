@@ -14,7 +14,8 @@ class _LoginScreenState extends State<LoginScreen> {
   String? emailError;
   String? passwordError;
 
-  bool _obscurePassword = true; // 👈 NUEVO
+  bool _obscurePassword = true; 
+  bool _isLoading = false; // 👈 NUEVO: loading del botón
 
   @override
   void dispose() {
@@ -29,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return regex.hasMatch(email.trim());
   }
 
-  // ───────────────────────── VALIDACIONES GENERALES ─────────────────────────
+  // ───────────────────────── VALIDACIONES ─────────────────────────
   bool validateInputs() {
     setState(() {
       emailError = null;
@@ -65,16 +66,28 @@ class _LoginScreenState extends State<LoginScreen> {
     return valid;
   }
 
-  // ───────────────────────── ACCIÓN DE LOGIN ─────────────────────────
-  void onLoginPressed() {
-    if (validateInputs()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Intentando iniciar sesión..."),
-        ),
-      );
-      // Más adelante: llamar al backend
-    }
+  // ───────────────────────── LOGIN (con loading) ─────────────────────────
+  Future<void> onLoginPressed() async {
+    if (_isLoading) return; // evitar toques dobles
+
+    if (!validateInputs()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Simulamos llamada a backend
+    await Future.delayed(const Duration(seconds: 2));
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Intentando iniciar sesión..."),
+      ),
+    );
   }
 
   // ───────────────────────── BUILD ─────────────────────────
@@ -100,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
 
-                  // LOGO + TÍTULO (más arriba)
+                  // LOGO + TÍTULO
                   Padding(
                     padding: const EdgeInsets.only(top: 0),
                     child: Column(
@@ -125,7 +138,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 12),
 
-                  // INPUT: EMAIL
                   _buildInputField(
                     controller: _emailController,
                     label: 'Correo electrónico',
@@ -135,20 +147,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 14),
 
-                  // INPUT: PASSWORD (con mostrar/ocultar)
                   _buildPasswordField(),
-
                   const SizedBox(height: 20),
 
-                  // BOTÓN LOGIN
+                  // BOTÓN CON LOADING
                   _buildGradientButton(
                     text: "Iniciar sesión",
                     onTap: onLoginPressed,
+                    isLoading: _isLoading,
                   ),
 
                   const SizedBox(height: 10),
 
-                  // LINK REGISTRO
                   TextButton(
                     onPressed: () {},
                     child: const Text(
@@ -188,7 +198,6 @@ class _LoginScreenState extends State<LoginScreen> {
             fillColor: Colors.white.withOpacity(0.15),
             prefixIcon: const Icon(Icons.lock_outline, color: Colors.white),
 
-            // 👁 BOTÓN MOSTRAR / OCULTAR
             suffixIcon: IconButton(
               icon: Icon(
                 _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -237,14 +246,12 @@ class _LoginScreenState extends State<LoginScreen> {
     required String label,
     required IconData icon,
     String? errorText,
-    bool obscureText = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
           controller: controller,
-          obscureText: obscureText,
           style: const TextStyle(color: Colors.white),
           cursorColor: Colors.white,
           decoration: InputDecoration(
@@ -283,10 +290,11 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ───────────────────────── BOTÓN HELPER ─────────────────────────
+  // ───────────────────────── BOTÓN CON LOADING ─────────────────────────
   Widget _buildGradientButton({
     required String text,
     required VoidCallback onTap,
+    required bool isLoading,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -302,18 +310,27 @@ class _LoginScreenState extends State<LoginScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
-          onTap: onTap,
+          onTap: isLoading ? null : onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 14),
             child: Center(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      text,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ),
