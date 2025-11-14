@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/signup_screen.dart'; // 👈 NUEVO
 
 void main() {
   runApp(const TaskControlApp());
@@ -17,14 +18,12 @@ class TaskControlApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-
-      // 👇 Usamos rutas nombradas para poder añadir SignUp y Home luego
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
-        // Más adelante:
-        // '/signup': (context) => const SignUpScreen(),
+        '/signup': (context) => const SignUpScreen(), // 👈 NUEVO
+        // En el futuro:
         // '/home': (context) => const HomeScreen(),
       },
     );

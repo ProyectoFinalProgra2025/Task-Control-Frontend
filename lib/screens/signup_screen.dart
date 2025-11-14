@@ -297,7 +297,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 4, top: 4),
             child: Text(
-              errorText!,
+              errorText,
               style: const TextStyle(
                 color: Colors.redAccent,
                 fontSize: 13,
