@@ -15,7 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? passwordError;
 
   bool _obscurePassword = true;
-  bool _isLoading = false; // loading del botón
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -24,13 +24,19 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ───────────────────────── VALIDACIÓN EMAIL ─────────────────────────
+  // ─────────────────────── VALIDACIÓN EMAIL ───────────────────────
   bool isValidEmail(String email) {
     final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     return regex.hasMatch(email.trim());
   }
 
-  // ───────────────────────── VALIDACIÓN GENERAL ─────────────────────────
+  // ─────────────────────── CREDENCIALES DE PRUEBA ───────────────────────
+  bool checkCredentials(String email, String password) {
+    return email == 'doctormengueche@gmail.com' &&
+           password == '123456789';
+  }
+
+  // ─────────────────────── VALIDACIÓN GENERAL ───────────────────────
   bool validateInputs() {
     setState(() {
       emailError = null;
@@ -66,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return valid;
   }
 
-  // ───────────────────────── ACCIÓN LOGIN ─────────────────────────
+  // ─────────────────────── LOGIN CON CREDENCIALES DE PRUEBA ───────────────────────
   Future<void> onLoginPressed() async {
     if (_isLoading) return;
     if (!validateInputs()) return;
@@ -75,20 +81,39 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // Simula llamada a backend
+    // Simula tiempo de backend
     await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // Si no coincide con la cuenta de prueba → error
+    if (!checkCredentials(email, password)) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Credenciales incorrectas"),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // Si coincide → navegar al Home
     setState(() {
       _isLoading = false;
     });
 
-    // Navegar al home (placeholder por ahora)
     Navigator.pushReplacementNamed(context, '/home');
   }
 
-  // ───────────────────────── BUILD ─────────────────────────
+  // ─────────────────────── BUILD ───────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -136,12 +161,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 12),
 
-                  // EMAIL FIELD
+                  // EMAIL
                   _buildEmailField(),
 
                   const SizedBox(height: 14),
 
-                  // PASSWORD FIELD
+                  // PASSWORD
                   _buildPasswordField(),
 
                   const SizedBox(height: 20),
@@ -180,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ───────────────────────── EMAIL WIDGET ─────────────────────────
+  // ─────────────────────── UI: EMAIL FIELD ───────────────────────
   Widget _buildEmailField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,7 +225,6 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide.none,
             ),
-
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide(
@@ -227,7 +251,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ───────────────────────── PASSWORD WIDGET ─────────────────────────
+  // ─────────────────────── UI: PASSWORD FIELD ───────────────────────
   Widget _buildPasswordField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +284,6 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide.none,
             ),
-
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide(
@@ -287,7 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ───────────────────────── BOTÓN ─────────────────────────
+  // ─────────────────────── UI: BOTÓN ───────────────────────
   Widget _buildGradientButton({
     required String text,
     required VoidCallback onTap,
