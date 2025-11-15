@@ -15,7 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? passwordError;
 
   bool _obscurePassword = true;
-  bool _isLoading = false; // Loading del botón
+  bool _isLoading = false; // loading del botón
 
   @override
   void dispose() {
@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return regex.hasMatch(email.trim());
   }
 
-  // ───────────────────────── VALIDACIONES GENERALES ─────────────────────────
+  // ───────────────────────── VALIDACIÓN GENERAL ─────────────────────────
   bool validateInputs() {
     setState(() {
       emailError = null;
@@ -38,7 +38,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     bool valid = true;
-
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
@@ -63,20 +62,20 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
 
-    setState(() {}); // Actualizar UI
+    setState(() {});
     return valid;
   }
 
-  // ───────────────────────── ACCIÓN DE LOGIN ─────────────────────────
+  // ───────────────────────── ACCIÓN LOGIN ─────────────────────────
   Future<void> onLoginPressed() async {
-    if (_isLoading) return; // Evita toques dobles
+    if (_isLoading) return;
     if (!validateInputs()) return;
 
     setState(() {
       _isLoading = true;
     });
 
-    // Simulación de llamada al backend
+    // Simula llamada a backend
     await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
@@ -85,14 +84,8 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = false;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Intentando iniciar sesión..."),
-      ),
-    );
-
-    // En un futuro:
-    // Navigator.pushReplacementNamed(context, '/home');
+    // Navegar al home (placeholder por ahora)
+    Navigator.pushReplacementNamed(context, '/home');
   }
 
   // ───────────────────────── BUILD ─────────────────────────
@@ -113,12 +106,12 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
 
-                  // LOGO Y TÍTULO
+                  // LOGO + TÍTULO
                   Padding(
                     padding: const EdgeInsets.only(top: 0),
                     child: Column(
@@ -143,12 +136,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 12),
 
-                  // EMAIL
+                  // EMAIL FIELD
                   _buildEmailField(),
 
                   const SizedBox(height: 14),
 
-                  // PASSWORD
+                  // PASSWORD FIELD
                   _buildPasswordField(),
 
                   const SizedBox(height: 20),
@@ -162,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 10),
 
-                  // → IR A SIGNUP
+                  // IR A SIGNUP
                   TextButton(
                     onPressed: () {
                       Navigator.pushNamed(context, '/signup');
@@ -187,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ───────────────────────── EMAIL FIELD ─────────────────────────
+  // ───────────────────────── EMAIL WIDGET ─────────────────────────
   Widget _buildEmailField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ───────────────────────── PASSWORD FIELD ─────────────────────────
+  // ───────────────────────── PASSWORD WIDGET ─────────────────────────
   Widget _buildPasswordField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
