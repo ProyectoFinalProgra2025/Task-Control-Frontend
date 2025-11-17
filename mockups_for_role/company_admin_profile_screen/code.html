@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#005A9C",
+              "background-light": "#f0f2f5",
+              "background-dark": "#101622",
+              "destructive": "#D93025"
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 24px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-background-light dark:bg-background-dark">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/10 bg-background-light/80 p-4 pb-3 backdrop-blur-sm dark:bg-background-dark/80">
+<div class="flex size-8 shrink-0 items-center text-slate-800 dark:text-white">
+<!-- Placeholder for back button if needed -->
+</div>
+<h1 class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-white">My Profile</h1>
+<div class="flex size-8 shrink-0 items-center">
+<!-- Placeholder for action button if needed -->
+</div>
+</div>
+<!-- Main Content -->
+<div class="flex-grow overflow-y-auto pb-28">
+<!-- Profile Header -->
+<div class="flex w-full flex-col items-center gap-4 p-4 @container pt-8">
+<div class="flex flex-col items-center gap-4">
+<div class="aspect-square w-32 min-h-32 rounded-full bg-cover bg-center bg-no-repeat" data-alt="Portrait of a woman with glasses smiling in an office setting." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDSW5gH-xz6hjl3aXGg42mdxmnhXGvZ4pAG_lrEvDXkb3zzVJ8J4VbvmqfHff2HHsWxdBNPTYmqrkX7m_xCDJbhUY5z4XdOSBHpKeb6LQr-8TujbiAZQg4-B-EjsTNGDEd12gqBw-wU4vpZO0lDicf9ohIsKmSwrGPXdqEjB3JldIjYGH1bSNa0KXYdupMa5tZzSe1wKOp-zm52qi0J38GQMJmehOdnm5318HziLms0n5AnatkKtY9Pfo82xQQboJjaZnxDO2fEXkI");'></div>
+<div class="flex flex-col items-center justify-center">
+<p class="text-[22px] font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-white">Alex Doe</p>
+<p class="text-base font-normal leading-normal text-slate-500 dark:text-slate-400">Company Admin</p>
+</div>
+</div>
+</div>
+<div class="px-4 py-2">
+<button class="flex h-12 w-full items-center justify-center rounded-xl bg-primary px-6 text-base font-medium text-white transition-colors hover:bg-primary/90">
+                    Edit Profile
+                </button>
+</div>
+<!-- Personal Information Section -->
+<h3 class="px-4 pb-2 pt-6 text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-white">Personal Information</h3>
+<div class="mx-4 flex flex-col overflow-hidden rounded-xl bg-white shadow-sm dark:bg-slate-800/50">
+<div class="flex items-center gap-4 p-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">Full Name</p>
+<p class="text-base font-medium leading-normal text-slate-800 dark:text-white">Alex Doe</p>
+</div>
+</div>
+<hr class="border-slate-200 dark:border-slate-700/50 ml-20"/>
+<div class="flex items-center gap-4 p-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+<span class="material-symbols-outlined">badge</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">Job Title</p>
+<p class="text-base font-medium leading-normal text-slate-800 dark:text-white">Project Manager</p>
+</div>
+</div>
+<hr class="border-slate-200 dark:border-slate-700/50 ml-20"/>
+<div class="flex items-center gap-4 p-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+<span class="material-symbols-outlined">mail</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">Email Address</p>
+<p class="text-base font-medium leading-normal text-slate-800 dark:text-white">admin@company.com</p>
+</div>
+</div>
+<hr class="border-slate-200 dark:border-slate-700/50 ml-20"/>
+<div class="flex items-center gap-4 p-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+<span class="material-symbols-outlined">call</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">Phone Number</p>
+<p class="text-base font-medium leading-normal text-slate-800 dark:text-white">+1 (555) 123-4567</p>
+</div>
+</div>
+</div>
+<!-- Account & Security Section -->
+<h3 class="px-4 pb-2 pt-6 text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-white">Account &amp; Security</h3>
+<div class="mx-4 flex flex-col overflow-hidden rounded-xl bg-white shadow-sm dark:bg-slate-800/50">
+<div class="flex min-h-[72px] cursor-pointer items-center justify-between gap-4 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+<div class="flex items-center gap-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+<span class="material-symbols-outlined">lock</span>
+</div>
+<p class="text-base font-medium leading-normal text-slate-800 dark:text-white">Change Password</p>
+</div>
+<div class="shrink-0">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">chevron_right</span>
+</div>
+</div>
+<hr class="border-slate-200 dark:border-slate-700/50 ml-20"/>
+<div class="flex min-h-[72px] cursor-pointer items-center justify-between gap-4 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+<div class="flex items-center gap-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<p class="text-base font-medium leading-normal text-slate-800 dark:text-white">Two-Factor Authentication</p>
+</div>
+<div class="shrink-0">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- App Settings Section -->
+<h3 class="px-4 pb-2 pt-6 text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-white">App Settings</h3>
+<div class="mx-4 flex flex-col overflow-hidden rounded-xl bg-white shadow-sm dark:bg-slate-800/50">
+<div class="flex min-h-[72px] items-center justify-between gap-4 p-4">
+<div class="flex items-center gap-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+<span class="material-symbols-outlined">notifications</span>
+</div>
+<p class="text-base font-medium leading-normal text-slate-800 dark:text-white">Push Notifications</p>
+</div>
+<div class="shrink-0">
+<div class="relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full bg-slate-200 transition-colors checked:bg-primary has-[:checked]:bg-primary dark:bg-slate-700">
+<input class="peer sr-only" id="notifications-toggle" type="checkbox"/>
+<span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform peer-checked:translate-x-6"></span>
+</div>
+</div>
+</div>
+<hr class="border-slate-200 dark:border-slate-700/50 ml-20"/>
+<div class="flex min-h-[72px] cursor-pointer items-center justify-between gap-4 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+<div class="flex items-center gap-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+<span class="material-symbols-outlined">language</span>
+</div>
+<p class="text-base font-medium leading-normal text-slate-800 dark:text-white">Language</p>
+</div>
+<div class="flex items-center gap-2">
+<p class="text-base font-normal text-slate-500 dark:text-slate-400">English</p>
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">chevron_right</span>
+</div>
+</div>
+<hr class="border-slate-200 dark:border-slate-700/50 ml-20"/>
+<div class="flex min-h-[72px] cursor-pointer items-center justify-between gap-4 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+<div class="flex items-center gap-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+<span class="material-symbols-outlined">contrast</span>
+</div>
+<p class="text-base font-medium leading-normal text-slate-800 dark:text-white">Appearance</p>
+</div>
+<div class="flex items-center gap-2">
+<p class="text-base font-normal text-slate-500 dark:text-slate-400">Dark</p>
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Logout Button -->
+<div class="px-4 py-8">
+<button class="flex h-12 w-full items-center justify-center rounded-xl bg-destructive/10 px-6 text-base font-medium text-destructive transition-colors hover:bg-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30">
+                    Logout
+                </button>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 z-10 w-full max-w-md border-t border-slate-200/10 bg-background-light/80 backdrop-blur-sm dark:bg-background-dark/80">
+<div class="flex h-20 items-center justify-around px-2">
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-xs font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-xs font-medium">Dashboard</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary dark:text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="text-xs font-bold">Profile</span>
+</a>
+</div>
+</div>
+</div>
+</body></html>

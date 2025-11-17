@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>All Companies</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+                'FILL' 0,
+                'wght' 400,
+                'GRAD' 0,
+                'opsz' 24
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative min-h-screen w-full">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="flex items-center p-4">
+<h1 class="text-xl font-bold text-slate-900 dark:text-white flex-1">All Companies</h1>
+<button class="flex items-center justify-center h-10 w-10 rounded-full text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-2xl">notifications</span>
+</button>
+<button class="flex items-center justify-center h-10 w-10 rounded-full ml-2">
+<img class="h-8 w-8 rounded-full object-cover" data-alt="User profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfXdBWnzJX0aKZRlubcMEoauLwtq4pFEm8Y8dXx_sgf_de5e7kx8J6JSly9v8xTOkWQLECT4YkqIa2ndnX8_J0EUfgkArY9Pw8EShRkjgRNFVqTHQBgbs1zJgoT1KwZEAAkzCiIiw1k3hYEUOJQsUxkqVmd1oSgDQv9jncZDT9aZlfWrynaDBZnjsUEhbErULhXB8n1cgqhCeXR5l_bU4ImSKqlsuLPg0Wxg9baVczxoK3MeyQN-ofuZHfcPa_C2YBffqqqneD888"/>
+</button>
+</div>
+</header>
+<main class="px-4 pb-24">
+<!-- Search and Filter -->
+<div class="sticky top-[72px] z-10 py-2 bg-background-light dark:bg-background-dark">
+<div class="flex items-center gap-2">
+<div class="relative flex-grow">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">search</span>
+<input class="w-full h-12 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white pl-10 pr-4 focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Search by company name or ID" type="text"/>
+</div>
+<button class="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</div>
+<!-- Company List -->
+<div class="mt-4 space-y-3">
+<!-- Company Card 1: Active -->
+<div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors cursor-pointer">
+<div class="flex items-center gap-4 flex-1">
+<img class="h-12 w-12 rounded-full object-cover bg-slate-200 dark:bg-slate-700" data-alt="Innovate Corp Logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHby2CivG4Yir22CJlrEcRoiztDIFqNNzrYLqB7gBmKGxKkKEHMMlrQ1kG4-kMmn7TJY0FGODXoKlb2_v6oY4YyOtP6N1639eP2LdpSl7pbrfAQLQL6FgnpMa2GSf7pobRdhdSRFzXW9CA3CaH-OEACKlOujRI4vqGouhavzRg6s03LtziyTuRnP8evlqIlNlSn0w81HY9LrQXD1r4siJ1TCo2ysPI7gQbImDv7pXNUVd-b-zjH5slHtnEltwM3veItHc86yvWeXY"/>
+<div class="flex flex-col">
+<p class="text-base font-bold text-slate-900 dark:text-white line-clamp-1">Innovate Corp</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-1">ID: 12345</p>
+<div class="mt-1 px-2 py-0.5 text-xs font-medium rounded-full self-start bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-300">Active</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">chevron_right</span>
+</div>
+<!-- Company Card 2: Pending -->
+<div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors cursor-pointer">
+<div class="flex items-center gap-4 flex-1">
+<img class="h-12 w-12 rounded-full object-cover bg-slate-200 dark:bg-slate-700" data-alt="Quantum Solutions Logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQlY_5X6hJrFQqxJAxE21_3PcLDP6f2avHXyA8qm7JT6SPRKDjd7vxLvYFL-Ol0hU-TUZ657rgpr2fR4H6P0w3qcFpyGXYANyac0IBABKUkdAbUDpiKEydY5hcKY_YCEv8b1WsXIxnRp1BBk3yk9Nz7RwckLZz4JoSYZJUw6LA1RZ2NVKnbRIAVqyiFJjrYUcHXdFz5yLrk3ba47aPHtPhGCYaNsuhEh6znXROnlhXPcscnwd3-3IrTL2hKcmTnxk9bnfSdjK6wow"/>
+<div class="flex flex-col">
+<p class="text-base font-bold text-slate-900 dark:text-white line-clamp-1">Quantum Solutions</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-1">San Francisco, CA</p>
+<div class="mt-1 px-2 py-0.5 text-xs font-medium rounded-full self-start bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300">Pending</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">chevron_right</span>
+</div>
+<!-- Company Card 3: Deactivated -->
+<div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors cursor-pointer">
+<div class="flex items-center gap-4 flex-1">
+<img class="h-12 w-12 rounded-full object-cover bg-slate-200 dark:bg-slate-700" data-alt="Synergy Dynamics Logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbGKb-fv6LtVDo2qtHqhI8-0raK49egGB_MTyebrRf8csH2h4p3ReIAHfFrVNkStoeikfxn1q5oLKE0Tyyd3irq8Wi9S5dKLM1iegS3anMuGupiTzKkIya5_1ldRnWTGwK5Qz1yAujJ5bpkRoQnEOAwbayJ1GHvJ5OiujWAc1aXjXlqojIjTqMIuBdTwuH4wNWP7yPPWlEI_3LeIYAmF7RiP9hgv7L7eXmdHNAHtUaaQkkSIfWkXn4i15DF0av9wnVSBx5EFaN2Bo"/>
+<div class="flex flex-col">
+<p class="text-base font-bold text-slate-900 dark:text-white line-clamp-1">Synergy Dynamics</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-1">ID: 67890</p>
+<div class="mt-1 px-2 py-0.5 text-xs font-medium rounded-full self-start bg-slate-200 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400">Deactivated</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">chevron_right</span>
+</div>
+<!-- Company Card 4: Active -->
+<div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors cursor-pointer">
+<div class="flex items-center gap-4 flex-1">
+<div class="h-12 w-12 rounded-full bg-blue-200 dark:bg-blue-900 flex items-center justify-center font-bold text-lg text-blue-800 dark:text-blue-300">AP</div>
+<div class="flex flex-col">
+<p class="text-base font-bold text-slate-900 dark:text-white line-clamp-1">Apex Innovations</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-1">New York, NY</p>
+<div class="mt-1 px-2 py-0.5 text-xs font-medium rounded-full self-start bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-300">Active</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500">chevron_right</span>
+</div>
+<!-- Empty State Example -->
+<div class="pt-16 text-center hidden">
+<div class="flex justify-center">
+<div class="flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+<span class="material-symbols-outlined text-5xl text-slate-400 dark:text-slate-500">domain_disabled</span>
+</div>
+</div>
+<h3 class="mt-6 text-lg font-semibold text-slate-900 dark:text-white">No companies found</h3>
+<p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Try adjusting your search or filters.</p>
+<button class="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 dark:focus:ring-offset-background-dark">
+<span class="material-symbols-outlined">add_business</span>
+                        Add a Company
+                    </button>
+</div>
+</div>
+</main>
+<!-- Floating Action Button -->
+<div class="fixed bottom-6 right-6 z-20">
+<button class="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform hover:scale-105 active:scale-95">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#135bec",
+              "background-light": "#f6f6f8",
+              "background-dark": "#101622",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body>
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark font-display" style='font-family: Manrope, "Noto Sans", sans-serif;'>
+<div class="flex-grow pb-24">
+<!-- Top App Bar -->
+<div class="flex flex-col gap-2 bg-background-light dark:bg-background-dark p-4 pb-2">
+<div class="flex items-center h-12 justify-between">
+<div class="flex size-12 shrink-0 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Admin user avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDMQgjNd8s3Bu9sgeEedhMhUflO_K2Un-TofplA2grQgiXQM8mQSMyNZHyoAy59S7PVongrqYBylKEyB_D0HfAwZKas2o1aq-lzqDuZak9GJn5Rct0uqU0RnH1ZaXuJDWVO-XugqdD1mNnbg7ogtvre-HaksZOQmrggsJDCynMXOEuApQyCGgisN3y2PDU59eBFod4uSK7O7NJz3UXmh2vFwPnE7aYbBJ-SO4PCOkwCo746XdrMp21q-ZpN17Vzc9-bUyWvRyX85Bs");'></div>
+</div>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 bg-transparent text-slate-800 dark:text-white gap-2 text-base font-bold leading-normal min-w-0 p-0 w-12">
+<span class="material-symbols-outlined text-slate-800 dark:text-white" style="font-size: 24px;">notifications</span>
+</button>
+</div>
+</div>
+<p class="text-slate-800 dark:text-white tracking-light text-[28px] font-bold leading-tight">Good Morning, Alex</p>
+</div>
+<!-- Quick Action Grid -->
+<div class="grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-3 p-4">
+<div class="flex flex-1 gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#192233] p-4 flex-col">
+<span class="material-symbols-outlined text-primary" style="font-size: 24px;">add_task</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-slate-800 dark:text-white text-base font-bold leading-tight">Create Task</h2>
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-normal leading-normal">Assign new tasks</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#192233] p-4 flex-col">
+<span class="material-symbols-outlined text-primary" style="font-size: 24px;">group</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-slate-800 dark:text-white text-base font-bold leading-tight">View Team</h2>
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-normal leading-normal">Manage members</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#192233] p-4 flex-col">
+<span class="material-symbols-outlined text-primary" style="font-size: 24px;">account_tree</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-slate-800 dark:text-white text-base font-bold leading-tight">Workflows</h2>
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-normal leading-normal">Automate processes</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#192233] p-4 flex-col">
+<span class="material-symbols-outlined text-primary" style="font-size: 24px;">bar_chart</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-slate-800 dark:text-white text-base font-bold leading-tight">Reports</h2>
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-normal leading-normal">View analytics</p>
+</div>
+</div>
+</div>
+<!-- Section Header -->
+<h2 class="text-slate-800 dark:text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Task Summary</h2>
+<!-- Task Summary Card -->
+<div class="flex flex-col bg-white dark:bg-[#192233] rounded-xl mx-4 border border-slate-200 dark:border-slate-800 overflow-hidden">
+<!-- Tabs -->
+<div class="pb-0">
+<div class="flex border-b border-slate-200 dark:border-[#324467] px-4 gap-8">
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-primary text-slate-800 dark:text-white pb-[13px] pt-4" href="#">
+<p class="text-slate-800 dark:text-white text-sm font-bold leading-normal tracking-[0.015em]">Ongoing</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-slate-500 dark:text-[#92a4c9] pb-[13px] pt-4" href="#">
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-bold leading-normal tracking-[0.015em]">Overdue</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-slate-500 dark:text-[#92a4c9] pb-[13px] pt-4" href="#">
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-bold leading-normal tracking-[0.015em]">Completed</p>
+</a>
+</div>
+</div>
+<!-- List Items -->
+<div class="flex items-center gap-4 bg-transparent px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="flex size-7 items-center justify-center">
+<input class="h-5 w-5 rounded border-slate-300 dark:border-[#324467] border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:border-slate-300 dark:focus:border-[#324467] focus:outline-none" type="checkbox"/>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-800 dark:text-white text-base font-medium leading-normal line-clamp-1">Finalize Q3 Budget Report</p>
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-normal leading-normal line-clamp-2">Due: Tomorrow</p>
+</div>
+</div>
+<div class="shrink-0"><p class="text-slate-800 dark:text-white text-base font-normal leading-normal">Sarah Day</p></div>
+</div>
+<div class="flex items-center gap-4 bg-transparent px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="flex size-7 items-center justify-center">
+<input class="h-5 w-5 rounded border-slate-300 dark:border-[#324467] border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:border-slate-300 dark:focus:border-[#324467] focus:outline-none" type="checkbox"/>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-800 dark:text-white text-base font-medium leading-normal line-clamp-1">Review Client Onboarding Flow</p>
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-normal leading-normal line-clamp-2">Due: Oct 28</p>
+</div>
+</div>
+<div class="shrink-0"><p class="text-slate-800 dark:text-white text-base font-normal leading-normal">Mark Lee</p></div>
+</div>
+<div class="flex items-center gap-4 bg-transparent px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="flex size-7 items-center justify-center">
+<input class="h-5 w-5 rounded border-slate-300 dark:border-[#324467] border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:border-slate-300 dark:focus:border-[#324467] focus:outline-none" type="checkbox"/>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-800 dark:text-white text-base font-medium leading-normal line-clamp-1">Prepare Presentation for Stakeholders</p>
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-normal leading-normal line-clamp-2">Due: Nov 02</p>
+</div>
+</div>
+<div class="shrink-0"><p class="text-slate-800 dark:text-white text-base font-normal leading-normal">Jane Doe</p></div>
+</div>
+<a class="flex items-center justify-center px-4 py-4 text-sm font-bold text-primary border-t border-slate-200 dark:border-[#324467]" href="#">View All Tasks</a>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-0 right-0 h-20 bg-white/80 dark:bg-[#192233]/80 backdrop-blur-md border-t border-slate-200 dark:border-[#324467]">
+<div class="flex justify-around items-center h-full">
+<a class="flex flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-xs font-bold">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-[#92a4c9]" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="text-xs font-bold">Chats</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-[#92a4c9]" href="#">
+<span class="material-symbols-outlined">checklist</span>
+<span class="text-xs font-bold">Tasks</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-[#92a4c9]" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-xs font-bold">Profile</span>
+</a>
+</div>
+</div>
+</div>
+</body></html>

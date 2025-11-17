@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#005A9C",
+              "background-light": "#F0F2F5",
+              "background-dark": "#101622",
+              "destructive": "#D93025",
+              "text-light-primary": "#333333",
+              "text-light-secondary": "#666666",
+              "text-dark-primary": "#FFFFFF",
+              "text-dark-secondary": "#92a4c9",
+              "card-light": "#FFFFFF",
+              "card-dark": "#1C2431",
+              "icon-bg-light": "#e6f0f7",
+              "icon-bg-dark": "#232f48"
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: { "DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px" },
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="mx-auto max-w-md">
+<div class="relative flex min-h-screen w-full flex-col">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-10 flex items-center justify-between bg-primary px-4 py-3">
+<div class="flex size-8 items-center justify-center text-white">
+<span class="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
+</div>
+<h1 class="flex-1 text-center text-lg font-bold text-white">My Profile</h1>
+<div class="size-8"></div> <!-- Spacer -->
+</header>
+<main class="flex-1 space-y-6 p-4">
+<!-- Profile Header -->
+<section class="flex flex-col items-center gap-4 py-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-28 w-28" data-alt="Profile picture of a professional woman smiling" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD7gsxftFZxjF3HO0QdwezPFgDrE0SdqPAVGRs0hvNEaTR9f9HvORMYals0vnOjN2Hik5xlpfneSjlcLMcnPbyuBYv_NLpd2B3ZTqxwPILxJE636j5jnBvuvAQS4w5x86i_XrJ9SG5b530HjHQFqsQ-wGddGZVK4ufL9X5FyYGFVGA-07goX6ZB1OtINrVL7kqDf0ENyd5V-U7_-ER3SkFF6YAWQrH7-3Ns_50BzeJZN5_Vr94gWlHWa0owVc8TViPkRXiB-Ow4Yr0");'></div>
+<div class="flex flex-col items-center justify-center">
+<p class="text-text-light-primary dark:text-text-dark-primary text-2xl font-bold">Eleanor Vance</p>
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-base">Sales Associate</p>
+</div>
+</section>
+<!-- Personal Information Section -->
+<section class="flex flex-col rounded-xl bg-card-light dark:bg-card-dark shadow-sm">
+<div class="flex items-center justify-between px-4 pt-4 pb-2">
+<h3 class="text-text-light-primary dark:text-text-dark-primary text-base font-bold">Personal Information</h3>
+<button class="text-primary text-sm font-semibold">Edit Details</button>
+</div>
+<div class="divide-y divide-gray-200 dark:divide-gray-700">
+<!-- Email -->
+<div class="flex items-center gap-4 p-4">
+<div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-icon-bg-light dark:bg-icon-bg-dark text-primary dark:text-white">
+<span class="material-symbols-outlined text-2xl">mail</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal">Email</p>
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-medium">e.vance@example.com</p>
+</div>
+</div>
+<!-- Phone -->
+<div class="flex items-center gap-4 p-4">
+<div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-icon-bg-light dark:bg-icon-bg-dark text-primary dark:text-white">
+<span class="material-symbols-outlined text-2xl">phone</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal">Phone Number</p>
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-medium">+1 (555) 987-6543</p>
+</div>
+</div>
+<!-- Department -->
+<div class="flex items-center gap-4 p-4">
+<div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-icon-bg-light dark:bg-icon-bg-dark text-primary dark:text-white">
+<span class="material-symbols-outlined text-2xl">groups</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal">Team / Department</p>
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-medium">Enterprise Sales</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Account & Security Section -->
+<section class="flex flex-col rounded-xl bg-card-light dark:bg-card-dark shadow-sm">
+<div class="flex items-center justify-between px-4 pt-4 pb-2">
+<h3 class="text-text-light-primary dark:text-text-dark-primary text-base font-bold">Account &amp; Security</h3>
+</div>
+<div class="divide-y divide-gray-200 dark:divide-gray-700">
+<!-- Username -->
+<div class="flex items-center gap-4 p-4">
+<div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-icon-bg-light dark:bg-icon-bg-dark text-primary dark:text-white">
+<span class="material-symbols-outlined text-2xl">badge</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal">Username / ID</p>
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-medium">evance</p>
+</div>
+</div>
+<!-- Change Password -->
+<a class="flex items-center gap-4 justify-between p-4 group" href="#">
+<div class="flex items-center gap-4">
+<div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-icon-bg-light dark:bg-icon-bg-dark text-primary dark:text-white">
+<span class="material-symbols-outlined text-2xl">lock</span>
+</div>
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-medium">Change Password</p>
+</div>
+<div class="shrink-0 text-text-light-secondary dark:text-text-dark-secondary group-hover:text-primary">
+<span class="material-symbols-outlined text-2xl">chevron_right</span>
+</div>
+</a>
+</div>
+</section>
+<!-- Settings Section -->
+<section class="flex flex-col rounded-xl bg-card-light dark:bg-card-dark shadow-sm">
+<div class="flex items-center justify-between px-4 pt-4 pb-2">
+<h3 class="text-text-light-primary dark:text-text-dark-primary text-base font-bold">Settings</h3>
+</div>
+<div class="divide-y divide-gray-200 dark:divide-gray-700">
+<!-- Push Notifications -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-4">
+<div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-icon-bg-light dark:bg-icon-bg-dark text-primary dark:text-white">
+<span class="material-symbols-outlined text-2xl">notifications</span>
+</div>
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-medium">Push Notifications</p>
+</div>
+<label class="relative inline-flex cursor-pointer items-center">
+<input checked="" class="peer sr-only" type="checkbox" value=""/>
+<div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-gray-600 dark:bg-gray-700"></div>
+</label>
+</div>
+<!-- Biometric Login -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-4">
+<div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-icon-bg-light dark:bg-icon-bg-dark text-primary dark:text-white">
+<span class="material-symbols-outlined text-2xl">fingerprint</span>
+</div>
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-medium">Biometric Login</p>
+</div>
+<label class="relative inline-flex cursor-pointer items-center">
+<input class="peer sr-only" type="checkbox" value=""/>
+<div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-gray-600 dark:bg-gray-700"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Logout Button -->
+<div class="pt-4 pb-2">
+<button class="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-3 text-base font-bold text-white shadow-sm transition-colors hover:bg-red-700">
+<span class="material-symbols-outlined">logout</span>
+                        Logout
+                    </button>
+</div>
+</main>
+</div>
+</div>
+</body></html>

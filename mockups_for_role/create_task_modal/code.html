@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create New Task</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#005A9C",
+                        "background-light": "#F4F6F8",
+                        "background-dark": "#101622",
+                        "text-light-primary": "#212529",
+                        "text-dark-primary": "#F4F6F8",
+                        "text-light-secondary": "#6C757D",
+                        "text-dark-secondary": "#92a4c9",
+                        "border-light": "#E0E0E0",
+                        "border-dark": "#324467",
+                        "input-bg-light": "#FFFFFF",
+                        "input-bg-dark": "#192233",
+                        "success": "#28A745",
+                        "danger": "#DC3545",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+         body {
+             -webkit-font-smoothing: antialiased;
+             -moz-osx-font-smoothing: grayscale;
+         }
+         select.form-input {
+             --select-button-svg-light: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='24px' height='24px' fill='rgb(108,117,125)' viewBox='0 0 256 256'%3e%3cpath d='M181.66,170.34a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-48-48a8,8,0,0,1,11.32-11.32L128,212.69l42.34-42.35A8,8,0,0,1,181.66,170.34Zm-96-84.68L128,43.31l42.34,42.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,85.66Z'%3e%3c/path%3e%3c/svg%3e");
+             --select-button-svg-dark: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='24px' height='24px' fill='rgb(146,164,201)' viewBox='0 0 256 256'%3e%3cpath d='M181.66,170.34a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-48-48a8,8,0,0,1,11.32-11.32L128,212.69l42.34-42.35A8,8,0,0,1,181.66,170.34Zm-96-84.68L128,43.31l42.34,42.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,85.66Z'%3e%3c/path%3e%3c/svg%3e");
+             background-image: var(--select-button-svg-light);
+             background-position: right 0.75rem center;
+             background-repeat: no-repeat;
+             background-size: 1.5em 1.5em;
+             padding-right: 2.5rem;
+             -webkit-appearance: none;
+             -moz-appearance: none;
+             appearance: none;
+         }
+         .dark select.form-input {
+             background-image: var(--select-button-svg-dark);
+         }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative flex min-h-screen w-full flex-col bg-black/30 dark:bg-black/50">
+<!-- Background content (placeholder) -->
+<div class="absolute inset-0 h-full w-full bg-background-light dark:bg-background-dark opacity-80"></div>
+<!-- Modal -->
+<div class="absolute bottom-0 flex h-[95vh] w-full flex-col overflow-hidden rounded-t-xl bg-background-light dark:bg-background-dark shadow-2xl">
+<!-- Header -->
+<div class="flex flex-shrink-0 items-center border-b border-border-light dark:border-border-dark p-4">
+<div class="flex w-12 items-center justify-start"></div>
+<h2 class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-text-light-primary dark:text-text-dark-primary">Create New Task</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex items-center justify-center text-text-light-secondary dark:text-text-dark-secondary">
+<span class="material-symbols-outlined text-2xl">close</span>
+</button>
+</div>
+</div>
+<!-- Form Content -->
+<div class="flex-1 space-y-4 overflow-y-auto p-4 pb-28">
+<!-- Task Name -->
+<label class="flex flex-col">
+<p class="pb-2 text-base font-medium leading-normal text-text-light-secondary dark:text-text-dark-secondary">Task Name</p>
+<input class="form-input flex h-14 w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-border-light bg-input-bg-light p-4 text-base font-normal leading-normal text-text-light-primary placeholder:text-text-light-secondary focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/20 dark:border-border-dark dark:bg-input-bg-dark dark:text-text-dark-primary dark:placeholder:text-text-dark-secondary dark:focus:border-primary" placeholder="Enter the task name" value=""/>
+</label>
+<!-- Task Category -->
+<label class="flex flex-col">
+<p class="pb-2 text-base font-medium leading-normal text-text-light-secondary dark:text-text-dark-secondary">Task Category</p>
+<select class="form-input flex h-14 w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-border-light bg-input-bg-light p-4 text-base font-normal leading-normal text-text-light-primary focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/20 dark:border-border-dark dark:bg-input-bg-dark dark:text-text-dark-primary dark:focus:border-primary">
+<option value="">Select a category</option>
+<option value="marketing">Marketing</option>
+<option value="hr">HR</option>
+<option value="engineering">Engineering</option>
+<option value="design">Design</option>
+</select>
+</label>
+<!-- Description -->
+<label class="flex flex-col">
+<p class="pb-2 text-base font-medium leading-normal text-text-light-secondary dark:text-text-dark-secondary">Description</p>
+<textarea class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-border-light bg-input-bg-light p-4 text-base font-normal leading-normal text-text-light-primary placeholder:text-text-light-secondary focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/20 dark:border-border-dark dark:bg-input-bg-dark dark:text-text-dark-primary dark:placeholder:text-text-dark-secondary dark:focus:border-primary" placeholder="Add a detailed description" rows="4"></textarea>
+</label>
+<!-- Due Date -->
+<label class="flex flex-col">
+<p class="pb-2 text-base font-medium leading-normal text-text-light-secondary dark:text-text-dark-secondary">Due Date</p>
+<div class="relative flex w-full items-center">
+<input class="form-input flex h-14 w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-border-light bg-input-bg-light p-4 pr-12 text-base font-normal leading-normal text-text-light-primary placeholder:text-text-light-secondary focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/20 dark:border-border-dark dark:bg-input-bg-dark dark:text-text-dark-primary dark:placeholder:text-text-dark-secondary dark:focus:border-primary" placeholder="Select a date" type="text" value=""/>
+<div class="pointer-events-none absolute right-0 flex items-center justify-center pr-4 text-text-light-secondary dark:text-text-dark-secondary">
+<span class="material-symbols-outlined text-2xl">calendar_today</span>
+</div>
+</div>
+</label>
+<!-- Assign To -->
+<label class="flex flex-col">
+<p class="pb-2 text-base font-medium leading-normal text-text-light-secondary dark:text-text-dark-secondary">Assign To</p>
+<div class="relative flex w-full items-center">
+<select class="form-input flex h-14 w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-border-light bg-input-bg-light p-4 text-base font-normal leading-normal text-text-light-primary focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/20 dark:border-border-dark dark:bg-input-bg-dark dark:text-text-dark-primary dark:focus:border-primary">
+<option value="">Select a person</option>
+<option value="user1">Alice Johnson</option>
+<option value="user2">Bob Williams</option>
+<option value="user3">Charlie Brown</option>
+</select>
+</div>
+</label>
+<!-- Priority -->
+<div class="flex flex-col">
+<p class="pb-2 text-base font-medium leading-normal text-text-light-secondary dark:text-text-dark-secondary">Priority</p>
+<div class="grid grid-cols-3 gap-2 rounded-lg bg-background-light p-1 dark:bg-background-dark">
+<button class="rounded-md px-3 py-2.5 text-center text-sm font-semibold text-text-light-secondary transition-colors dark:text-text-dark-secondary">Low</button>
+<button class="rounded-md bg-primary/20 px-3 py-2.5 text-center text-sm font-semibold text-primary transition-colors">Medium</button>
+<button class="rounded-md px-3 py-2.5 text-center text-sm font-semibold text-text-light-secondary transition-colors dark:text-text-dark-secondary">High</button>
+</div>
+</div>
+</div>
+<!-- Footer / CTA -->
+<div class="absolute bottom-0 left-0 w-full bg-background-light p-4 dark:bg-background-dark">
+<button class="w-full rounded-xl bg-primary px-5 py-4 text-base font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">Create Task</button>
+</div>
+</div>
+</div>
+</body></html>

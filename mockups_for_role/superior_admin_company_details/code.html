@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Company Administration</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0A2540",
+            "background-light": "#F6F9FC",
+            "background-dark": "#101622",
+          },
+          fontFamily: {
+            "display": ["Manrope", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-light dark:bg-primary/20 dark:bg-opacity-20 sticky top-0 z-10 p-4 pb-2 justify-between border-b border-gray-200 dark:border-white/10">
+<div class="flex size-12 shrink-0 items-center -ml-3">
+<span class="material-symbols-outlined text-gray-800 dark:text-white">arrow_back</span>
+</div>
+<h2 class="text-gray-800 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Innovate Inc.</h2>
+<div class="flex size-12 shrink-0 items-center justify-end -mr-3">
+<span class="material-symbols-outlined text-gray-800 dark:text-white">more_vert</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-6">
+<!-- Profile Header -->
+<div class="flex w-full flex-col gap-4">
+<div class="flex gap-4 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-xl h-20 w-20 flex-shrink-0" data-alt="Innovate Inc. company logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBvXfYrRGXGHfbN1OqHJLHm6xLAOtre05BVoiU3tEKRf3EstLyyLGghJw3QbazP-CBs5C0hnjkVVAL_OE-XZM1u5rUQPqmGX7cl195i3cvxgwFBtlSUye1e9cvHCiDJXW0q67XtQrPMOot5K-ryNlSiy3m2gKjjwWrRB1QFHEudp-i-TjzlyZrizHJpwfy-p2FhbyIDEF2UYjs5AbP6rJc9XXQCsAx6oGaUyNzmkAH8k_n-dBs6hyu-GQ2Fooea3ie58HI5AKAWD80");'></div>
+<div class="flex flex-col">
+<p class="text-gray-900 dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">Innovate Inc.</p>
+<p class="text-gray-500 dark:text-gray-400 text-base font-normal leading-normal">Technology</p>
+</div>
+</div>
+</div>
+<!-- Chips / Status Tags -->
+<div class="flex gap-2 flex-wrap">
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-teal-500/10 dark:bg-[#00C49A]/20 px-3">
+<span class="material-symbols-outlined text-sm text-teal-600 dark:text-[#00C49A]">check_circle</span>
+<p class="text-teal-600 dark:text-[#00C49A] text-sm font-medium leading-normal">Active</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-blue-500/10 dark:bg-blue-400/20 px-3">
+<span class="material-symbols-outlined text-sm text-blue-600 dark:text-blue-400">workspace_premium</span>
+<p class="text-blue-600 dark:text-blue-400 text-sm font-medium leading-normal">On Trial</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-gray-500/10 dark:bg-gray-400/20 px-3">
+<span class="material-symbols-outlined text-sm text-gray-600 dark:text-gray-400">business_center</span>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-medium leading-normal">Enterprise</p>
+</div>
+</div>
+<!-- Accordions -->
+<div class="flex flex-col">
+<details class="flex flex-col border-t border-gray-200 dark:border-white/10 py-2 group" open="">
+<summary class="flex cursor-pointer items-center justify-between gap-6 py-2">
+<p class="text-gray-900 dark:text-white text-base font-bold leading-normal">Company Details</p>
+<span class="material-symbols-outlined text-gray-500 dark:text-white group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<!-- Description List -->
+<div class="grid grid-cols-[35%_1fr] gap-x-4 pt-2">
+<div class="col-span-2 grid grid-cols-subgrid border-t border-gray-200 dark:border-white/10 py-3">
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Company ID</p>
+<p class="text-gray-800 dark:text-white text-sm font-normal leading-normal text-right">12345</p>
+</div>
+<div class="col-span-2 grid grid-cols-subgrid border-t border-gray-200 dark:border-white/10 py-3">
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Registration Date</p>
+<p class="text-gray-800 dark:text-white text-sm font-normal leading-normal text-right">2023-10-26</p>
+</div>
+<div class="col-span-2 grid grid-cols-subgrid border-t border-gray-200 dark:border-white/10 py-3">
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Primary Contact</p>
+<p class="text-gray-800 dark:text-white text-sm font-normal leading-normal text-right">Jane Doe</p>
+</div>
+<div class="col-span-2 grid grid-cols-subgrid border-t border-gray-200 dark:border-white/10 py-3">
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Billing Address</p>
+<p class="text-gray-800 dark:text-white text-sm font-normal leading-normal text-right">123 Innovation Dr, Tech City, 12345</p>
+</div>
+</div>
+</details>
+<details class="flex flex-col border-t border-gray-200 dark:border-white/10 py-2 group">
+<summary class="flex cursor-pointer items-center justify-between gap-6 py-2">
+<p class="text-gray-900 dark:text-white text-base font-bold leading-normal">Subscription Plan</p>
+<span class="material-symbols-outlined text-gray-500 dark:text-white group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="grid grid-cols-[40%_1fr] gap-x-4 pt-2">
+<div class="col-span-2 grid grid-cols-subgrid border-t border-gray-200 dark:border-white/10 py-3">
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Current Plan</p>
+<p class="text-gray-800 dark:text-white text-sm font-normal leading-normal text-right">Enterprise Trial</p>
+</div>
+<div class="col-span-2 grid grid-cols-subgrid border-t border-gray-200 dark:border-white/10 py-3">
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">User Seats</p>
+<p class="text-gray-800 dark:text-white text-sm font-normal leading-normal text-right">15 / 50 Used</p>
+</div>
+<div class="col-span-2 grid grid-cols-subgrid border-t border-gray-200 dark:border-white/10 py-3">
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Billing Cycle</p>
+<p class="text-gray-800 dark:text-white text-sm font-normal leading-normal text-right">Monthly</p>
+</div>
+<div class="col-span-2 grid grid-cols-subgrid border-t border-gray-200 dark:border-white/10 py-3">
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Trial Ends</p>
+<p class="text-gray-800 dark:text-white text-sm font-normal leading-normal text-right">2024-11-25</p>
+</div>
+</div>
+</details>
+<details class="flex flex-col border-t border-b border-gray-200 dark:border-white/10 py-2 group">
+<summary class="flex cursor-pointer items-center justify-between gap-6 py-2">
+<p class="text-gray-900 dark:text-white text-base font-bold leading-normal">Users</p>
+<span class="material-symbols-outlined text-gray-500 dark:text-white group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="flex flex-col gap-4 pt-3">
+<div class="grid grid-cols-3 gap-2 text-center">
+<div class="flex flex-col p-2 bg-gray-100 dark:bg-white/5 rounded-lg">
+<p class="text-gray-900 dark:text-white text-lg font-bold">15</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Total</p>
+</div>
+<div class="flex flex-col p-2 bg-gray-100 dark:bg-white/5 rounded-lg">
+<p class="text-gray-900 dark:text-white text-lg font-bold">2</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Admins</p>
+</div>
+<div class="flex flex-col p-2 bg-gray-100 dark:bg-white/5 rounded-lg">
+<p class="text-gray-900 dark:text-white text-lg font-bold">13</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Workers</p>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
+<div class="flex items-center gap-3">
+<img class="h-10 w-10 rounded-full object-cover" data-alt="Profile picture of John Smith" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDkRDDO_tqx_4uGaOwkJ_YfAZRUzZmlD_yYLgxP1hpUGVJoKcH8DnEz4oFO0CC8cay1jBUYdLVlyXbeOSsx8gxJN18esk0TfEvXDORLXYNZm6TTxaryqdoPAAIfr_Jw1RVTd-cHqcGyhSaAOno0sgpRlGTWAS_IzXkNCy619ksg_aiIohHdoFCQWEF86FSVTTdS25tUP86NsXWK_CBF-QUzczfrxC8iFohziM3DtZfiP0cCOuq-FCOHp8mev2-dZXdscwxI6RWekU"/>
+<div>
+<p class="text-gray-800 dark:text-white font-medium text-sm">John Smith</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Company Admin</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
+<div class="flex items-center gap-3">
+<img class="h-10 w-10 rounded-full object-cover" data-alt="Profile picture of Adam Miller" src="https://lh3.googleusercontent.com/aida-public/AB6AXuARemnPRO90Zyiw-NPN3Sx87qmWd-D-vbcL4u58QUvKL_-WbLBQJyGhB0pxzxvIZawJd_QJcWiufPLmHafu29LmbKfKNHJl0Kbsy94d6-xsonNhSqwzFg1CflrG1jJCDbzrneicPuuEcMW55RJh9rFrQWR2iacJlmimx2XBCmQQWgHxJQixCpM3XnKV7P5UtnoMAa2LcXBc3wwNLDnl3-JByjL9Kfc_ZOaAXsw2Igv19Vkl_ajnJ5eykQcUiS5xhmhZxmUmBT4_7Bg"/>
+<div>
+<p class="text-gray-800 dark:text-white font-medium text-sm">Adam Miller</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Company Admin</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400">chevron_right</span>
+</div>
+<button class="flex h-11 w-full items-center justify-center gap-x-2 rounded-lg bg-gray-200 dark:bg-white/10 px-4">
+<p class="text-gray-800 dark:text-white text-sm font-semibold leading-normal">View All Users</p>
+</button>
+</div>
+</details>
+</div>
+</div>
+<!-- Sticky Footer with Actions -->
+<div class="sticky bottom-0 mt-auto flex flex-col gap-3 border-t border-gray-200 dark:border-white/10 bg-background-light dark:bg-background-dark p-4">
+<div class="flex gap-3">
+<button class="flex h-12 flex-1 items-center justify-center gap-x-2 rounded-xl bg-gray-200 dark:bg-white/10 px-4">
+<span class="material-symbols-outlined text-gray-800 dark:text-white">edit</span>
+<p class="text-gray-800 dark:text-white text-sm font-semibold leading-normal">Edit</p>
+</button>
+<button class="flex h-12 flex-1 items-center justify-center gap-x-2 rounded-xl bg-primary px-4">
+<span class="material-symbols-outlined text-white">receipt_long</span>
+<p class="text-white text-sm font-semibold leading-normal">Manage Plan</p>
+</button>
+</div>
+<button class="flex h-12 w-full items-center justify-center gap-x-2 rounded-xl bg-red-500/10 dark:bg-[#E53E3E]/20 px-4">
+<span class="material-symbols-outlined text-red-600 dark:text-[#E53E3E]">pause_circle</span>
+<p class="text-red-600 dark:text-[#E53E3E] text-sm font-semibold leading-normal">Suspend Company</p>
+</button>
+</div>
+</div>
+</body></html>
