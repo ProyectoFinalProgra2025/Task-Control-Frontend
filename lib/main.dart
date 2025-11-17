@@ -4,6 +4,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/company_admin/admin_main_screen.dart';
 import 'services/storage_service.dart';
 
 void main() {
@@ -28,6 +29,7 @@ class TaskControlApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignUpScreen(),
         '/home': (context) => const HomeScreen(),
+        '/admin': (context) => const AdminMainScreen(),
       },
     );
   }

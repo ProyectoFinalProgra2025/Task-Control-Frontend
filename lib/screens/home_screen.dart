@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
+import 'company_admin/admin_main_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -155,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if (rol == 'AdminGeneral') {
       return _buildAdminGeneralHome();
     } else if (rol == 'AdminEmpresa') {
-      return _buildAdminEmpresaHome();
+      return const AdminMainScreen();
     } else {
       return _buildUsuarioHome();
     }
