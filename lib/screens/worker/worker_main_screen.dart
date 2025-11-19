@@ -59,53 +59,38 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          gradient: isDark
-              ? LinearGradient(
-                  colors: [Color(0xFF192233), Color(0xFF1a2942)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                )
-              : LinearGradient(
-                  colors: [Colors.white, Color(0xFFF8FAFC)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
+          color: isDark ? const Color(0xFF192233) : Colors.white,
           boxShadow: [
             BoxShadow(
-              color: isDark 
-                  ? Colors.black.withOpacity(0.4)
-                  : Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
             ),
           ],
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(
-                  icon: Icons.dashboard_rounded,
-                  activeIcon: Icons.dashboard,
-                  label: 'Inicio',
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home,
+                  label: 'Home',
                   index: 0,
-                  isDark: isDark,
                 ),
                 _buildNavItem(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  activeIcon: Icons.chat_bubble_rounded,
-                  label: 'Mensajes',
+                  icon: Icons.chat_bubble_outline,
+                  activeIcon: Icons.chat_bubble,
+                  label: 'Chats',
                   index: 1,
-                  isDark: isDark,
                 ),
                 _buildNavItem(
-                  icon: Icons.account_circle_outlined,
-                  activeIcon: Icons.account_circle,
-                  label: 'Perfil',
+                  icon: Icons.person_outline,
+                  activeIcon: Icons.person,
+                  label: 'Profile',
                   index: 2,
-                  isDark: isDark,
                 ),
               ],
             ),
@@ -120,60 +105,36 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
     required IconData activeIcon,
     required String label,
     required int index,
-    required bool isDark,
   }) {
     final isActive = _currentIndex == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Expanded(
       child: InkWell(
         onTap: () => _onNavItemTapped(index),
-        borderRadius: BorderRadius.circular(16),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          decoration: BoxDecoration(
-            gradient: isActive
-                ? const LinearGradient(
-                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF6366F1).withOpacity(0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
-          ),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 isActive ? activeIcon : icon,
                 color: isActive
-                    ? Colors.white
+                    ? const Color(0xFF135bec)
                     : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                size: 24,
+                size: 26,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                   color: isActive
-                      ? Colors.white
+                      ? const Color(0xFF135bec)
                       : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                  letterSpacing: 0.3,
                 ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
               ),
             ],
           ),
