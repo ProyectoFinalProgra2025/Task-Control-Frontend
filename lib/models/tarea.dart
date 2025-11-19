@@ -109,12 +109,12 @@ class CreateTareaDTO {
 
   Map<String, dynamic> toJson() {
     return {
-      'titulo': titulo,
-      'descripcion': descripcion,
-      'prioridad': prioridad.value,
-      if (dueDate != null) 'dueDate': dueDate!.toIso8601String(),
-      if (departamento != null) 'departamento': departamento!.value,
-      'capacidadesRequeridas': capacidadesRequeridas,
+      'Titulo': titulo,
+      'Descripcion': descripcion,
+      'Prioridad': prioridad.value,
+      if (dueDate != null) 'DueDate': dueDate!.toIso8601String(),
+      if (departamento != null) 'Departamento': departamento!.value,
+      'CapacidadesRequeridas': capacidadesRequeridas,
     };
   }
 }
@@ -122,19 +122,17 @@ class CreateTareaDTO {
 class AsignarManualTareaDTO {
   final int? usuarioId;
   final String? nombreUsuario;
-  final bool ignorarValidacionesSkills;
 
   AsignarManualTareaDTO({
     this.usuarioId,
     this.nombreUsuario,
-    this.ignorarValidacionesSkills = false,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      if (usuarioId != null) 'usuarioId': usuarioId,
-      if (nombreUsuario != null) 'nombreUsuario': nombreUsuario,
-      'ignorarValidacionesSkills': ignorarValidacionesSkills,
+      if (usuarioId != null) 'UsuarioId': usuarioId,
+      if (nombreUsuario != null) 'NombreUsuario': nombreUsuario,
+      'IgnorarValidacionesSkills': true,
     };
   }
 }
@@ -148,7 +146,7 @@ class AsignarAutomaticoTareaDTO {
 
   Map<String, dynamic> toJson() {
     return {
-      'forzarReasignacion': forzarReasignacion,
+      'ForzarReasignacion': forzarReasignacion,
     };
   }
 }
@@ -164,8 +162,8 @@ class FinalizarTareaDTO {
 
   Map<String, dynamic> toJson() {
     return {
-      if (evidenciaTexto != null) 'evidenciaTexto': evidenciaTexto,
-      if (evidenciaImagenUrl != null) 'evidenciaImagenUrl': evidenciaImagenUrl,
+      if (evidenciaTexto != null) 'EvidenciaTexto': evidenciaTexto,
+      if (evidenciaImagenUrl != null) 'EvidenciaImagenUrl': evidenciaImagenUrl,
     };
   }
 }
