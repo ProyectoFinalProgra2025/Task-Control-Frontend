@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/empresa_service.dart';
 import '../../models/empresa_model.dart';
+import '../../widgets/theme_toggle_button.dart';
 
 class SuperAdminHomeTab extends StatefulWidget {
   const SuperAdminHomeTab({super.key});
@@ -72,6 +73,7 @@ class _SuperAdminHomeTabState extends State<SuperAdminHomeTab> {
                             child: const Icon(Icons.admin_panel_settings, color: Color(0xFF7C3AED)),
                           ),
                           const Spacer(),
+                          const ThemeToggleButton(),
                           IconButton(
                             icon: Icon(Icons.notifications_outlined, color: textPrimary),
                             onPressed: () {},

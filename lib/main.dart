@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
@@ -9,9 +10,16 @@ import 'screens/super_admin/super_admin_main_screen.dart';
 import 'screens/worker/worker_main_screen.dart';
 import 'services/storage_service.dart';
 import 'models/user_model.dart';
+import 'config/theme_config.dart';
+import 'providers/theme_provider.dart' as theme_prov;
 
 void main() {
-  runApp(const TaskControlApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => theme_prov.ThemeProvider(),
+      child: const TaskControlApp(),
+    ),
+  );
 }
 
 class TaskControlApp extends StatelessWidget {
@@ -19,46 +27,25 @@ class TaskControlApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TaskControl',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFF6F6F8),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF135BEC),
-          brightness: Brightness.light,
-        ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.black,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF135BEC),
-          brightness: Brightness.dark,
-          background: Colors.black,
-          surface: const Color(0xFF1A1A1A),
-        ),
-        cardColor: const Color(0xFF1A1A1A),
-        dialogBackgroundColor: const Color(0xFF1A1A1A),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-        ),
-      ),
-      themeMode: ThemeMode.system,
-      home: const InitialRouteHandler(),
-      routes: {
-        '/onboarding': (context) => const OnboardingScreen(),
-        '/login': (context) => const LoginScreen(),
-        '/signup': (context) => const SignUpScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/admin': (context) => const AdminMainScreen(),
-        '/super-admin': (context) => const SuperAdminMainScreen(),
-        '/worker': (context) => const WorkerMainScreen(),
+    return Consumer<theme_prov.ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return MaterialApp(
+          title: 'TaskControl',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme(),
+          darkTheme: AppTheme.darkTheme(),
+          themeMode: themeProvider.themeMode,
+          home: const InitialRouteHandler(),
+          routes: {
+            '/onboarding': (context) => const OnboardingScreen(),
+            '/login': (context) => const LoginScreen(),
+            '/signup': (context) => const SignUpScreen(),
+            '/home': (context) => const HomeScreen(),
+            '/admin': (context) => const AdminMainScreen(),
+            '/super-admin': (context) => const SuperAdminMainScreen(),
+            '/worker': (context) => const WorkerMainScreen(),
+          },
+        );
       },
     );
   }
@@ -86,6 +73,16 @@ class _InitialRouteHandlerState extends State<InitialRouteHandler> {
 
     if (!mounted) return;
 
+    // ════════════════════════════════════════════════════════════
+    // MODO DESARROLLO: SIEMPRE MOSTRAR ONBOARDING
+    // TODO: Comentar línea siguiente y descomentar bloque para producción
+    // ════════════════════════════════════════════════════════════
+    Navigator.of(context).pushReplacementNamed('/onboarding');
+
+    // ════════════════════════════════════════════════════════════
+    // LÓGICA ORIGINAL - Descomentar para producción
+    // ════════════════════════════════════════════════════════════
+    /*
     // 1. Verificar si está autenticado
     final isAuthenticated = await _storage.isAuthenticated();
     
@@ -124,6 +121,7 @@ class _InitialRouteHandlerState extends State<InitialRouteHandler> {
       // Si no ha visto el onboarding, mostrarlo
       Navigator.of(context).pushReplacementNamed('/onboarding');
     }
+    */
   }
 
   @override

@@ -7,6 +7,7 @@ class StorageService {
   static const String _keyRefreshToken = 'refresh_token';
   static const String _keyUser = 'user_data';
   static const String _keyOnboardingCompleted = 'onboarding_completed';
+  static const String _keyThemeMode = 'theme_mode';
 
   // ========== TOKENS ==========
   
@@ -85,5 +86,17 @@ class StorageService {
   Future<bool> hasCompletedOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_keyOnboardingCompleted) ?? false;
+  }
+
+  // ========== THEME MODE ==========
+  
+  Future<void> saveThemeMode(String themeMode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyThemeMode, themeMode);
+  }
+
+  Future<String?> getThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyThemeMode);
   }
 }

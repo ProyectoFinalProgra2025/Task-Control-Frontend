@@ -30,38 +30,38 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isDark ? Colors.black : Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-              width: 1,
+          color: isDark ? const Color(0xFF192233) : Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
             ),
-          ),
+          ],
         ),
         child: SafeArea(
-          child: Container(
-            height: 70,
-            padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(
-                  icon: Icons.home,
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home,
                   label: 'Home',
                   index: 0,
-                  isDark: isDark,
                 ),
                 _buildNavItem(
-                  icon: Icons.chat,
+                  icon: Icons.chat_bubble_outline,
+                  activeIcon: Icons.chat_bubble,
                   label: 'Chats',
                   index: 1,
-                  isDark: isDark,
                 ),
                 _buildNavItem(
-                  icon: Icons.person,
+                  icon: Icons.person_outline,
+                  activeIcon: Icons.person,
                   label: 'Profile',
                   index: 2,
-                  isDark: isDark,
                 ),
               ],
             ),
@@ -73,43 +73,42 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> {
 
   Widget _buildNavItem({
     required IconData icon,
+    required IconData activeIcon,
     required String label,
     required int index,
-    required bool isDark,
   }) {
     final isActive = _currentIndex == index;
-    final primaryColor = const Color(0xFF135BEC);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Expanded(
       child: InkWell(
-        onTap: () {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isActive
-                  ? primaryColor
-                  : (isDark ? Colors.grey[400] : Colors.grey[600]),
-              size: 26,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+        onTap: () => setState(() => _currentIndex = index),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
                 color: isActive
-                    ? primaryColor
-                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                    ? const Color(0xFF135bec)
+                    : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
+                size: 26,
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  color: isActive
+                      ? const Color(0xFF135bec)
+                      : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -42,30 +42,13 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf0f2f5);
+    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : const Color(0xFFF6F6F8),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF005A9C),
-        centerTitle: true,
-        title: const Text(
-          'My Profile',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () {
-            // Optional: Navigate back if needed
-          },
-        ),
-        actions: [
-          // Spacer for centering
-          const SizedBox(width: 48),
-        ],
-      ),
+      backgroundColor: backgroundColor,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -241,17 +224,16 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
     Widget? trailing,
     required List<Widget> children,
   }) {
+    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
+        ),
       ),
       child: Column(
         children: [
@@ -265,7 +247,7 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF333333),
+                    color: textPrimary,
                   ),
                 ),
                 if (trailing != null) trailing,
@@ -284,6 +266,9 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
     required String value,
     required bool isDark,
   }) {
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -292,9 +277,7 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFF232F48)
-                  : const Color(0xFFE6F0F7),
+              color: const Color(0xFF135bec).withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -321,7 +304,7 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white : const Color(0xFF333333),
+                    color: textPrimary,
                   ),
                 ),
               ],
@@ -338,6 +321,9 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
     required bool isDark,
     required VoidCallback onTap,
   }) {
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -348,14 +334,12 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF232F48)
-                    : const Color(0xFFE6F0F7),
+                color: const Color(0xFF135bec).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                color: isDark ? Colors.white : const Color(0xFF005A9C),
+                color: const Color(0xFF135bec),
                 size: 24,
               ),
             ),
@@ -366,13 +350,13 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : const Color(0xFF333333),
+                  color: textPrimary,
                 ),
               ),
             ),
             Icon(
               Icons.chevron_right,
-              color: isDark ? const Color(0xFF92A4C9) : const Color(0xFF666666),
+              color: textSecondary,
             ),
           ],
         ),
@@ -387,6 +371,8 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
     required bool isDark,
     required ValueChanged<bool> onChanged,
   }) {
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -395,14 +381,12 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFF232F48)
-                  : const Color(0xFFE6F0F7),
+              color: const Color(0xFF135bec).withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
-              color: isDark ? Colors.white : const Color(0xFF005A9C),
+              color: const Color(0xFF135bec),
               size: 24,
             ),
           ),
@@ -413,14 +397,14 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : const Color(0xFF333333),
+                color: textPrimary,
               ),
             ),
           ),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFF005A9C),
+            activeColor: const Color(0xFF135bec),
           ),
         ],
       ),

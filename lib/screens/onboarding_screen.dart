@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../services/storage_service.dart';
+import '../config/theme_config.dart';
+import '../widgets/theme_toggle_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -16,32 +18,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
-      title: 'Bienvenido a TaskControl',
+      title: 'TaskControl Pro',
       description:
-          'Tu plataforma de gestión de tareas empresariales. Organiza, delega y monitorea el trabajo de tu equipo de manera eficiente.',
+          'Sistema integral de gestión empresarial. Administra empresas, trabajadores y tareas desde un solo lugar.',
       icon: Icons.business_center,
-      gradient: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
-    ),
-    OnboardingPage(
-      title: 'Gestión Inteligente de Tareas',
-      description:
-          'Asigna tareas con capacidades específicas, establece prioridades y fechas límite. Mantén tu equipo enfocado en lo importante.',
-      icon: Icons.assignment_turned_in,
       gradient: [Color(0xFF7C3AED), Color(0xFFEC4899)],
     ),
     OnboardingPage(
-      title: 'Monitoreo en Tiempo Real',
+      title: 'Gestión Multinivel',
       description:
-          'Visualiza el progreso de tareas, identifica cuellos de botella y toma decisiones basadas en datos actualizados.',
-      icon: Icons.analytics,
+          'Super Admins aprueban empresas. Admins de Empresa crean tareas con capacidades requeridas. Trabajadores ejecutan y reportan.',
+      icon: Icons.supervisor_account,
+      gradient: [Color(0xFF135BEC), Color(0xFF7C3AED)],
+    ),
+    OnboardingPage(
+      title: 'Asignación Inteligente',
+      description:
+          'Asigna tareas según capacidades del trabajador. Establece prioridades, fechas límite y departamentos específicos.',
+      icon: Icons.assignment_turned_in,
       gradient: [Color(0xFFEC4899), Color(0xFFF59E0B)],
     ),
     OnboardingPage(
-      title: 'Colaboración sin Límites',
+      title: 'Seguimiento Completo',
       description:
-          'Facilita la comunicación entre tu equipo. Cada miembro sabe qué hacer y cuándo, aumentando la productividad general.',
-      icon: Icons.groups,
-      gradient: [Color(0xFFF59E0B), Color(0xFF4F46E5)],
+          'Estados de tareas: Pendiente, Asignada, Aceptada, En Progreso, Finalizada. Visualiza estadísticas y progreso en tiempo real.',
+      icon: Icons.analytics,
+      gradient: [Color(0xFF10B981), Color(0xFF135BEC)],
+    ),
+    OnboardingPage(
+      title: 'Comunicación Directa',
+      description:
+          'Chat integrado para coordinación. Los trabajadores pueden reportar avances y solicitar ayuda directamente desde las tareas.',
+      icon: Icons.chat_bubble_outline,
+      gradient: [Color(0xFFF59E0B), Color(0xFFEF4444)],
     ),
   ];
 
@@ -62,27 +71,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
       body: SafeArea(
         child: Column(
           children: [
-            // Skip Button
+            // Header: Theme Toggle + Skip Button
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: _completeOnboarding,
-                  child: const Text(
-                    'Saltar',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF4F46E5),
+              padding: const EdgeInsets.all(AppTheme.spaceRegular),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const ThemeToggleButton(),
+                  TextButton(
+                    onPressed: _completeOnboarding,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.spaceRegular,
+                        vertical: AppTheme.spaceSmall,
+                      ),
+                    ),
+                    child: Text(
+                      'Saltar',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeMedium,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryPurple,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
 
@@ -104,22 +124,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             // Page Indicator
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24.0),
+              padding: const EdgeInsets.symmetric(vertical: AppTheme.spaceLarge),
               child: SmoothPageIndicator(
                 controller: _pageController,
                 count: _pages.length,
-                effect: const WormEffect(
+                effect: WormEffect(
                   dotHeight: 10,
                   dotWidth: 10,
-                  activeDotColor: Color(0xFF4F46E5),
-                  dotColor: Color(0xFFE5E7EB),
+                  activeDotColor: AppTheme.primaryPurple,
+                  dotColor: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
                 ),
               ),
             ),
 
             // Next/Get Started Button
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(AppTheme.spaceLarge),
               child: SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -135,11 +155,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4F46E5),
+                    backgroundColor: AppTheme.primaryPurple,
                     foregroundColor: Colors.white,
-                    elevation: 0,
+                    elevation: AppTheme.elevationNone,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                     ),
                   ),
                   child: Text(
@@ -147,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ? 'Comenzar'
                         : 'Siguiente',
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: AppTheme.fontSizeMedium,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -161,60 +181,62 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPage(OnboardingPage page) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceXLarge),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Icon with gradient background
           Container(
-            width: 160,
-            height: 160,
+            width: 180,
+            height: 180,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: page.gradient,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(80),
+              borderRadius: BorderRadius.circular(90),
               boxShadow: [
                 BoxShadow(
-                  color: page.gradient[0].withOpacity(0.3),
-                  blurRadius: 30,
-                  offset: const Offset(0, 15),
+                  color: page.gradient[0].withOpacity(isDark ? 0.5 : 0.3),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
                 ),
               ],
             ),
             child: Icon(
               page.icon,
-              size: 80,
+              size: AppTheme.iconLarge * 2.5,
               color: Colors.white,
             ),
           ),
 
-          const SizedBox(height: 48),
+          const SizedBox(height: AppTheme.spaceXXLarge),
 
           // Title
           Text(
             page.title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 28,
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeXXLarge,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
               height: 1.2,
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: AppTheme.spaceLarge),
 
           // Description
           Text(
             page.description,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Color(0xFF6B7280),
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeMedium,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
               height: 1.5,
             ),
           ),

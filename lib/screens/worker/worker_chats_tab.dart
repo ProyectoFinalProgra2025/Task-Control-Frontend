@@ -76,14 +76,18 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
+    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : const Color(0xFFF6F6F8),
+      backgroundColor: backgroundColor,
       body: Column(
         children: [
           // Header
           Container(
-            color: isDark ? Colors.black : const Color(0xFFF6F6F8),
+            color: backgroundColor,
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -97,7 +101,7 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : Colors.grey[900],
+                            color: textPrimary,
                           ),
                         ),
                         IconButton(
@@ -121,19 +125,31 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
                       decoration: InputDecoration(
                         hintText: 'Search by name or task...',
                         hintStyle: TextStyle(
-                          color: isDark ? Colors.grey[600] : Colors.grey[400],
+                          color: textSecondary,
                         ),
                         prefixIcon: Icon(
                           Icons.search,
-                          color: isDark ? Colors.grey[600] : Colors.grey[400],
+                          color: textSecondary,
                         ),
                         filled: true,
-                        fillColor: isDark
-                            ? Colors.grey[900]!.withOpacity(0.5)
-                            : Colors.grey[200]!.withOpacity(0.5),
+                        fillColor: cardColor,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF135bec),
+                          ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -141,7 +157,7 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
                         ),
                       ),
                       style: TextStyle(
-                        color: isDark ? Colors.white : Colors.grey[900],
+                        color: textPrimary,
                       ),
                     ),
                   ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../widgets/create_task_modal.dart';
+import '../../widgets/theme_toggle_button.dart';
 
 class AdminHomeTab extends StatefulWidget {
   const AdminHomeTab({super.key});
@@ -49,6 +50,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                           child: Icon(Icons.person, color: const Color(0xFF135bec)),
                         ),
                         const Spacer(),
+                        const ThemeToggleButton(),
                         IconButton(
                           icon: Icon(Icons.notifications_outlined, color: textPrimary),
                           onPressed: () {},

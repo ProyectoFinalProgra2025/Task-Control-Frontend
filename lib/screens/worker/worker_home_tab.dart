@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/theme_toggle_button.dart';
 
 class WorkerHomeTab extends StatefulWidget {
   const WorkerHomeTab({super.key});
@@ -28,9 +29,13 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
+    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : const Color(0xFFF6F6F8),
+      backgroundColor: backgroundColor,
       body: RefreshIndicator(
         onRefresh: _refreshData,
         child: CustomScrollView(
@@ -38,7 +43,7 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
             // App Bar
             SliverAppBar(
               pinned: true,
-              backgroundColor: isDark ? Colors.black : const Color(0xFFF6F6F8),
+              backgroundColor: backgroundColor,
               elevation: 0,
               toolbarHeight: 80,
               flexibleSpace: SafeArea(
@@ -55,15 +60,20 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                             backgroundColor: const Color(0xFF135BEC),
                             child: const Icon(Icons.person, color: Colors.white),
                           ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.notifications_outlined,
-                              color: isDark ? Colors.white : Colors.grey[800],
-                              size: 28,
-                            ),
-                            onPressed: () {
-                              // TODO: Navigate to notifications
-                            },
+                          Row(
+                            children: [
+                              const ThemeToggleButton(),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.notifications_outlined,
+                                  color: textPrimary,
+                                  size: 28,
+                                ),
+                                onPressed: () {
+                                  // TODO: Navigate to notifications
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -73,7 +83,7 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.grey[900],
+                          color: textPrimary,
                         ),
                       ),
                     ],
@@ -141,13 +151,17 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
     required String value,
     required bool isDark,
   }) {
+    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+          color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
         ),
       ),
       child: Column(
@@ -158,7 +172,7 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: isDark ? const Color(0xFF92A4C9) : Colors.grey[600],
+              color: textSecondary,
             ),
           ),
           const SizedBox(height: 8),
@@ -167,7 +181,7 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
             style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.grey[900],
+              color: textPrimary,
             ),
           ),
         ],
@@ -176,6 +190,9 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
   }
 
   Widget _buildViewAllTasksCard({required bool isDark}) {
+    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
+    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+
     return InkWell(
       onTap: () {
         // TODO: Navigate to all tasks screen
@@ -184,10 +201,10 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          color: cardColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+            color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
           ),
         ),
         child: Column(
@@ -198,7 +215,7 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: isDark ? const Color(0xFF92A4C9) : Colors.grey[600],
+                color: textSecondary,
               ),
             ),
             const SizedBox(height: 8),
@@ -217,12 +234,16 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
   }
 
   Widget _buildTaskCard({required bool isDark}) {
+    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+          color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
         ),
         boxShadow: [
           BoxShadow(
@@ -248,7 +269,7 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.grey[900],
+                          color: textPrimary,
                         ),
                       ),
                     ),
@@ -278,7 +299,7 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                   _activeTaskDescription,
                   style: TextStyle(
                     fontSize: 16,
-                    color: isDark ? const Color(0xFF92A4C9) : Colors.grey[600],
+                    color: textSecondary,
                   ),
                 ),
                 const SizedBox(height: 16),
