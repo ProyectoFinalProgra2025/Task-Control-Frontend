@@ -72,16 +72,29 @@ class EmpresaService {
   }
 
   // ========== OBTENER ESTADÍSTICAS DE EMPRESA ==========
-  Future<EmpresaEstadisticasModel> obtenerEstadisticas(int empresaId) async {
+  Future<Map<String, dynamic>> obtenerEstadisticas(int empresaId) async {
     final response = await _http.get('/api/Empresas/$empresaId/estadisticas');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      return EmpresaEstadisticasModel.fromJson(jsonResponse['data']);
+      return jsonResponse['data'];
     } else if (response.statusCode == 404) {
       throw Exception('Empresa no encontrada');
     } else if (response.statusCode == 403) {
       throw Exception('No tienes permisos para ver las estadísticas');
+    } else {
+      throw Exception('Error al obtener estadísticas: ${response.statusCode}');
+    }
+  }
+  
+  // ========== OBTENER MIS ESTADÍSTICAS (empresa autenticada) ==========
+  Future<Map<String, dynamic>> obtenerMisEstadisticas() async {
+    // El backend obtiene el empresaId del JWT automáticamente
+    final response = await _http.get('/api/Empresas/me/estadisticas');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse['data'];
     } else {
       throw Exception('Error al obtener estadísticas: ${response.statusCode}');
     }
@@ -104,9 +117,11 @@ class EmpresaService {
     for (var empresa in empresas.where((e) => e.isApproved)) {
       try {
         final stats = await obtenerEstadisticas(empresa.id);
-        totalTrabajadores += stats.totalTrabajadores;
-        tareasActivas += (stats.tareasPendientes + stats.tareasAsignadas + stats.tareasAceptadas);
-        tareasCompletadas += stats.tareasFinalizadas;
+        totalTrabajadores += (stats['totalTrabajadores'] as int? ?? 0);
+        tareasActivas += ((stats['tareasPendientes'] as int? ?? 0) + 
+                         (stats['tareasAsignadas'] as int? ?? 0) + 
+                         (stats['tareasAceptadas'] as int? ?? 0));
+        tareasCompletadas += (stats['tareasFinalizadas'] as int? ?? 0);
       } catch (e) {
         // Continuar si hay error en alguna empresa
         print('Error obteniendo stats de empresa ${empresa.id}: $e');

@@ -99,4 +99,11 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyThemeMode);
   }
+
+  // ========== EMPRESA ID ==========
+  
+  Future<int?> getEmpresaId() async {
+    final userData = await getUserData();
+    return userData?['empresaId'] as int?;
+  }
 }
