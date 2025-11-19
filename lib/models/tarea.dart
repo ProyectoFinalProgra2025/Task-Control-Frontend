@@ -152,3 +152,20 @@ class AsignarAutomaticoTareaDTO {
     };
   }
 }
+
+class FinalizarTareaDTO {
+  final String? evidenciaTexto;
+  final String? evidenciaImagenUrl;
+
+  FinalizarTareaDTO({
+    this.evidenciaTexto,
+    this.evidenciaImagenUrl,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (evidenciaTexto != null) 'evidenciaTexto': evidenciaTexto,
+      if (evidenciaImagenUrl != null) 'evidenciaImagenUrl': evidenciaImagenUrl,
+    };
+  }
+}

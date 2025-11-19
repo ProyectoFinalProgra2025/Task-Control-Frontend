@@ -10,8 +10,9 @@ class WorkerMainScreen extends StatefulWidget {
   State<WorkerMainScreen> createState() => _WorkerMainScreenState();
 }
 
-class _WorkerMainScreenState extends State<WorkerMainScreen> {
+class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
+  late PageController _pageController;
 
   final List<Widget> _tabs = const [
     WorkerHomeTab(),
@@ -20,48 +21,91 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onPageChanged(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
+  void _onNavItemTapped(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: _onPageChanged,
+        physics: const BouncingScrollPhysics(),
         children: _tabs,
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF192233) : Colors.white,
+          gradient: isDark
+              ? LinearGradient(
+                  colors: [Color(0xFF192233), Color(0xFF1a2942)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                )
+              : LinearGradient(
+                  colors: [Colors.white, Color(0xFFF8FAFC)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
+              color: isDark 
+                  ? Colors.black.withOpacity(0.4)
+                  : Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildNavItem(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home,
-                  label: 'Home',
+                  icon: Icons.dashboard_rounded,
+                  activeIcon: Icons.dashboard,
+                  label: 'Inicio',
                   index: 0,
+                  isDark: isDark,
                 ),
                 _buildNavItem(
-                  icon: Icons.chat_bubble_outline,
-                  activeIcon: Icons.chat_bubble,
-                  label: 'Chats',
+                  icon: Icons.chat_bubble_outline_rounded,
+                  activeIcon: Icons.chat_bubble_rounded,
+                  label: 'Mensajes',
                   index: 1,
+                  isDark: isDark,
                 ),
                 _buildNavItem(
-                  icon: Icons.person_outline,
-                  activeIcon: Icons.person,
-                  label: 'Profile',
+                  icon: Icons.account_circle_outlined,
+                  activeIcon: Icons.account_circle,
+                  label: 'Perfil',
                   index: 2,
+                  isDark: isDark,
                 ),
               ],
             ),
@@ -76,36 +120,60 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> {
     required IconData activeIcon,
     required String label,
     required int index,
+    required bool isDark,
   }) {
     final isActive = _currentIndex == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _currentIndex = index),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+        onTap: () => _onNavItemTapped(index),
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            gradient: isActive
+                ? const LinearGradient(
+                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF6366F1).withOpacity(0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 isActive ? activeIcon : icon,
                 color: isActive
-                    ? const Color(0xFF135bec)
+                    ? Colors.white
                     : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                size: 26,
+                size: 24,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                   color: isActive
-                      ? const Color(0xFF135bec)
+                      ? Colors.white
                       : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
+                  letterSpacing: 0.3,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ],
           ),

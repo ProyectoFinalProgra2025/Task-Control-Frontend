@@ -12,11 +12,17 @@ import 'services/storage_service.dart';
 import 'models/user_model.dart';
 import 'config/theme_config.dart';
 import 'providers/theme_provider.dart' as theme_prov;
+import 'providers/tarea_provider.dart';
+import 'providers/usuario_provider.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => theme_prov.ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => theme_prov.ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => TareaProvider()),
+        ChangeNotifierProvider(create: (_) => UsuarioProvider()),
+      ],
       child: const TaskControlApp(),
     ),
   );

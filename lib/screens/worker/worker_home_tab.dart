@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../widgets/theme_toggle_button.dart';
+import '../../providers/tarea_provider.dart';
+import '../../providers/usuario_provider.dart';
+import '../../models/tarea.dart';
+import '../../models/enums/estado_tarea.dart';
+import 'worker_tasks_list_screen.dart';
+// import 'worker_chat_detail_screen.dart'; // TODO: Descomentar cuando se implemente
 
 class WorkerHomeTab extends StatefulWidget {
   const WorkerHomeTab({super.key});
@@ -9,139 +16,161 @@ class WorkerHomeTab extends StatefulWidget {
 }
 
 class _WorkerHomeTabState extends State<WorkerHomeTab> {
-  // Mock data - Replace with actual API calls
-  final int _pendingTasks = 5;
-  final bool _hasActiveTask = true;
-  final String _activeTaskTitle = 'Fix AC Unit - Floor 3';
-  final String _activeTaskDescription =
-      'Repair the malfunctioning air conditioning unit in the main conference room on the third floor.';
-  final String _activeTaskJobNumber = 'J4582';
-  final String _activeTaskStatus = 'Doing';
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  Future<void> _loadData() async {
+    final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+    final usuarioProvider = Provider.of<UsuarioProvider>(context, listen: false);
+    await Future.wait([
+      tareaProvider.cargarMisTareas(),
+      usuarioProvider.cargarPerfil(),
+    ]);
+  }
 
   Future<void> _refreshData() async {
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() {});
-    }
+    await _loadData();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
     final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: RefreshIndicator(
-        onRefresh: _refreshData,
-        child: CustomScrollView(
-          slivers: [
-            // App Bar
-            SliverAppBar(
-              pinned: true,
-              backgroundColor: backgroundColor,
-              elevation: 0,
-              toolbarHeight: 80,
-              flexibleSpace: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Consumer2<TareaProvider, UsuarioProvider>(
+        builder: (context, tareaProvider, usuarioProvider, child) {
+          if (tareaProvider.isLoading || usuarioProvider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final tareasPendientes = tareaProvider.tareasPendientes.length;
+          final tareaActiva = tareaProvider.tareaActiva;
+          final nombreUsuario = usuarioProvider.usuario?.nombreCompleto ?? 'Usuario';
+
+          return RefreshIndicator(
+            onRefresh: _refreshData,
+            child: CustomScrollView(
+              slivers: [
+                // App Bar
+                SliverAppBar(
+                  pinned: true,
+                  backgroundColor: backgroundColor,
+                  elevation: 0,
+                  expandedHeight: 120,
+                  collapsedHeight: 120,
+                  flexibleSpace: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: const Color(0xFF135BEC),
-                            child: const Icon(Icons.person, color: Colors.white),
-                          ),
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const ThemeToggleButton(),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.notifications_outlined,
-                                  color: textPrimary,
-                                  size: 28,
-                                ),
-                                onPressed: () {
-                                  // TODO: Navigate to notifications
-                                },
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFF6366F1),
+                                child: const Icon(Icons.person, color: Colors.white, size: 20),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const ThemeToggleButton(),
+                                  const SizedBox(width: 4),
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.notifications_outlined,
+                                      color: textPrimary,
+                                      size: 24,
+                                    ),
+                                    padding: EdgeInsets.all(8),
+                                    constraints: BoxConstraints(),
+                                    onPressed: () {
+                                      // TODO: Navigate to notifications
+                                    },
+                                  ),
+                                ],
                               ),
                             ],
                           ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Hola, $nombreUsuario',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Hello, Alex',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: textPrimary,
+                    ),
+                  ),
+                ),
+                // Content
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Stats Cards
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                title: 'Tareas Pendientes',
+                                value: '$tareasPendientes',
+                                isDark: isDark,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildViewAllTasksCard(isDark: isDark),
+                            ),
+                          ],
                         ),
                       ),
+
+                      // Section Header
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: Text(
+                          'Tarea en Progreso',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.grey[900],
+                          ),
+                        ),
+                      ),
+
+                      // Task Card or Empty State
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        child: tareaActiva != null
+                            ? _buildTaskCard(tarea: tareaActiva, isDark: isDark)
+                            : _buildEmptyState(isDark: isDark),
+                      ),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
-              ),
+              ],
             ),
-            // Content
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Stats Cards
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
-                            title: 'Pending Tasks',
-                            value: '$_pendingTasks',
-                            isDark: isDark,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildViewAllTasksCard(isDark: isDark),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Section Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Text(
-                      'Task in Progress',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.grey[900],
-                      ),
-                    ),
-                  ),
-
-                  // Task Card or Empty State
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _hasActiveTask
-                        ? _buildTaskCard(isDark: isDark)
-                        : _buildEmptyState(isDark: isDark),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -151,18 +180,30 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
     required String value,
     required bool isDark,
   }) {
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
-
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
-        ),
+        gradient: isDark
+            ? LinearGradient(
+                colors: [Color(0xFF192233), Color(0xFF1a2942)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Color(0xFF6366F1).withOpacity(0.3),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,18 +211,19 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: textSecondary,
+              color: Colors.white.withOpacity(0.9),
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,
-              color: textPrimary,
+              color: Colors.white,
             ),
           ),
         ],
@@ -190,32 +232,51 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
   }
 
   Widget _buildViewAllTasksCard({required bool isDark}) {
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
-
     return InkWell(
       onTap: () {
-        // TODO: Navigate to all tasks screen
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const WorkerTasksListScreen(),
           ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: isDark
+              ? LinearGradient(
+                  colors: [Color(0xFF192233), Color(0xFF1a2942)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : LinearGradient(
+                  colors: [Color(0xFFEC4899), Color(0xFFF59E0B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withOpacity(0.3)
+                  : Color(0xFFEC4899).withOpacity(0.3),
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'View All Tasks',
+              'Ver Todas',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: textSecondary,
+                color: Colors.white.withOpacity(0.9),
+                letterSpacing: 0.5,
               ),
             ),
             const SizedBox(height: 8),
@@ -224,7 +285,7 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
               style: TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF135BEC),
+                color: Colors.white,
               ),
             ),
           ],
@@ -233,23 +294,65 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
     );
   }
 
-  Widget _buildTaskCard({required bool isDark}) {
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
+  Widget _buildTaskCard({required Tarea tarea, required bool isDark}) {
     final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
     final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
 
+    String getEstadoText(EstadoTarea estado) {
+      switch (estado) {
+        case EstadoTarea.asignada:
+          return 'Asignada';
+        case EstadoTarea.aceptada:
+          return 'En Progreso';
+        case EstadoTarea.finalizada:
+          return 'Finalizada';
+        case EstadoTarea.cancelada:
+          return 'Cancelada';
+        default:
+          return 'Pendiente';
+      }
+    }
+
+    Color getEstadoColor(EstadoTarea estado) {
+      switch (estado) {
+        case EstadoTarea.asignada:
+          return const Color(0xFF3B82F6);
+        case EstadoTarea.aceptada:
+          return const Color(0xFFF59E0B);
+        case EstadoTarea.finalizada:
+          return const Color(0xFF10B981);
+        case EstadoTarea.cancelada:
+          return const Color(0xFFEF4444);
+        default:
+          return Colors.grey;
+      }
+    }
+
     return Container(
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
+        gradient: isDark
+            ? LinearGradient(
+                colors: [Color(0xFF192233), Color(0xFF1a2942)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [Colors.white, Color(0xFFF8FAFC)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
+          color: isDark ? const Color(0xFF324467) : const Color(0xFFE2E8F0),
+          width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -265,12 +368,15 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                   children: [
                     Expanded(
                       child: Text(
-                        _activeTaskTitle,
+                        tarea.titulo,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: textPrimary,
+                          letterSpacing: 0.3,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -280,15 +386,28 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.2),
+                        gradient: LinearGradient(
+                          colors: [
+                            getEstadoColor(tarea.estado),
+                            getEstadoColor(tarea.estado).withOpacity(0.7),
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: getEstadoColor(tarea.estado).withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Text(
-                        _activeTaskStatus,
+                        getEstadoText(tarea.estado),
                         style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.orange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
@@ -296,90 +415,197 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  _activeTaskDescription,
+                  tarea.descripcion,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     color: textSecondary,
+                    height: 1.4,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Job #$_activeTaskJobNumber',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? const Color(0xFF92A4C9) : Colors.grey[500],
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: Navigate to chat
-                      },
-                      icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                      label: const Text('Chat'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF135BEC).withOpacity(0.2),
-                        foregroundColor: const Color(0xFF135BEC),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.tag,
+                          size: 16,
+                          color: textSecondary,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Tarea #${tarea.id}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
+                      ],
                     ),
+                    if (tarea.dueDate != null)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 16,
+                            color: textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
+                if (tarea.creadoPorNombre != null) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        size: 16,
+                        color: textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Creado por: ${tarea.creadoPorNombre}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
-          // Finished Button
+          // Action Buttons
           Container(
             decoration: BoxDecoration(
-              color: isDark ? Colors.black.withOpacity(0.3) : Colors.grey[50],
+              color: isDark
+                  ? Colors.black.withOpacity(0.2)
+                  : Colors.grey.shade50,
               border: Border(
                 top: BorderSide(
-                  color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                  color: isDark ? const Color(0xFF324467) : const Color(0xFFE2E8F0),
+                  width: 1,
                 ),
               ),
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
             ),
             padding: const EdgeInsets.all(12),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  _showFinishTaskDialog();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD93025),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+            child: Row(
+              children: [
+                // Chat Button
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      _openChatWithCreator(tarea);
+                    },
+                    icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                    label: const Text(
+                      'Chat',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark
+                          ? const Color(0xFF6366F1)
+                          : const Color(0xFF8B5CF6),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
-                child: const Text(
-                  'Finished',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(width: 10),
+                // Finish Button
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      _showFinishTaskDialog(tarea);
+                    },
+                    icon: const Icon(Icons.check_circle_outline, size: 16),
+                    label: const Text(
+                      'Finalizar',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _openChatWithCreator(Tarea tarea) {
+    final nombreCreador = tarea.creadoPorNombre ?? 'Creador de la tarea';
+
+    // Mostrar snackbar con información del creador
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Abriendo chat con $nombreCreador',
+        ),
+        backgroundColor: const Color(0xFF6366F1),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: Colors.white,
+          onPressed: () {},
+        ),
+      ),
+    );
+
+    // TODO: Navegar a la pantalla de chat cuando esté implementada
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (context) => WorkerChatDetailScreen(
+    //       otroUsuarioId: tarea.creadoPor,
+    //       otroUsuarioNombre: nombreCreador,
+    //       tareaId: tarea.id,
+    //     ),
+    //   ),
+    // );
   }
 
   Widget _buildEmptyState({required bool isDark}) {
@@ -423,32 +649,71 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
     );
   }
 
-  void _showFinishTaskDialog() {
+  void _showFinishTaskDialog(Tarea tarea) {
+    final evidenciaController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Complete Task'),
-        content: const Text('Are you sure you want to mark this task as finished?'),
+        title: const Text('Finalizar Tarea'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('¿Estás seguro de que deseas marcar "${tarea.titulo}" como finalizada?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: evidenciaController,
+              decoration: const InputDecoration(
+                labelText: 'Evidencia (opcional)',
+                hintText: 'Describe el trabajo realizado...',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // TODO: Complete task API call
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Task marked as finished'),
-                  backgroundColor: Colors.green,
-                ),
+              
+              final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+              final dto = FinalizarTareaDTO(
+                evidenciaTexto: evidenciaController.text.isNotEmpty 
+                    ? evidenciaController.text 
+                    : null,
               );
+
+              final success = await tareaProvider.finalizarTarea(tarea.id, dto);
+
+              if (!mounted) return;
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('¡Tarea finalizada exitosamente!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                await tareaProvider.cargarMisTareas();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(tareaProvider.error ?? 'Error al finalizar tarea'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD93025),
+              backgroundColor: Colors.green,
             ),
-            child: const Text('Finish'),
+            child: const Text('Finalizar'),
           ),
         ],
       ),

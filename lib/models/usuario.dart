@@ -44,19 +44,30 @@ class Usuario {
 }
 
 class CapacidadUsuario {
+  final int? capacidadId;
   final String nombre;
   final int nivel;
 
   CapacidadUsuario({
+    this.capacidadId,
     required this.nombre,
     required this.nivel,
   });
 
   factory CapacidadUsuario.fromJson(Map<String, dynamic> json) {
     return CapacidadUsuario(
+      capacidadId: json['capacidadId'],
       nombre: json['nombre'] ?? '',
       nivel: json['nivel'] ?? 1,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (capacidadId != null) 'capacidadId': capacidadId,
+      'nombre': nombre,
+      'nivel': nivel,
+    };
   }
 }
 

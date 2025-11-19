@@ -203,4 +203,69 @@ class TareaService {
       throw Exception('Error al aceptar tarea: $e');
     }
   }
+
+  /// Obtener tareas del trabajador autenticado (GET /api/tareas/mis)
+  Future<List<Tarea>> getMisTareas({
+    EstadoTarea? estado,
+    PrioridadTarea? prioridad,
+    Departamento? departamento,
+  }) async {
+    try {
+      final queryParams = <String, String>{};
+      if (estado != null) queryParams['estado'] = estado.value.toString();
+      if (prioridad != null) queryParams['prioridad'] = prioridad.value.toString();
+      if (departamento != null) queryParams['departamento'] = departamento.value.toString();
+
+      final queryString = queryParams.isNotEmpty
+          ? '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}'
+          : '';
+
+      final response = await _http.get('/api/tareas/mis$queryString');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final List<dynamic> tareasJson = data['data'] ?? [];
+          return tareasJson.map((json) => Tarea.fromJson(json)).toList();
+        } else {
+          throw Exception(data['message'] ?? 'Error al obtener mis tareas');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al obtener mis tareas');
+      }
+    } catch (e) {
+      throw Exception('Error al obtener mis tareas: $e');
+    }
+  }
+
+  /// Finalizar una tarea (solo Usuario/Worker) con evidencia
+  Future<void> finalizarTarea(int tareaId, FinalizarTareaDTO dto) async {
+    try {
+      final response = await _http.put(
+        '/api/tareas/$tareaId/finalizar',
+        body: dto.toJson(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Error al finalizar tarea');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('No autorizado. Solo trabajadores pueden finalizar tareas.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Tarea no encontrada');
+      } else if (response.statusCode == 422) {
+        throw Exception('Datos inválidos. Verifica los campos requeridos.');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al finalizar tarea');
+      }
+    } catch (e) {
+      throw Exception('Error al finalizar tarea: $e');
+    }
+  }
 }
