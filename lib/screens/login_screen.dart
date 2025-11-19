@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,6 +11,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
 
   String? emailError;
   String? passwordError;
@@ -28,12 +30,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isValidEmail(String email) {
     final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     return regex.hasMatch(email.trim());
-  }
-
-  // ─────────────────────── CREDENCIALES DE PRUEBA ───────────────────────
-  bool checkCredentials(String email, String password) {
-    return email == 'doctormengueche@gmail.com' &&
-           password == '123456789';
   }
 
   // ─────────────────────── VALIDACIÓN GENERAL ───────────────────────
@@ -72,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return valid;
   }
 
-  // ─────────────────────── LOGIN CON CREDENCIALES DE PRUEBA ───────────────────────
+  // ─────────────────────── LOGIN CON BACKEND REAL ───────────────────────
   Future<void> onLoginPressed() async {
     if (_isLoading) return;
     if (!validateInputs()) return;
@@ -81,36 +77,56 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // Simula tiempo de backend
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
 
-    if (!mounted) return;
+      final authResponse = await _authService.login(email, password);
 
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+      if (!mounted) return;
 
-    // Si no coincide con la cuenta de prueba → error
-    if (!checkCredentials(email, password)) {
+      // Login exitoso - navegar según el rol del usuario
+      String route = '/home';
+      if (authResponse.usuario.isAdminGeneral) {
+        route = '/super-admin';
+      } else if (authResponse.usuario.isAdminEmpresa) {
+        route = '/admin';
+      } else {
+        route = '/home';
+      }
+
+      Navigator.pushReplacementNamed(context, route);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Bienvenido, ${authResponse.usuario.nombreCompleto}!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      
       setState(() {
         _isLoading = false;
       });
 
+      String errorMessage = 'Error al iniciar sesión';
+      if (e.toString().contains('Credenciales incorrectas')) {
+        errorMessage = 'Credenciales incorrectas';
+      } else if (e.toString().contains('Connection refused') || 
+                 e.toString().contains('Failed host lookup')) {
+        errorMessage = 'No se pudo conectar al servidor. Verifica que el backend esté ejecutándose.';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Credenciales incorrectas"),
+        SnackBar(
+          content: Text(errorMessage),
           backgroundColor: Colors.redAccent,
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 3),
         ),
       );
-      return;
     }
-
-    // Si coincide → navegar al Home
-    setState(() {
-      _isLoading = false;
-    });
-
-    Navigator.pushReplacementNamed(context, '/home');
   }
 
   // ─────────────────────── BUILD ───────────────────────

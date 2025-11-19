@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chats - Company Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#005A9C",
+              "accent": "#46B3A9",
+              "background-light": "#F5F7FA",
+              "background-dark": "#101622",
+              "text-light-primary": "#333333",
+              "text-light-secondary": "#808080",
+              "text-dark-primary": "#FFFFFF",
+              "text-dark-secondary": "#92a4c9",
+              "border-light": "#E0E0E0",
+              "border-dark": "#324467",
+              "card-light": "#FFFFFF",
+              "card-dark": "#1a2233",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col overflow-x-hidden group/design-root">
+<!-- Main Content Area -->
+<div class="flex-1 pb-24">
+<!-- Top App Bar -->
+<div class="flex items-center bg-card-light dark:bg-card-dark p-4 pb-2 justify-between sticky top-0 z-10 shadow-sm dark:shadow-none">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-text-light-primary dark:text-text-dark-primary text-2xl">search</span>
+</div>
+<h2 class="text-text-light-primary dark:text-text-dark-primary text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Chats</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-primary dark:text-primary gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-3xl">add_circle</span>
+</button>
+</div>
+</div>
+<!-- Tabs -->
+<div class="bg-card-light dark:bg-card-dark">
+<div class="flex border-b border-border-light dark:border-border-dark px-4 gap-8">
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-primary text-primary pb-[13px] pt-4" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">All</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-light-secondary dark:text-text-dark-secondary pb-[13px] pt-4" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Teams</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-light-secondary dark:text-text-dark-secondary pb-[13px] pt-4" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Direct Messages</p>
+</a>
+</div>
+</div>
+<!-- Chat List -->
+<div class="flex flex-col pt-2 bg-background-light dark:bg-background-dark">
+<!-- List Item 1: Team with Unread -->
+<div class="flex items-center gap-4 bg-card-light dark:bg-card-dark px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Marketing Team group avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA2JKPkdTP2h5SFr4rba5NfOhYKjpFL2lkUaxIj3RdbfObwTrABzBvZbboVrkAeU2_O3MN9weGSI91cyllfJVj1MKJUVo4odYx-u1dt31WvNRHvkkmyvziYqYLagNw-5yzZfHq5uPx2QQ5QDim7PZhiylep8ysBxhZgufJiszEMj2sWAkbBJsKNX0NmWojxCFbrczg3-Wui2GLKyhAjRMcbm42hYX4Ro9WDepb0c0At5eZfCywDPlb_bCoKhEQ_u-sDthgQg1KQk3g");'></div>
+</div>
+<div class="flex flex-col justify-center min-w-0">
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-semibold leading-normal truncate">Marketing Team</p>
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal truncate">Alex: Sounds good, I'll review it and get back to you by EOD.</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end justify-between self-stretch pt-1">
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-xs font-normal leading-normal">10m ago</p>
+<div class="flex size-7 items-center justify-center">
+<div class="flex items-center justify-center size-5 rounded-full bg-accent text-white text-xs font-bold">2</div>
+</div>
+</div>
+</div>
+<!-- List Item 2: DM -->
+<div class="flex items-center gap-4 bg-card-light dark:bg-card-dark px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0" data-alt="Profile picture of Alice Johnson" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAk_k3QgYB9D9k9T-a79BZtB0lDv4IidI7drL6he7s7OzRDUsXgW7hxEoFZ_-Gr0H_hwpucsXZgWK3nof4cmeFtbxxbfwE2iVxaT__aj1TfJsqoVyl5Tkk_EjIUxQdKL4ENrFi7UD_tNoU4dCQ8E905mantJ6ya73DlryjEXUd1-8A9W5iKN0mqS6Ti89NkRwmty1suV08EFDCbA_iu6lBjmIey8sDui1vzikAZhY2LHbOvQl-wnRbGhgfCnVvRLCV21xksJaYGfeo");'></div>
+<div class="flex flex-col justify-center min-w-0">
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-semibold leading-normal truncate">Alice Johnson</p>
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal truncate">Okay, I've sent the updated document. Please check your email.</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end justify-between self-stretch pt-1">
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-xs font-normal leading-normal">2h ago</p>
+</div>
+</div>
+<!-- List Item 3: Project Group -->
+<div class="flex items-center gap-4 bg-card-light dark:bg-card-dark px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0" data-alt="Project Phoenix group avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD_Nqr0fiZzxWzmqqZe2I95cIvQO2vAMd_rDu-_tV0NtFEbsLjTbTHt5IbZttqpjQ6ULhULM_IRPgMRjognr5MMjBRhaoCiVTUOiqyhFySSlYXC3nZwwoc6i3WoLR9iwexNoJYrrgccVTGvbmpoEzDCAlI4r2liQ9mJq2CeMq7XUrQyGD0_D21q14kfxnRTTvTXx8Nejtq7XCsNjPDOS1IX8lZKNh3QNrHfxJ_KwyohyjE-llUTqL1Nktmm9lmeNk1PBQV5farcOp8");'></div>
+<div class="flex flex-col justify-center min-w-0">
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-semibold leading-normal truncate">Project Phoenix</p>
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal truncate">We need to finalize the Q3 budget by end of day tomorrow.</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end justify-between self-stretch pt-1">
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-xs font-normal leading-normal">Yesterday</p>
+</div>
+</div>
+<!-- List Item 4: DM with Unread -->
+<div class="flex items-center gap-4 bg-card-light dark:bg-card-dark px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Profile picture of David Chen" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDgDdKd-5Jvlt7edsnfF_qMCa_FQHVeso9s3K0DxQ8ghm1AV1NSvr2qmcsrAdnM_iWbF3e1Ua0DvRCW2_eNIj9iJdnnA652o-OVwy0X8EVYuZx7uS667RKRNL589zx-QWh8PRdTvgz2A3C_30R6_3xvk4CiNqE34nwpiDYAliCDxBGCJqGupdoXeYwrqA8MFYDYg9YOa029209aNw9S4Rs4G8Bc9dDh-uq14AxLZL-VMw-0YyuCy-QVE40eNtvncaz_Pa54a9na5-I");'></div>
+</div>
+<div class="flex flex-col justify-center min-w-0">
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-semibold leading-normal truncate">David Chen</p>
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal truncate">Can you approve my time off request?</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end justify-between self-stretch pt-1">
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-xs font-normal leading-normal">10/28/24</p>
+<div class="flex size-7 items-center justify-center">
+<div class="flex items-center justify-center size-5 rounded-full bg-accent text-white text-xs font-bold">1</div>
+</div>
+</div>
+</div>
+<!-- List Item 5: Another Team -->
+<div class="flex items-center gap-4 bg-card-light dark:bg-card-dark px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4 flex-1 min-w-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0" data-alt="Engineering team group avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD1nI96WvFT5xXJgywc2IFOlJwxdujQrQ0DP8JEVIsYU1qhX1gv4FLrL1xi1R_dhQi_yMtv8AsL0TOFC98Amc5iQZZFarQSuWQev9okJv6Gv9lMNCkuoZbT2SjiP1bNfsjUpc2sz8x3OXfOUNEkNTTYLRxTfO_OAM4O6sXhKtvwpGP5-7jv7FUoge-QlNx3qlwc4oEmWWn0KjJodmMDTAfFiFpfEbEVDEDQeyZs_93va0SJVp7ptZ7In82gx--_0LuiSo-6JCCRvCo");'></div>
+<div class="flex flex-col justify-center min-w-0">
+<p class="text-text-light-primary dark:text-text-dark-primary text-base font-semibold leading-normal truncate">Engineering</p>
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal truncate">You: Great, let's sync up on that tomorrow.</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end justify-between self-stretch pt-1">
+<p class="text-text-light-secondary dark:text-text-dark-secondary text-xs font-normal leading-normal">10/27/24</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark">
+<div class="flex justify-around items-center h-16">
+<a class="flex flex-col items-center justify-center w-full text-text-light-secondary dark:text-text-dark-secondary" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-xs mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full text-primary" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="text-xs mt-1 font-bold">Chats</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full text-text-light-secondary dark:text-text-dark-secondary" href="#">
+<span class="material-symbols-outlined">task_alt</span>
+<span class="text-xs mt-1">Tasks</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full text-text-light-secondary dark:text-text-dark-secondary" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-xs mt-1">Profile</span>
+</a>
+</div>
+</div>
+</div>
+</body></html>
