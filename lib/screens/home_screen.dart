@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
 import 'company_admin/admin_main_screen.dart';
+import 'worker/worker_main_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -154,202 +155,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     // Redirigir a la pantalla correspondiente según el rol
     if (rol == 'AdminGeneral') {
-      return _buildAdminGeneralHome();
+      // Redirect to SuperAdminMainScreen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacementNamed('/super-admin');
+      });
+      return Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFB794F6), Color(0xFF9F7AEA)],
+            ),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          ),
+        ),
+      );
     } else if (rol == 'AdminEmpresa') {
       return const AdminMainScreen();
+    } else if (rol == 'Usuario') {
+      // Trabajador usa el WorkerMainScreen
+      return const WorkerMainScreen();
     } else {
       return _buildUsuarioHome();
     }
-  }
-
-  // ========== HOME ADMIN GENERAL ==========
-  Widget _buildAdminGeneralHome() {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
-            stops: [0.0, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildModernAppBar('Admin General', const Color(0xFF4F46E5)),
-              Expanded(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(30),
-                          topRight: Radius.circular(30),
-                        ),
-                      ),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildModernWelcomeCard(),
-                            const SizedBox(height: 24),
-                            _buildStatsRow([
-                              {'label': 'Empresas', 'value': '12', 'icon': Icons.business, 'color': const Color(0xFF4F46E5)},
-                              {'label': 'Usuarios', 'value': '145', 'icon': Icons.people, 'color': const Color(0xFF7C3AED)},
-                            ]),
-                            const SizedBox(height: 28),
-                            const Text(
-                              'Panel de Control',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F2937),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildModernDashboardGrid([
-                              {
-                                'title': 'Gestión de Empresas',
-                                'icon': Icons.business,
-                                'color': const Color(0xFF4F46E5),
-                                'description': 'Administra las empresas registradas',
-                                'action': () => _showComingSoon(context, 'Gestión de empresas'),
-                              },
-                              {
-                                'title': 'Gestión de Usuarios',
-                                'icon': Icons.people,
-                                'color': const Color(0xFF7C3AED),
-                                'description': 'Administra usuarios del sistema',
-                                'action': () => _showComingSoon(context, 'Gestión de usuarios'),
-                              },
-                              {
-                                'title': 'Estadísticas Globales',
-                                'icon': Icons.analytics,
-                                'color': const Color(0xFFEC4899),
-                                'description': 'Visualiza métricas y reportes',
-                                'action': () => _showComingSoon(context, 'Estadísticas'),
-                              },
-                              {
-                                'title': 'Configuración',
-                                'icon': Icons.settings,
-                                'color': const Color(0xFFF59E0B),
-                                'description': 'Configura el sistema',
-                                'action': () => _showComingSoon(context, 'Configuración'),
-                              },
-                            ]),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ========== HOME ADMIN EMPRESA ==========
-  Widget _buildAdminEmpresaHome() {
-    final String nombreEmpresa = _userData!['nombreEmpresa'] ?? 'Mi Empresa';
-    
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF7C3AED), Color(0xFFEC4899)],
-            stops: [0.0, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildModernAppBar(nombreEmpresa, const Color(0xFF7C3AED)),
-              Expanded(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(30),
-                          topRight: Radius.circular(30),
-                        ),
-                      ),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildModernWelcomeCard(),
-                            const SizedBox(height: 24),
-                            _buildStatsRow([
-                              {'label': 'Tareas', 'value': '28', 'icon': Icons.assignment, 'color': const Color(0xFF7C3AED)},
-                              {'label': 'Trabajadores', 'value': '15', 'icon': Icons.groups, 'color': const Color(0xFFEC4899)},
-                            ]),
-                            const SizedBox(height: 28),
-                            const Text(
-                              'Panel de Empresa',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F2937),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildModernDashboardGrid([
-                              {
-                                'title': 'Gestión de Tareas',
-                                'icon': Icons.assignment_turned_in,
-                                'color': const Color(0xFF4F46E5),
-                                'description': 'Crea y asigna tareas',
-                                'action': () => _showComingSoon(context, 'Gestión de tareas'),
-                              },
-                              {
-                                'title': 'Mis Trabajadores',
-                                'icon': Icons.groups,
-                                'color': const Color(0xFF7C3AED),
-                                'description': 'Administra tu equipo',
-                                'action': () => _showComingSoon(context, 'Gestión de trabajadores'),
-                              },
-                              {
-                                'title': 'Estadísticas',
-                                'icon': Icons.bar_chart,
-                                'color': const Color(0xFFEC4899),
-                                'description': 'Rendimiento del equipo',
-                                'action': () => _showComingSoon(context, 'Estadísticas'),
-                              },
-                              {
-                                'title': 'Mi Empresa',
-                                'icon': Icons.business_center,
-                                'color': const Color(0xFFF59E0B),
-                                'description': 'Perfil empresarial',
-                                'action': () => _showComingSoon(context, 'Perfil de empresa'),
-                              },
-                            ]),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   // ========== HOME USUARIO (TRABAJADOR) ==========
@@ -595,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
             child: Row(
               children: [
-                Icon(Icons.email_outlined, color: Colors.white70, size: 16),
+                const Icon(Icons.email_outlined, color: Colors.white70, size: 16),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -620,7 +451,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
             child: Row(
               children: [
-                Icon(Icons.badge_outlined, color: Colors.white70, size: 16),
+                const Icon(Icons.badge_outlined, color: Colors.white70, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   rolDisplay,

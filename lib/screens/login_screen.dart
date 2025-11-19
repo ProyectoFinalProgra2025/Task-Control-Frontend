@@ -85,8 +85,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // Login exitoso - navegar según el rol
-      Navigator.pushReplacementNamed(context, '/home');
+      // Login exitoso - navegar según el rol del usuario
+      String route = '/home';
+      if (authResponse.usuario.isAdminGeneral) {
+        route = '/super-admin';
+      } else if (authResponse.usuario.isAdminEmpresa) {
+        route = '/admin';
+      } else {
+        route = '/home';
+      }
+
+      Navigator.pushReplacementNamed(context, route);
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

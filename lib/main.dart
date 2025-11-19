@@ -5,7 +5,10 @@ import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/company_admin/admin_main_screen.dart';
+import 'screens/super_admin/super_admin_main_screen.dart';
+import 'screens/worker/worker_main_screen.dart';
 import 'services/storage_service.dart';
+import 'models/user_model.dart';
 
 void main() {
   runApp(const TaskControlApp());
@@ -22,7 +25,31 @@ class TaskControlApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFF6F6F8),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF135BEC),
+          brightness: Brightness.light,
+        ),
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: Colors.black,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF135BEC),
+          brightness: Brightness.dark,
+          background: Colors.black,
+          surface: const Color(0xFF1A1A1A),
+        ),
+        cardColor: const Color(0xFF1A1A1A),
+        dialogBackgroundColor: const Color(0xFF1A1A1A),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+        ),
+      ),
+      themeMode: ThemeMode.system,
       home: const InitialRouteHandler(),
       routes: {
         '/onboarding': (context) => const OnboardingScreen(),
@@ -30,6 +57,8 @@ class TaskControlApp extends StatelessWidget {
         '/signup': (context) => const SignUpScreen(),
         '/home': (context) => const HomeScreen(),
         '/admin': (context) => const AdminMainScreen(),
+        '/super-admin': (context) => const SuperAdminMainScreen(),
+        '/worker': (context) => const WorkerMainScreen(),
       },
     );
   }
@@ -61,8 +90,25 @@ class _InitialRouteHandlerState extends State<InitialRouteHandler> {
     final isAuthenticated = await _storage.isAuthenticated();
     
     if (isAuthenticated) {
-      // Si está autenticado, ir directo al home
-      Navigator.of(context).pushReplacementNamed('/home');
+      // Verificar el rol del usuario para enviarlo a la pantalla correcta
+      final userData = await _storage.getUserData();
+      if (userData != null) {
+        final user = UserModel.fromJson(userData);
+        
+        if (user.isAdminGeneral) {
+          // Admin General va al dashboard de super admin
+          Navigator.of(context).pushReplacementNamed('/super-admin');
+        } else if (user.isAdminEmpresa) {
+          // Admin de Empresa va al dashboard de admin
+          Navigator.of(context).pushReplacementNamed('/admin');
+        } else {
+          // Usuario normal va al home
+          Navigator.of(context).pushReplacementNamed('/home');
+        }
+      } else {
+        // Si no hay userData, ir al login
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
       return;
     }
 

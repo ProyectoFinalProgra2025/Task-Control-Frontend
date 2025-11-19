@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/auth_response.dart';
+import '../models/user_model.dart';
 import 'storage_service.dart';
 
 class AuthService {
@@ -23,14 +24,17 @@ class AuthService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final authResponse = AuthResponse.fromJson(jsonResponse['data']);
+      // Backend structure: {"success": true, "message": "...", "data": {...}}
+      final data = jsonResponse['data'] ?? {};
+      final authResponse = AuthResponse.fromJson(data);
       
       // Guardar tokens y datos del usuario
       await _storage.saveAuthResponse(authResponse);
       
       return authResponse;
     } else if (response.statusCode == 401) {
-      throw Exception('Credenciales incorrectas');
+      final jsonResponse = jsonDecode(response.body);
+      throw Exception(jsonResponse['message'] ?? 'Credenciales incorrectas');
     } else if (response.statusCode == 422) {
       throw Exception('Datos inválidos');
     } else {
@@ -96,20 +100,35 @@ class AuthService {
       url,
       headers: ApiConfig.headers,
       body: jsonEncode({
-        'refreshToken': refreshToken,
+        'RefreshToken': refreshToken,
       }),
     );
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final authResponse = AuthResponse.fromJson(jsonResponse['data']);
+      // Backend returns: {"success": true, "data": {"AccessToken": ..., "RefreshToken": ..., "ExpiresIn": ...}}
+      final data = jsonResponse['data'] ?? {};
+      
+      // Get current user data since refresh doesn't return it
+      final currentUserData = await _storage.getUserData();
+      if (currentUserData == null) {
+        throw Exception('No hay datos de usuario guardados');
+      }
+      
+      // Create AuthResponse with tokens and existing user data
+      final authResponse = AuthResponse(
+        accessToken: data['AccessToken'] ?? data['accessToken'] ?? '',
+        refreshToken: data['RefreshToken'] ?? data['refreshToken'] ?? '',
+        expiresIn: data['ExpiresIn'] ?? data['expiresIn'] ?? 3600,
+        usuario: UserModel.fromJson(currentUserData),
+      );
       
       // Actualizar tokens guardados
       await _storage.saveAuthResponse(authResponse);
       
       return authResponse;
     } else {
-      throw Exception('Error al renovar token');
+      throw Exception('Error al renovar token: ${response.statusCode}');
     }
   }
 
@@ -127,7 +146,7 @@ class AuthService {
           url,
           headers: ApiConfig.headersWithAuth(accessToken),
           body: jsonEncode({
-            'refreshToken': refreshToken,
+            'RefreshToken': refreshToken,
           }),
         );
       }
@@ -136,6 +155,40 @@ class AuthService {
     } finally {
       // Siempre limpiar datos locales
       await _storage.clearAuth();
+    }
+  }
+
+  // ========== VERIFY TOKEN (llamar a /api/usuarios/me) ==========
+  
+  Future<UserModel?> verifyToken() async {
+    try {
+      final accessToken = await _storage.getAccessToken();
+      if (accessToken == null) return null;
+
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/usuarios/me');
+      final response = await http.get(
+        url,
+        headers: ApiConfig.headersWithAuth(accessToken),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        final data = jsonResponse['data'] ?? {};
+        return UserModel.fromJson(data);
+      } else if (response.statusCode == 401) {
+        // Token expirado, intentar refresh
+        try {
+          await refreshToken();
+          return await verifyToken(); // Retry
+        } catch (e) {
+          await _storage.clearAuth();
+          return null;
+        }
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
     }
   }
 
