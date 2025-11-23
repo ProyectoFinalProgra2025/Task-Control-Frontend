@@ -50,7 +50,7 @@ class TareaService {
   }
 
   /// Obtener tarea por ID con detalles completos
-  Future<Tarea> getTareaById(int tareaId) async {
+  Future<Tarea> getTareaById(String tareaId) async {
     try {
       final response = await _http.get('/api/tareas/$tareaId');
 
@@ -75,7 +75,7 @@ class TareaService {
   }
 
   /// Crear una nueva tarea
-  Future<int> createTarea(CreateTareaDTO dto) async {
+  Future<String> createTarea(CreateTareaDTO dto) async {
     try {
       final response = await _http.post(
         '/api/tareas',
@@ -85,7 +85,7 @@ class TareaService {
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
-          return data['data']['id'] ?? 0;
+          return data['data']['id']?.toString() ?? '';
         } else {
           throw Exception(data['message'] ?? 'Error al crear tarea');
         }
@@ -103,7 +103,7 @@ class TareaService {
   }
 
   /// Asignar tarea manualmente a un usuario
-  Future<void> asignarManual(int tareaId, AsignarManualTareaDTO dto) async {
+  Future<void> asignarManual(String tareaId, AsignarManualTareaDTO dto) async {
     try {
       final response = await _http.put(
         '/api/tareas/$tareaId/asignar-manual',
@@ -129,7 +129,7 @@ class TareaService {
   }
 
   /// Asignar tarea automáticamente (el sistema elige el mejor candidato)
-  Future<void> asignarAutomatico(int tareaId, {bool forzarReasignacion = false}) async {
+  Future<void> asignarAutomatico(String tareaId, {bool forzarReasignacion = false}) async {
     try {
       final dto = AsignarAutomaticoTareaDTO(forzarReasignacion: forzarReasignacion);
       final response = await _http.put(
@@ -156,7 +156,7 @@ class TareaService {
   }
 
   /// Cancelar una tarea (solo AdminEmpresa)
-  Future<void> cancelarTarea(int tareaId, {String? motivo}) async {
+  Future<void> cancelarTarea(String tareaId, {String? motivo}) async {
     try {
       final response = await _http.put(
         '/api/tareas/$tareaId/cancelar',
@@ -182,7 +182,7 @@ class TareaService {
   }
 
   /// Aceptar una tarea (solo Usuario/Worker)
-  Future<void> aceptarTarea(int tareaId) async {
+  Future<void> aceptarTarea(String tareaId) async {
     try {
       final response = await _http.put('/api/tareas/$tareaId/aceptar');
 
@@ -242,7 +242,7 @@ class TareaService {
   }
 
   /// Finalizar una tarea (solo Usuario/Worker) con evidencia
-  Future<void> finalizarTarea(int tareaId, FinalizarTareaDTO dto) async {
+  Future<void> finalizarTarea(String tareaId, FinalizarTareaDTO dto) async {
     try {
       final response = await _http.put(
         '/api/tareas/$tareaId/finalizar',

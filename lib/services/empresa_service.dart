@@ -27,7 +27,7 @@ class EmpresaService {
   }
 
   // ========== APROBAR EMPRESA ==========
-  Future<void> aprobarEmpresa(int empresaId) async {
+  Future<void> aprobarEmpresa(String empresaId) async {
     final response = await _http.put('/api/Empresas/$empresaId/aprobar');
 
     if (response.statusCode == 200) {
@@ -42,7 +42,7 @@ class EmpresaService {
   }
 
   // ========== RECHAZAR EMPRESA ==========
-  Future<void> rechazarEmpresa(int empresaId) async {
+  Future<void> rechazarEmpresa(String empresaId) async {
     final response = await _http.put('/api/Empresas/$empresaId/rechazar');
 
     if (response.statusCode == 200) {
@@ -57,7 +57,7 @@ class EmpresaService {
   }
 
   // ========== ELIMINAR EMPRESA ==========
-  Future<void> eliminarEmpresa(int empresaId) async {
+  Future<void> eliminarEmpresa(String empresaId) async {
     final response = await _http.delete('/api/Empresas/$empresaId');
 
     if (response.statusCode == 200) {
@@ -72,7 +72,7 @@ class EmpresaService {
   }
 
   // ========== OBTENER ESTADÍSTICAS DE EMPRESA ==========
-  Future<Map<String, dynamic>> obtenerEstadisticas(int empresaId) async {
+  Future<Map<String, dynamic>> obtenerEstadisticas(String empresaId) async {
     final response = await _http.get('/api/Empresas/$empresaId/estadisticas');
 
     if (response.statusCode == 200) {

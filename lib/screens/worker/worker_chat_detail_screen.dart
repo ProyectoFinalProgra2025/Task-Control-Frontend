@@ -24,7 +24,7 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final StorageService _storage = StorageService();
-  int? _currentUserId;
+  String? _currentUserId;
   bool _isSending = false;
 
   @override
@@ -39,7 +39,7 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
     // Get current user ID
     final userData = await _storage.getUserData();
     setState(() {
-      _currentUserId = userData?['id'] as int?;
+      _currentUserId = userData?['id']?.toString();
     });
 
     // Load messages and join SignalR room

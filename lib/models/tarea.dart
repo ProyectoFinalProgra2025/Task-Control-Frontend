@@ -3,18 +3,18 @@ import 'enums/prioridad_tarea.dart';
 import 'enums/departamento.dart';
 
 class Tarea {
-  final int id;
+  final String id;
   final String titulo;
   final String descripcion;
   final PrioridadTarea prioridad;
   final EstadoTarea estado;
   final Departamento? departamento;
   final DateTime? dueDate;
-  final int empresaId;
-  final int? asignadoA;
+  final String empresaId;
+  final String? asignadoAUsuarioId;
   final String? asignadoANombre;
-  final int creadoPor;
-  final String? creadoPorNombre;
+  final String createdByUsuarioId;
+  final String createdByUsuarioNombre;
   final List<String> capacidadesRequeridas;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -28,10 +28,10 @@ class Tarea {
     this.departamento,
     this.dueDate,
     required this.empresaId,
-    this.asignadoA,
+    this.asignadoAUsuarioId,
     this.asignadoANombre,
-    required this.creadoPor,
-    this.creadoPorNombre,
+    required this.createdByUsuarioId,
+    required this.createdByUsuarioNombre,
     required this.capacidadesRequeridas,
     required this.createdAt,
     required this.updatedAt,
@@ -39,7 +39,7 @@ class Tarea {
 
   factory Tarea.fromJson(Map<String, dynamic> json) {
     return Tarea(
-      id: json['id'] ?? 0,
+      id: json['id']?.toString() ?? '',
       titulo: json['titulo'] ?? '',
       descripcion: json['descripcion'] ?? '',
       prioridad: json['prioridad'] != null
@@ -52,11 +52,11 @@ class Tarea {
           ? Departamento.fromValue(json['departamento'])
           : null,
       dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate']) : null,
-      empresaId: json['empresaId'] ?? 0,
-      asignadoA: json['asignadoA'],
+      empresaId: json['empresaId']?.toString() ?? '',
+      asignadoAUsuarioId: json['asignadoAUsuarioId']?.toString(),
       asignadoANombre: json['asignadoANombre'],
-      creadoPor: json['creadoPor'] ?? 0,
-      creadoPorNombre: json['creadoPorNombre'],
+      createdByUsuarioId: json['createdByUsuarioId']?.toString() ?? '',
+      createdByUsuarioNombre: json['createdByUsuarioNombre'] ?? '',
       capacidadesRequeridas: json['capacidadesRequeridas'] != null
           ? List<String>.from(json['capacidadesRequeridas'])
           : [],
@@ -79,10 +79,10 @@ class Tarea {
       'departamento': departamento?.value,
       'dueDate': dueDate?.toIso8601String(),
       'empresaId': empresaId,
-      'asignadoA': asignadoA,
+      'asignadoAUsuarioId': asignadoAUsuarioId,
       'asignadoANombre': asignadoANombre,
-      'creadoPor': creadoPor,
-      'creadoPorNombre': creadoPorNombre,
+      'createdByUsuarioId': createdByUsuarioId,
+      'createdByUsuarioNombre': createdByUsuarioNombre,
       'capacidadesRequeridas': capacidadesRequeridas,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -120,7 +120,7 @@ class CreateTareaDTO {
 }
 
 class AsignarManualTareaDTO {
-  final int? usuarioId;
+  final String? usuarioId;
   final String? nombreUsuario;
 
   AsignarManualTareaDTO({

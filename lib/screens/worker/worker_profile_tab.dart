@@ -267,7 +267,7 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
   Widget _buildCapacidadTile({
     required String nombre,
     required int nivel,
-    required int? capacidadId,
+    required String? capacidadId,
     required bool isDark,
   }) {
     final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
@@ -367,7 +367,7 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
     );
   }
 
-  Future<void> _deleteCapacidad(int capacidadId) async {
+  Future<void> _deleteCapacidad(String capacidadId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

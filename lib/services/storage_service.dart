@@ -102,8 +102,8 @@ class StorageService {
 
   // ========== EMPRESA ID ==========
   
-  Future<int?> getEmpresaId() async {
+  Future<String?> getEmpresaId() async {
     final userData = await getUserData();
-    return userData?['empresaId'] as int?;
+    return userData?['empresaId']?.toString();
   }
 }

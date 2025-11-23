@@ -50,7 +50,7 @@ class UsuarioProvider extends ChangeNotifier {
   }
 
   /// Eliminar una capacidad del perfil
-  Future<bool> eliminarCapacidad(int capacidadId) async {
+  Future<bool> eliminarCapacidad(String capacidadId) async {
     try {
       await _usuarioService.deleteMiCapacidad(capacidadId);
       // Actualizar localmente

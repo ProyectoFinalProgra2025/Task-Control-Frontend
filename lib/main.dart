@@ -9,7 +9,6 @@ import 'screens/company_admin/admin_main_screen.dart';
 import 'screens/super_admin/super_admin_main_screen.dart';
 import 'screens/worker/worker_main_screen.dart';
 import 'services/storage_service.dart';
-import 'models/user_model.dart';
 import 'config/theme_config.dart';
 import 'providers/theme_provider.dart' as theme_prov;
 import 'providers/tarea_provider.dart';
@@ -78,8 +77,17 @@ class _InitialRouteHandlerState extends State<InitialRouteHandler> {
   Future<void> _determineInitialRoute() async {
     // Pequeña pausa para mostrar el splash
     await Future.delayed(const Duration(seconds: 2));
-
+    
     if (!mounted) return;
+
+    // Verificar token almacenado
+    final token = await _storage.getAccessToken();
+    
+    // Si hay token, podríamos validar sesión aquí
+    if (token != null && token.isNotEmpty) {
+      // Usuario tiene sesión activa
+      // En el futuro, validar con el backend si el token es válido
+    }
 
     // ════════════════════════════════════════════════════════════
     // MODO DESARROLLO: SIEMPRE MOSTRAR ONBOARDING

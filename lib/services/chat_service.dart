@@ -34,7 +34,7 @@ class ChatService {
   }
 
   // Create 1:1 chat
-  Future<ChatModel> createOneToOneChat(int userId) async {
+  Future<ChatModel> createOneToOneChat(String userId) async{
     final token = await _getAuthToken();
     if (token == null) throw Exception('No authentication token');
 
@@ -63,7 +63,7 @@ class ChatService {
   }
 
   // Create group chat
-  Future<ChatModel> createGroupChat(String name, List<int> memberIds) async {
+  Future<ChatModel> createGroupChat(String name, List<String> memberIds) async {
     final token = await _getAuthToken();
     if (token == null) throw Exception('No authentication token');
 
@@ -159,7 +159,7 @@ class ChatService {
   }
 
   // Add member to group chat
-  Future<void> addMember(String chatId, int userId) async {
+  Future<void> addMember(String chatId, String userId) async{
     final token = await _getAuthToken();
     if (token == null) throw Exception('No authentication token');
 

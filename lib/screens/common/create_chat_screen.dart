@@ -18,7 +18,7 @@ class _CreateChatScreenState extends State<CreateChatScreen>
   final TextEditingController _groupNameController = TextEditingController();
   
   List<UserSearchResult> _searchResults = [];
-  final Set<int> _selectedUsers = {};
+  final Set<String> _selectedUsers = {};
   bool _isSearching = false;
   bool _isCreating = false;
 

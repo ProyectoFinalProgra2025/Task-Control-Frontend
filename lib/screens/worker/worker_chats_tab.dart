@@ -182,8 +182,6 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
   }
 
   Widget _buildChatItem(ChatModel chat, bool isDark) {
-    final hasUnread = false; // TODO: Implement unread count
-
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -229,10 +227,8 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
                       chat.lastMessage!.body,
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
-                        color: hasUnread
-                            ? const Color(0xFF135BEC)
-                            : (isDark ? Colors.grey[500] : Colors.grey[600]),
+                        fontWeight: FontWeight.normal,
+                        color: isDark ? Colors.grey[500] : Colors.grey[600],
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -248,9 +244,7 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
                 chat.lastMessage!.formattedTime,
                 style: TextStyle(
                   fontSize: 12,
-                  color: hasUnread
-                      ? const Color(0xFF135BEC)
-                      : (isDark ? Colors.grey[600] : Colors.grey[400]),
+                  color: isDark ? Colors.grey[600] : Colors.grey[400],
                 ),
               ),
           ],
