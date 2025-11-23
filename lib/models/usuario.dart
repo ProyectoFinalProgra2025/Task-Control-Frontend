@@ -1,10 +1,10 @@
 class Usuario {
-  final int id;
+  final String id;
   final String email;
   final String nombreCompleto;
   final String? telefono;
   final String rol;
-  final int? empresaId;
+  final String? empresaId;
   final String? departamento;
   final int? nivelHabilidad;
   final bool isActive;
@@ -25,12 +25,12 @@ class Usuario {
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
     return Usuario(
-      id: json['id'] ?? 0,
+      id: json['id']?.toString() ?? '',
       email: json['email'] ?? '',
       nombreCompleto: json['nombreCompleto'] ?? '',
       telefono: json['telefono'],
       rol: json['rol'] ?? 'Usuario',
-      empresaId: json['empresaId'],
+      empresaId: json['empresaId']?.toString(),
       departamento: json['departamento'],
       nivelHabilidad: json['nivelHabilidad'],
       isActive: json['isActive'] ?? true,
@@ -44,7 +44,7 @@ class Usuario {
 }
 
 class CapacidadUsuario {
-  final int? capacidadId;
+  final String? capacidadId;
   final String nombre;
   final int nivel;
 
@@ -56,7 +56,7 @@ class CapacidadUsuario {
 
   factory CapacidadUsuario.fromJson(Map<String, dynamic> json) {
     return CapacidadUsuario(
-      capacidadId: json['capacidadId'],
+      capacidadId: json['capacidadId']?.toString(),
       nombre: json['nombre'] ?? '',
       nivel: json['nivel'] ?? 1,
     );
@@ -72,7 +72,7 @@ class CapacidadUsuario {
 }
 
 class EmpresaEstadisticas {
-  final int empresaId;
+  final String empresaId;
   final String nombreEmpresa;
   final int totalTrabajadores;
   final int trabajadoresActivos;
@@ -98,7 +98,7 @@ class EmpresaEstadisticas {
 
   factory EmpresaEstadisticas.fromJson(Map<String, dynamic> json) {
     return EmpresaEstadisticas(
-      empresaId: json['empresaId'] ?? 0,
+      empresaId: json['empresaId']?.toString() ?? '',
       nombreEmpresa: json['nombreEmpresa'] ?? '',
       totalTrabajadores: json['totalTrabajadores'] ?? 0,
       trabajadoresActivos: json['trabajadoresActivos'] ?? 0,

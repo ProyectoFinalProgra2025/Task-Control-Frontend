@@ -530,13 +530,4 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
       MaterialPageRoute(builder: (context) => const TeamManagementScreen()),
     );
   }
-
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature coming soon!'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
 }

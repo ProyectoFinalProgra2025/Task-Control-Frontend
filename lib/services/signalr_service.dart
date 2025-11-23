@@ -56,7 +56,7 @@ class SignalRService {
           final message = MessageModel(
             id: messageData['id'] as String,
             chatId: messageData['chatId'] as String,
-            senderId: messageData['senderId'] as int,
+            senderId: messageData['senderId']?.toString() ?? '',
             body: messageData['body'] as String,
             createdAt: DateTime.parse(messageData['createdAt'] as String),
           );

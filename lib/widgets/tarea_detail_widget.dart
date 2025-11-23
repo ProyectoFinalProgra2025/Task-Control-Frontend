@@ -7,7 +7,7 @@ import '../services/tarea_service.dart';
 import '../services/usuario_service.dart';
 
 class TareaDetailWidget extends StatefulWidget {
-  final int tareaId;
+  final String tareaId;
 
   const TareaDetailWidget({super.key, required this.tareaId});
 
@@ -246,6 +246,7 @@ class _TareaDetailWidgetState extends State<TareaDetailWidget> {
       appBar: AppBar(
         backgroundColor: cardColor,
         elevation: 0,
+        surfaceTintColor: borderColor,
         title: const Text('Detalle de Tarea'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -468,7 +469,7 @@ class _TareaDetailWidgetState extends State<TareaDetailWidget> {
                                 _buildDetailRow(
                                   Icons.person_outline,
                                   'Creado por',
-                                  _tarea!.creadoPorNombre ?? 'Desconocido',
+                                  _tarea!.createdByUsuarioNombre,
                                   textSecondary,
                                   textPrimary,
                                 ),

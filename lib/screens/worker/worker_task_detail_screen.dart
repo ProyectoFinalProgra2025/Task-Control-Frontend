@@ -7,7 +7,7 @@ import '../../models/enums/estado_tarea.dart';
 import 'worker_chat_detail_screen.dart';
 
 class WorkerTaskDetailScreen extends StatefulWidget {
-  final int tareaId;
+  final String tareaId;
 
   const WorkerTaskDetailScreen({super.key, required this.tareaId});
 
@@ -237,17 +237,16 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
 
                       // Botón de Chat con Creador
                       const SizedBox(height: 16),
-                      if (_tarea!.creadoPor != null)
-                        OutlinedButton.icon(
-                          onPressed: () => _chatWithCreator(),
-                          icon: const Icon(Icons.chat_bubble_outline),
-                          label: Text(
-                            _tarea!.creadoPorNombre != null
-                                ? 'Chat con ${_tarea!.creadoPorNombre}'
-                                : 'Chat con Creador',
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF135BEC),
+                      OutlinedButton.icon(
+                        onPressed: () => _chatWithCreator(),
+                        icon: const Icon(Icons.chat_bubble_outline),
+                        label: Text(
+                          _tarea!.createdByUsuarioNombre.isNotEmpty
+                              ? 'Chat con ${_tarea!.createdByUsuarioNombre}'
+                              : 'Chat con Creador',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF135BEC),
                             side: const BorderSide(color: Color(0xFF135BEC)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -456,7 +455,7 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
   }
 
   Future<void> _chatWithCreator() async {
-    if (_tarea == null || _tarea!.creadoPor == 0) return;
+    if (_tarea == null || _tarea!.createdByUsuarioId.isEmpty) return;
 
     try {
       final chatProvider = Provider.of<ChatProvider>(context, listen: false);
@@ -471,7 +470,7 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
       );
 
       // Create or get existing chat with creator
-      final chat = await chatProvider.createOneToOneChat(_tarea!.creadoPor);
+      final chat = await chatProvider.createOneToOneChat(_tarea!.createdByUsuarioId);
 
       if (!mounted) return;
 
@@ -484,7 +483,7 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
         MaterialPageRoute(
           builder: (context) => WorkerChatDetailScreen(
             chatId: chat.id,
-            chatName: _tarea!.creadoPorNombre ?? 'Creador',
+            chatName: _tarea!.createdByUsuarioNombre,
             chatType: '1:1',
           ),
         ),

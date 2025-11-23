@@ -42,7 +42,7 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab> {
     }
   }
 
-  Future<void> _aprobarEmpresa(int id, String nombre) async {
+  Future<void> _aprobarEmpresa(String id, String nombre) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -97,7 +97,7 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab> {
     }
   }
 
-  Future<void> _rechazarEmpresa(int id, String nombre) async {
+  Future<void> _rechazarEmpresa(String id, String nombre) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -152,7 +152,7 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab> {
     }
   }
 
-  Future<void> _eliminarEmpresa(int id, String nombre) async {
+  Future<void> _eliminarEmpresa(String id, String nombre) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

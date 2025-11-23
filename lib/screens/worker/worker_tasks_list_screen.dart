@@ -161,8 +161,6 @@ class _WorkerTasksListScreenState extends State<WorkerTasksListScreen> {
           return Colors.orange;
         case PrioridadTarea.low:
           return Colors.green;
-        default:
-          return Colors.grey;
       }
     }
 
@@ -322,7 +320,7 @@ class _WorkerTasksListScreenState extends State<WorkerTasksListScreen> {
     );
   }
 
-  Future<void> _aceptarTarea(int tareaId) async {
+  Future<void> _aceptarTarea(String tareaId) async {
     final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
     final success = await tareaProvider.aceptarTarea(tareaId);
 

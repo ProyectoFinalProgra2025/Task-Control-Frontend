@@ -31,7 +31,7 @@ class UsuarioService {
   }
 
   /// Obtener un usuario por ID
-  Future<Usuario> getUsuarioById(int id) async {
+  Future<Usuario> getUsuarioById(String id) async {
     try {
       final response = await _http.get('/api/usuarios/$id');
 
@@ -56,7 +56,7 @@ class UsuarioService {
   }
 
   /// Eliminar un usuario
-  Future<void> deleteUsuario(int id) async {
+  Future<void> deleteUsuario(String id) async {
     try {
       final response = await _http.delete('/api/usuarios/$id');
 
@@ -102,7 +102,7 @@ class UsuarioService {
   }
 
   /// Actualizar capacidades de un usuario (AdminEmpresa)
-  Future<void> updateCapacidadesUsuario(int usuarioId, List<CapacidadNivelItem> capacidades) async {
+  Future<void> updateCapacidadesUsuario(String usuarioId, List<CapacidadNivelItem> capacidades) async {
     try {
       final response = await _http.put(
         '/api/usuarios/$usuarioId/capacidades',
@@ -154,7 +154,7 @@ class UsuarioService {
   }
 
   /// Eliminar una capacidad de mi perfil
-  Future<void> deleteMiCapacidad(int capacidadId) async {
+  Future<void> deleteMiCapacidad(String capacidadId) async {
     try {
       final response = await _http.delete('/api/usuarios/mis-capacidades/$capacidadId');
 
@@ -173,6 +173,31 @@ class UsuarioService {
       }
     } catch (e) {
       throw Exception('Error al eliminar capacidad: $e');
+    }
+  }
+
+  /// Crear un nuevo usuario (solo AdminEmpresa)
+  Future<String> createUsuario(Map<String, dynamic> dto) async {
+    try {
+      final response = await _http.post('/api/usuarios', body: dto);
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return data['data']['id']?.toString() ?? '';
+        } else {
+          throw Exception(data['message'] ?? 'Error al crear usuario');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
+      } else if (response.statusCode == 409) {
+        throw Exception('El email ya está registrado');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al crear usuario');
+      }
+    } catch (e) {
+      throw Exception('Error al crear usuario: $e');
     }
   }
 }

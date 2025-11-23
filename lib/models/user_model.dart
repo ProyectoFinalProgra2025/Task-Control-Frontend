@@ -1,10 +1,10 @@
 class UserModel {
-  final int id;
+  final String id;
   final String email;
   final String nombreCompleto;
   final String? telefono;
   final String rol; // AdminGeneral, AdminEmpresa, Usuario
-  final int? empresaId;
+  final String? empresaId;
   final String? nombreEmpresa;
 
   UserModel({
@@ -19,12 +19,12 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] ?? 0,
+      id: json['id']?.toString() ?? '',
       email: json['email'] ?? '',
       nombreCompleto: json['nombreCompleto'] ?? '',
       telefono: json['telefono'],
       rol: json['rol'] ?? 'Usuario',
-      empresaId: json['empresaId'],
+      empresaId: json['empresaId']?.toString(),
       nombreEmpresa: json['nombreEmpresa'],
     );
   }

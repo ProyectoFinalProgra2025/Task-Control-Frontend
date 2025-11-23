@@ -16,7 +16,6 @@ class ChatProvider with ChangeNotifier {
   String? _error;
   ChatModel? _currentChat;
   StreamSubscription? _messageSubscription;
-  int? _currentUserId;
 
   // Getters
   List<ChatModel> get chats => _chats;
@@ -34,7 +33,8 @@ class ChatProvider with ChangeNotifier {
   Future<void> _initializeCurrentUser() async {
     final userData = await _storage.getUserData();
     if (userData != null) {
-      _currentUserId = userData['id'] as int?;
+      // Inicialización del usuario actual
+      // En el futuro, usar para filtrar mensajes propios
     }
   }
 
@@ -151,7 +151,7 @@ class ChatProvider with ChangeNotifier {
   }
 
   // Create 1:1 chat
-  Future<ChatModel> createOneToOneChat(int userId) async {
+  Future<ChatModel> createOneToOneChat(String userId) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -177,7 +177,7 @@ class ChatProvider with ChangeNotifier {
   }
 
   // Create group chat
-  Future<ChatModel> createGroupChat(String name, List<int> memberIds) async {
+  Future<ChatModel> createGroupChat(String name, List<String> memberIds) async {
     _isLoading = true;
     _error = null;
     notifyListeners();

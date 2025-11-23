@@ -1,5 +1,5 @@
 class CreateOneToOneChatDto {
-  final int userId;
+  final String userId;
 
   CreateOneToOneChatDto({required this.userId});
 
@@ -10,7 +10,7 @@ class CreateOneToOneChatDto {
 
 class CreateGroupChatDto {
   final String name;
-  final List<int> memberIds;
+  final List<String> memberIds;
 
   CreateGroupChatDto({
     required this.name,
@@ -36,7 +36,7 @@ class SendMessageDto {
 }
 
 class AddMemberDto {
-  final int userId;
+  final String userId;
 
   AddMemberDto({required this.userId});
 

@@ -3,10 +3,11 @@ import 'package:provider/provider.dart';
 import '../../widgets/theme_toggle_button.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/usuario_provider.dart';
+import '../../providers/chat_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import 'worker_tasks_list_screen.dart';
-// import 'worker_chat_detail_screen.dart'; // TODO: Descomentar cuando se implemente
+import 'worker_chat_detail_screen.dart';
 
 class WorkerHomeTab extends StatefulWidget {
   const WorkerHomeTab({super.key});
@@ -467,7 +468,7 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                       ),
                   ],
                 ),
-                if (tarea.creadoPorNombre != null) ...[
+                if (tarea.createdByUsuarioNombre.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -478,7 +479,7 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Creado por: ${tarea.creadoPorNombre}',
+                        'Creado por: ${tarea.createdByUsuarioNombre}',
                         style: TextStyle(
                           fontSize: 13,
                           color: textSecondary,
@@ -573,39 +574,61 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
     );
   }
 
-  void _openChatWithCreator(Tarea tarea) {
-    final nombreCreador = tarea.creadoPorNombre ?? 'Creador de la tarea';
+  Future<void> _openChatWithCreator(Tarea tarea) async {
+    if (tarea.createdByUsuarioId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Esta tarea no tiene un creador asignado'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
-    // Mostrar snackbar con información del creador
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Abriendo chat con $nombreCreador',
+    try {
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF135BEC)),
         ),
-        backgroundColor: const Color(0xFF6366F1),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
-      ),
-    );
+      );
 
-    // TODO: Navegar a la pantalla de chat cuando esté implementada
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => WorkerChatDetailScreen(
-    //       otroUsuarioId: tarea.creadoPor,
-    //       otroUsuarioNombre: nombreCreador,
-    //       tareaId: tarea.id,
-    //     ),
-    //   ),
-    // );
+      // Create or get existing chat with creator
+      final chat = await chatProvider.createOneToOneChat(tarea.createdByUsuarioId);
+
+      if (!mounted) return;
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Navigate to chat
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WorkerChatDetailScreen(
+            chatId: chat.id,
+            chatName: tarea.createdByUsuarioNombre,
+            chatType: '1:1',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      
+      // Close loading if still showing
+      Navigator.of(context, rootNavigator: true).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al abrir chat: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildEmptyState({required bool isDark}) {

@@ -109,7 +109,7 @@ class ChatModel {
 }
 
 class ChatMemberModel {
-  final int userId;
+  final String userId;
   final String userName;
   final String email;
   final ChatRole role;
@@ -124,7 +124,7 @@ class ChatMemberModel {
   factory ChatMemberModel.fromJson(Map<String, dynamic> json) {
     try {
       return ChatMemberModel(
-        userId: json['userId'] as int? ?? 0,
+        userId: json['userId']?.toString() ?? '',
         userName: json['nombreCompleto']?.toString() ?? 
                   json['userName']?.toString() ?? 
                   json['email']?.toString() ?? 
@@ -154,7 +154,7 @@ class ChatMemberModel {
 class MessageModel {
   final String id;
   final String chatId;
-  final int senderId;
+  final String senderId;
   final String body;
   final DateTime createdAt;
 
@@ -171,7 +171,7 @@ class MessageModel {
       return MessageModel(
         id: json['id']?.toString() ?? '',
         chatId: json['chatId']?.toString() ?? '',
-        senderId: json['senderId'] as int? ?? 0,
+        senderId: json['senderId']?.toString() ?? '',
         body: json['body']?.toString() ?? '',
         createdAt: json['createdAt'] != null
             ? DateTime.parse(json['createdAt'].toString())
@@ -217,7 +217,7 @@ class MessageModel {
 }
 
 class UserSearchResult {
-  final int id;
+  final String id;
   final String nombreCompleto;
   final String email;
 
@@ -229,7 +229,7 @@ class UserSearchResult {
 
   factory UserSearchResult.fromJson(Map<String, dynamic> json) {
     return UserSearchResult(
-      id: json['id'] as int,
+      id: json['id']?.toString() ?? '',
       nombreCompleto: json['nombreCompleto'] as String,
       email: json['email'] as String,
     );

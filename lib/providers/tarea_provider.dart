@@ -61,7 +61,7 @@ class TareaProvider extends ChangeNotifier {
   }
 
   /// Obtener detalle de una tarea específica
-  Future<Tarea?> obtenerTareaDetalle(int tareaId) async {
+  Future<Tarea?> obtenerTareaDetalle(String tareaId) async {
     try {
       return await _tareaService.getTareaById(tareaId);
     } catch (e) {
@@ -72,7 +72,7 @@ class TareaProvider extends ChangeNotifier {
   }
 
   /// Aceptar una tarea
-  Future<bool> aceptarTarea(int tareaId) async {
+  Future<bool> aceptarTarea(String tareaId) async {
     try {
       await _tareaService.aceptarTarea(tareaId);
       // Actualizar la tarea localmente
@@ -87,10 +87,10 @@ class TareaProvider extends ChangeNotifier {
           departamento: _misTareas[index].departamento,
           dueDate: _misTareas[index].dueDate,
           empresaId: _misTareas[index].empresaId,
-          asignadoA: _misTareas[index].asignadoA,
+          asignadoAUsuarioId: _misTareas[index].asignadoAUsuarioId,
           asignadoANombre: _misTareas[index].asignadoANombre,
-          creadoPor: _misTareas[index].creadoPor,
-          creadoPorNombre: _misTareas[index].creadoPorNombre,
+          createdByUsuarioId: _misTareas[index].createdByUsuarioId,
+          createdByUsuarioNombre: _misTareas[index].createdByUsuarioNombre,
           capacidadesRequeridas: _misTareas[index].capacidadesRequeridas,
           createdAt: _misTareas[index].createdAt,
           updatedAt: DateTime.now(),
@@ -107,7 +107,7 @@ class TareaProvider extends ChangeNotifier {
   }
 
   /// Finalizar una tarea
-  Future<bool> finalizarTarea(int tareaId, FinalizarTareaDTO dto) async {
+  Future<bool> finalizarTarea(String tareaId, FinalizarTareaDTO dto) async{
     try {
       await _tareaService.finalizarTarea(tareaId, dto);
       // Actualizar la tarea localmente
@@ -122,10 +122,10 @@ class TareaProvider extends ChangeNotifier {
           departamento: _misTareas[index].departamento,
           dueDate: _misTareas[index].dueDate,
           empresaId: _misTareas[index].empresaId,
-          asignadoA: _misTareas[index].asignadoA,
+          asignadoAUsuarioId: _misTareas[index].asignadoAUsuarioId,
           asignadoANombre: _misTareas[index].asignadoANombre,
-          creadoPor: _misTareas[index].creadoPor,
-          creadoPorNombre: _misTareas[index].creadoPorNombre,
+          createdByUsuarioId: _misTareas[index].createdByUsuarioId,
+          createdByUsuarioNombre: _misTareas[index].createdByUsuarioNombre,
           capacidadesRequeridas: _misTareas[index].capacidadesRequeridas,
           createdAt: _misTareas[index].createdAt,
           updatedAt: DateTime.now(),

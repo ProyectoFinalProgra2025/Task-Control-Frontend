@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/usuario_service.dart';
 import '../../models/usuario.dart';
+import '../../widgets/create_user_modal.dart';
 
 class TeamManagementScreen extends StatefulWidget {
   const TeamManagementScreen({super.key});
@@ -45,7 +46,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
     }
   }
 
-  Future<void> _deleteUsuario(int id, String nombre) async {
+  Future<void> _deleteUsuario(String id, String nombre) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -152,7 +153,30 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                         },
                       ),
                     ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showCreateUserModal,
+        backgroundColor: const Color(0xFF135BEC),
+        icon: const Icon(Icons.person_add, color: Colors.white),
+        label: const Text(
+          'Crear Usuario',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
     );
+  }
+
+  void _showCreateUserModal() async {
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const CreateUserModal(),
+    );
+
+    // Si se creó un usuario, recargar la lista
+    if (result == true) {
+      _loadUsuarios();
+    }
   }
 
   Widget _buildUsuarioCard({
