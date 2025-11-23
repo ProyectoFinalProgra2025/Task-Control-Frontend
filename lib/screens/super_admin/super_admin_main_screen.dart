@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'super_admin_home_tab.dart';
 import 'super_admin_companies_tab.dart';
+import 'super_admin_chats_tab.dart';
 import 'super_admin_profile_tab.dart';
 
 class SuperAdminMainScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
   final List<Widget> _screens = [
     const SuperAdminHomeTab(),
     const SuperAdminCompaniesTab(),
+    const SuperAdminChatsTab(),
     const SuperAdminProfileTab(),
   ];
 
@@ -58,10 +60,16 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
                   index: 1,
                 ),
                 _buildNavItem(
+                  icon: Icons.chat_bubble_outline,
+                  activeIcon: Icons.chat_bubble,
+                  label: 'Chats',
+                  index: 2,
+                ),
+                _buildNavItem(
                   icon: Icons.person_outline,
                   activeIcon: Icons.person,
                   label: 'Perfil',
-                  index: 2,
+                  index: 3,
                 ),
               ],
             ),

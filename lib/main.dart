@@ -14,6 +14,7 @@ import 'config/theme_config.dart';
 import 'providers/theme_provider.dart' as theme_prov;
 import 'providers/tarea_provider.dart';
 import 'providers/usuario_provider.dart';
+import 'providers/chat_provider.dart';
 
 void main() {
   runApp(
@@ -22,6 +23,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => theme_prov.ThemeProvider()),
         ChangeNotifierProvider(create: (_) => TareaProvider()),
         ChangeNotifierProvider(create: (_) => UsuarioProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: const TaskControlApp(),
     ),

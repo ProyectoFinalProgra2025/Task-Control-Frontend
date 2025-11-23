@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/tarea_provider.dart';
+import '../../providers/chat_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
+import 'worker_chat_detail_screen.dart';
 
 class WorkerTaskDetailScreen extends StatefulWidget {
   final int tareaId;
@@ -233,8 +235,29 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
                         ),
                       ],
 
+                      // Botón de Chat con Creador
+                      const SizedBox(height: 16),
+                      if (_tarea!.creadoPor != null)
+                        OutlinedButton.icon(
+                          onPressed: () => _chatWithCreator(),
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          label: Text(
+                            _tarea!.creadoPorNombre != null
+                                ? 'Chat con ${_tarea!.creadoPorNombre}'
+                                : 'Chat con Creador',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF135BEC),
+                            side: const BorderSide(color: Color(0xFF135BEC)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+
                       // Botones de acción
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       if (_tarea!.estado == EstadoTarea.asignada)
                         SizedBox(
                           width: double.infinity,
@@ -429,6 +452,55 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _chatWithCreator() async {
+    if (_tarea == null || _tarea!.creadoPor == 0) return;
+
+    try {
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF135BEC)),
+        ),
+      );
+
+      // Create or get existing chat with creator
+      final chat = await chatProvider.createOneToOneChat(_tarea!.creadoPor);
+
+      if (!mounted) return;
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Navigate to chat
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WorkerChatDetailScreen(
+            chatId: chat.id,
+            chatName: _tarea!.creadoPorNombre ?? 'Creador',
+            chatType: '1:1',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      
+      // Close loading if still showing
+      Navigator.of(context, rootNavigator: true).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al abrir chat: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }
