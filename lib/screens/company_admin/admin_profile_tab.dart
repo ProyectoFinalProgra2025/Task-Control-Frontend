@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/usuario_service.dart';
+import '../../services/empresa_service.dart';
+import '../../models/usuario.dart';
 
 class AdminProfileTab extends StatefulWidget {
   const AdminProfileTab({super.key});
@@ -12,7 +15,11 @@ class AdminProfileTab extends StatefulWidget {
 class _AdminProfileTabState extends State<AdminProfileTab> {
   final StorageService _storage = StorageService();
   final AuthService _authService = AuthService();
+  final UsuarioService _usuarioService = UsuarioService();
+  final EmpresaService _empresaService = EmpresaService();
+  
   Map<String, dynamic>? _userData;
+  Usuario? _usuarioCompleto;
   bool _isLoading = true;
 
   @override
@@ -22,11 +29,45 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
   }
 
   Future<void> _loadUserData() async {
-    final userData = await _storage.getUserData();
-    setState(() {
-      _userData = userData;
-      _isLoading = false;
-    });
+    try {
+      // Obtener datos actualizados desde el backend
+      _usuarioCompleto = await _usuarioService.getMe();
+      
+      // Obtener nombre de la empresa usando el empresaId
+      String? nombreEmpresa;
+      final empresaId = _usuarioCompleto?.empresaId ?? await _storage.getEmpresaId();
+      
+      if (empresaId != null) {
+        try {
+          final estadisticas = await _empresaService.obtenerEstadisticas(empresaId);
+          nombreEmpresa = estadisticas['nombreEmpresa']?.toString();
+        } catch (e) {
+          nombreEmpresa = null;
+        }
+      }
+      
+      // Combinar datos del backend
+      setState(() {
+        _userData = {
+          'id': _usuarioCompleto!.id,
+          'email': _usuarioCompleto!.email,
+          'nombreCompleto': _usuarioCompleto!.nombreCompleto,
+          'telefono': _usuarioCompleto!.telefono,
+          'rol': _usuarioCompleto!.rol,
+          'empresaId': _usuarioCompleto!.empresaId,
+          'nombreEmpresa': nombreEmpresa,
+          'departamento': _usuarioCompleto!.departamento,
+        };
+        _isLoading = false;
+      });
+    } catch (e) {
+      // Si falla el backend, usar datos locales
+      final localUserData = await _storage.getUserData();
+      setState(() {
+        _userData = localUserData;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _handleLogout() async {
@@ -91,7 +132,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'My Profile',
+                  'Mi Perfil',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -142,7 +183,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Edit Profile'),
+                      child: const Text('Editar Perfil'),
                     ),
                   ],
                 ),
@@ -155,7 +196,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Personal Information',
+                      'Información Personal',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -179,7 +220,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                         children: [
                           _buildInfoItem(
                             icon: Icons.person,
-                            label: 'Full Name',
+                            label: 'Nombre Completo',
                             value: _userData?['nombreCompleto'] ?? 'N/A',
                             textPrimary: textPrimary,
                             textSecondary: textSecondary,
@@ -187,7 +228,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                           Divider(color: Colors.grey.withOpacity(0.2), height: 1),
                           _buildInfoItem(
                             icon: Icons.badge,
-                            label: 'Job Title',
+                            label: 'Titulo de Trabajo',
                             value: 'Project Manager',
                             textPrimary: textPrimary,
                             textSecondary: textSecondary,
@@ -195,7 +236,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                           Divider(color: Colors.grey.withOpacity(0.2), height: 1),
                           _buildInfoItem(
                             icon: Icons.email,
-                            label: 'Email Address',
+                            label: 'Correo Electronico',
                             value: _userData?['email'] ?? 'N/A',
                             textPrimary: textPrimary,
                             textSecondary: textSecondary,
@@ -203,7 +244,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                           Divider(color: Colors.grey.withOpacity(0.2), height: 1),
                           _buildInfoItem(
                             icon: Icons.phone,
-                            label: 'Phone',
+                            label: 'Telefono',
                             value: _userData?['telefono'] ?? 'N/A',
                             textPrimary: textPrimary,
                             textSecondary: textSecondary,
@@ -222,7 +263,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Company Information',
+                      'Información de la Empresa',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -246,7 +287,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                         children: [
                           _buildInfoItem(
                             icon: Icons.business,
-                            label: 'Company Name',
+                            label: 'Nombre de la Empresa',
                             value: _userData?['nombreEmpresa'] ?? 'N/A',
                             textPrimary: textPrimary,
                             textSecondary: textSecondary,
@@ -254,7 +295,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                           Divider(color: Colors.grey.withOpacity(0.2), height: 1),
                           _buildInfoItem(
                             icon: Icons.admin_panel_settings,
-                            label: 'Role',
+                            label: 'Rol',
                             value: _userData?['rol'] ?? 'Admin',
                             textPrimary: textPrimary,
                             textSecondary: textSecondary,
@@ -280,7 +321,7 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                     ),
                   ),
                   icon: const Icon(Icons.logout),
-                  label: const Text('Logout'),
+                  label: const Text('Cerrar Sesión'),
                 ),
               ),
               const SizedBox(height: 100), // Extra space for bottom nav
