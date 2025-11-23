@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/chat_provider.dart';
+import '../../models/chat_model.dart';
+import '../../services/storage_service.dart';
 
 class WorkerChatDetailScreen extends StatefulWidget {
   final String chatId;
@@ -19,68 +23,67 @@ class WorkerChatDetailScreen extends StatefulWidget {
 class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final StorageService _storage = StorageService();
+  int? _currentUserId;
+  bool _isSending = false;
 
-  // Mock messages - Replace with actual API calls
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'id': '1',
-      'text': 'Hi! Can you check the AC unit on floor 3?',
-      'isMine': false,
-      'time': '10:30 AM',
-      'senderName': 'Jane Doe',
-    },
-    {
-      'id': '2',
-      'text': 'Sure, I\'ll head there right now.',
-      'isMine': true,
-      'time': '10:32 AM',
-    },
-    {
-      'id': '3',
-      'text': 'Thanks! Let me know if you need any tools.',
-      'isMine': false,
-      'time': '10:33 AM',
-      'senderName': 'Jane Doe',
-    },
-    {
-      'id': '4',
-      'text': 'Sounds good, I\'ll get on it right away.',
-      'isMine': true,
-      'time': '10:42 AM',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadChatData();
+  }
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
-
+  Future<void> _loadChatData() async {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    
+    // Get current user ID
+    final userData = await _storage.getUserData();
     setState(() {
-      _messages.add({
-        'id': DateTime.now().toString(),
-        'text': _messageController.text.trim(),
-        'isMine': true,
-        'time': _formatTime(DateTime.now()),
-      });
+      _currentUserId = userData?['id'] as int?;
     });
 
-    _messageController.clear();
-    
-    // Scroll to bottom
-    Future.delayed(const Duration(milliseconds: 100), () {
+    // Load messages and join SignalR room
+    await chatProvider.loadMessages(widget.chatId);
+    await chatProvider.joinChatRoom(widget.chatId);
+
+    // Scroll to bottom after loading
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
-    });
-
-    // TODO: Send message to API
+    }
   }
 
-  String _formatTime(DateTime time) {
-    final hour = time.hour > 12 ? time.hour - 12 : time.hour;
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$minute $period';
+  Future<void> _sendMessage() async {
+    if (_messageController.text.trim().isEmpty || _isSending) return;
+
+    setState(() => _isSending = true);
+
+    try {
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      await chatProvider.sendMessage(widget.chatId, _messageController.text.trim());
+      
+      _messageController.clear();
+      
+      // Scroll to bottom after sending
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _scrollToBottom();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send message: $e')),
+      );
+    } finally {
+      setState(() => _isSending = false);
+    }
   }
 
   @override
@@ -100,7 +103,11 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
             CircleAvatar(
               radius: 18,
               backgroundColor: Colors.white.withOpacity(0.3),
-              child: const Icon(Icons.person, size: 20, color: Colors.white),
+              child: Icon(
+                widget.chatType == 'group' ? Icons.group : Icons.person,
+                size: 20,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -129,25 +136,79 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onPressed: () {
-              // TODO: Show chat options
+          Consumer<ChatProvider>(
+            builder: (context, chatProvider, child) {
+              return Icon(
+                chatProvider.isSignalRConnected ? Icons.circle : Icons.circle_outlined,
+                color: chatProvider.isSignalRConnected ? Colors.greenAccent : Colors.white70,
+                size: 12,
+              );
             },
           ),
+          const SizedBox(width: 16),
         ],
       ),
       body: Column(
         children: [
           // Messages List
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return _buildMessageBubble(message, isDark);
+            child: Consumer<ChatProvider>(
+              builder: (context, chatProvider, child) {
+                final messages = chatProvider.getMessages(widget.chatId);
+
+                if (messages.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No messages yet\nSend a message to start the conversation',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                      ),
+                    ),
+                  );
+                }
+
+                // Auto-scroll when new message arrives
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _scrollToBottom();
+                });
+
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final message = messages[index];
+                    final isMine = message.senderId == _currentUserId;
+                    
+                    // Show sender name for group chats on messages from others
+                    String? senderName;
+                    if (!isMine && widget.chatType == 'group') {
+                      // Try to find sender name from chat members
+                      final chat = chatProvider.chats.firstWhere(
+                        (c) => c.id == widget.chatId,
+                        orElse: () => ChatModel(
+                          id: widget.chatId,
+                          type: ChatType.group,
+                          members: [],
+                          createdAt: DateTime.now(),
+                        ),
+                      );
+                      final member = chat.members.firstWhere(
+                        (m) => m.userId == message.senderId,
+                        orElse: () => ChatMemberModel(
+                          userId: message.senderId,
+                          userName: 'User',
+                          email: '',
+                          role: ChatRole.member,
+                        ),
+                      );
+                      senderName = member.userName;
+                    }
+
+                    return _buildMessageBubble(message, isMine, senderName, isDark);
+                  },
+                );
               },
             ),
           ),
@@ -165,16 +226,6 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
             child: SafeArea(
               child: Row(
                 children: [
-                  // Attachment Button
-                  IconButton(
-                    icon: Icon(
-                      Icons.attach_file,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                    ),
-                    onPressed: () {
-                      // TODO: Attach file
-                    },
-                  ),
                   // Text Input
                   Expanded(
                     child: Container(
@@ -202,19 +253,31 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
                         ),
                         maxLines: null,
                         textCapitalization: TextCapitalization.sentences,
+                        enabled: !_isSending,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   // Send Button
                   Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF135BEC),
+                    decoration: BoxDecoration(
+                      color: _isSending
+                          ? Colors.grey
+                          : const Color(0xFF135BEC),
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: _sendMessage,
+                      icon: _isSending
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.send, color: Colors.white),
+                      onPressed: _isSending ? null : _sendMessage,
                     ),
                   ),
                 ],
@@ -226,20 +289,18 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
     );
   }
 
-  Widget _buildMessageBubble(Map<String, dynamic> message, bool isDark) {
-    final isMine = message['isMine'] as bool;
-
+  Widget _buildMessageBubble(MessageModel message, bool isMine, String? senderName, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         crossAxisAlignment:
             isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          if (!isMine && message['senderName'] != null)
+          if (!isMine && senderName != null)
             Padding(
               padding: const EdgeInsets.only(left: 12, bottom: 4),
               child: Text(
-                message['senderName'],
+                senderName,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -272,7 +333,7 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        message['text'],
+                        message.body,
                         style: TextStyle(
                           fontSize: 15,
                           color: isMine
@@ -282,7 +343,7 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        message['time'],
+                        message.detailTime,
                         style: TextStyle(
                           fontSize: 11,
                           color: isMine
@@ -303,6 +364,8 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
 
   @override
   void dispose() {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    chatProvider.leaveChatRoom(widget.chatId);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();

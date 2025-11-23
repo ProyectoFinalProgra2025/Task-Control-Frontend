@@ -5,14 +5,14 @@ import '../../models/chat_model.dart';
 import '../worker/worker_chat_detail_screen.dart';
 import '../common/create_chat_screen.dart';
 
-class AdminChatsTab extends StatefulWidget {
-  const AdminChatsTab({super.key});
+class SuperAdminChatsTab extends StatefulWidget {
+  const SuperAdminChatsTab({super.key});
 
   @override
-  State<AdminChatsTab> createState() => _AdminChatsTabState();
+  State<SuperAdminChatsTab> createState() => _SuperAdminChatsTabState();
 }
 
-class _AdminChatsTabState extends State<AdminChatsTab> {
+class _SuperAdminChatsTabState extends State<SuperAdminChatsTab> {
   @override
   void initState() {
     super.initState();
@@ -59,7 +59,7 @@ class _AdminChatsTabState extends State<AdminChatsTab> {
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.add_circle, color: Color(0xFF135BEC), size: 32),
+                    icon: const Icon(Icons.add_circle, color: Color(0xFF7C3AED), size: 32),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -77,7 +77,7 @@ class _AdminChatsTabState extends State<AdminChatsTab> {
                 builder: (context, chatProvider, child) {
                   if (chatProvider.isLoading && chatProvider.chats.isEmpty) {
                     return const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF135BEC)),
+                      child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
                     );
                   }
 
@@ -102,7 +102,7 @@ class _AdminChatsTabState extends State<AdminChatsTab> {
                           ElevatedButton(
                             onPressed: _loadChats,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF135BEC),
+                              backgroundColor: const Color(0xFF7C3AED),
                             ),
                             child: const Text('Retry'),
                           ),
@@ -124,7 +124,7 @@ class _AdminChatsTabState extends State<AdminChatsTab> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tap + to start a new conversation',
+                            'Tap + to contact company owners',
                             style: TextStyle(color: textSecondary),
                           ),
                         ],
@@ -134,7 +134,7 @@ class _AdminChatsTabState extends State<AdminChatsTab> {
 
                   return RefreshIndicator(
                     onRefresh: _loadChats,
-                    color: const Color(0xFF135BEC),
+                    color: const Color(0xFF7C3AED),
                     child: ListView.builder(
                       itemCount: chatProvider.chats.length,
                       itemBuilder: (context, index) {
@@ -185,10 +185,10 @@ class _AdminChatsTabState extends State<AdminChatsTab> {
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           leading: CircleAvatar(
             radius: 28,
-            backgroundColor: const Color(0xFF135BEC).withOpacity(0.1),
+            backgroundColor: const Color(0xFF7C3AED).withOpacity(0.1),
             child: Icon(
               isGroup ? Icons.group : Icons.person,
-              color: const Color(0xFF135BEC),
+              color: const Color(0xFF7C3AED),
             ),
           ),
           title: Text(

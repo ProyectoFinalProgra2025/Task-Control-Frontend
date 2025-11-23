@@ -17,6 +17,15 @@ class ApiConfig {
   // Endpoints de usuarios
   static const String usuariosEndpoint = '/api/Usuarios';
   
+  // Endpoints de chat
+  static const String usersSearchEndpoint = '/api/users/search';
+  static const String chatsEndpoint = '/api/chats';
+  static String chatMessagesEndpoint(String chatId) => '/api/chats/$chatId/messages';
+  static String chatMembersEndpoint(String chatId) => '/api/chats/$chatId/members';
+  
+  // SignalR Hub
+  static String get signalRHubUrl => '$baseUrl/apphub';
+  
   // Headers comunes
   static Map<String, String> get headers => {
     'Content-Type': 'application/json; charset=UTF-8',
