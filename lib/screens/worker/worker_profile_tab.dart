@@ -667,7 +667,7 @@ class _WorkerProfileTabState extends State<WorkerProfileTab> {
   }
 }
 
-// Bottom Sheet para seleccionar capacidades predefinidas
+// Bottom Sheet para seleccionar múltiples capacidades predefinidas
 class _CapacidadesWorkerSelectorSheet extends StatefulWidget {
   final UsuarioProvider usuarioProvider;
 
@@ -682,8 +682,29 @@ class _CapacidadesWorkerSelectorSheet extends StatefulWidget {
 
 class _CapacidadesWorkerSelectorSheetState
     extends State<_CapacidadesWorkerSelectorSheet> {
-  String? _selectedCapacidad;
-  int _nivelSeleccionado = 1;
+  // Map para almacenar múltiples capacidades seleccionadas con sus niveles
+  final Map<String, int> _capacidadesSeleccionadas = {};
+
+  void _showNivelSelector(String capacidad, int nivelActual, bool isDark) {
+    showDialog(
+      context: context,
+      builder: (context) => _NivelSelectorDialog(
+        capacidad: capacidad,
+        nivelInicial: nivelActual,
+        isDark: isDark,
+        onNivelSelected: (nivel) {
+          setState(() {
+            _capacidadesSeleccionadas[capacidad] = nivel;
+          });
+        },
+        onRemove: () {
+          setState(() {
+            _capacidadesSeleccionadas.remove(capacidad);
+          });
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -747,35 +768,53 @@ class _CapacidadesWorkerSelectorSheetState
                       ),
                     ),
                     TextButton(
-                      onPressed: _selectedCapacidad != null
+                      onPressed: _capacidadesSeleccionadas.isNotEmpty
                           ? () async {
                               Navigator.of(context).pop();
                               
-                              final capacidad = CapacidadNivelItem(
-                                nombre: _selectedCapacidad!,
-                                nivel: _nivelSeleccionado,
+                              // Mostrar progreso
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => const Center(
+                                  child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+                                ),
                               );
 
-                              final success =
-                                  await widget.usuarioProvider.agregarCapacidad(capacidad);
+                              // Convertir capacidades seleccionadas a lista
+                              final capacidadesAgregar = _capacidadesSeleccionadas.entries
+                                  .map((entry) => CapacidadNivelItem(
+                                        nombre: entry.key,
+                                        nivel: entry.value,
+                                      ))
+                                  .toList();
+
+                              final cantidadTotal = capacidadesAgregar.length;
+
+                              // Agregar todas las capacidades de una vez
+                              final success = await widget.usuarioProvider.agregarCapacidadesMultiples(capacidadesAgregar);
+
+                              // Limpiar selección
+                              _capacidadesSeleccionadas.clear();
 
                               if (!mounted) return;
 
+                              // Cerrar diálogo de progreso
+                              Navigator.of(context).pop();
+
+                              // Mostrar resultado
                               if (success) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Capacidad agregada exitosamente'),
-                                    backgroundColor: Color(0xFF10B981),
+                                  SnackBar(
+                                    content: Text('$cantidadTotal ${cantidadTotal == 1 ? "capacidad agregada" : "capacidades agregadas"} exitosamente'),
+                                    backgroundColor: const Color(0xFF10B981),
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text(
-                                      widget.usuarioProvider.error ??
-                                          'Error al agregar capacidad',
-                                    ),
+                                    content: Text('Error: ${widget.usuarioProvider.error ?? "No se pudieron agregar las capacidades"}'),
                                     backgroundColor: const Color(0xFFEF4444),
                                     behavior: SnackBarBehavior.floating,
                                   ),
@@ -784,9 +823,11 @@ class _CapacidadesWorkerSelectorSheetState
                             }
                           : null,
                       child: Text(
-                        'Agregar',
+                        _capacidadesSeleccionadas.isEmpty
+                            ? 'Agregar'
+                            : 'Agregar (${_capacidadesSeleccionadas.length})',
                         style: TextStyle(
-                          color: _selectedCapacidad != null
+                          color: _capacidadesSeleccionadas.isNotEmpty
                               ? (isDark ? const Color(0xFF6366F1) : Colors.white)
                               : Colors.grey,
                           fontWeight: FontWeight.bold,
@@ -798,10 +839,10 @@ class _CapacidadesWorkerSelectorSheetState
                 ),
               ),
 
-              // Nivel selector
-              if (_selectedCapacidad != null)
+              // Capacidades seleccionadas preview
+              if (_capacidadesSeleccionadas.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: isDark ? cardColor : const Color(0xFFF1F5F9),
                     border: Border(bottom: BorderSide(color: borderColor)),
@@ -810,45 +851,73 @@ class _CapacidadesWorkerSelectorSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Seleccionada: $_selectedCapacidad',
+                        'Capacidades seleccionadas (${_capacidadesSeleccionadas.length}):',
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                           color: textPrimary,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Nivel de dominio:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Row(
-                            children: List.generate(
-                              5,
-                              (index) => IconButton(
-                                icon: Icon(
-                                  index < _nivelSeleccionado
-                                      ? Icons.star
-                                      : Icons.star_border,
-                                  color: const Color(0xFFF59E0B),
-                                  size: 28,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _nivelSeleccionado = index + 1;
-                                  });
-                                },
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _capacidadesSeleccionadas.entries.map((entry) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
                               ),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF6366F1).withOpacity(0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  entry.key,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: List.generate(
+                                    entry.value,
+                                    (index) => const Icon(
+                                      Icons.star,
+                                      size: 12,
+                                      color: Color(0xFFF59E0B),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _capacidadesSeleccionadas.remove(entry.key);
+                                    });
+                                  },
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ],
                   ),
@@ -892,15 +961,15 @@ class _CapacidadesWorkerSelectorSheetState
                             ),
                           ),
                           ...entry.value.map((capacidad) {
-                            final isSelected = _selectedCapacidad == capacidad;
+                            final isSelected = _capacidadesSeleccionadas.containsKey(capacidad);
+                            final yaAgregada = widget.usuarioProvider.capacidades
+                                .any((c) => c.nombre == capacidad);
+                            final nivel = _capacidadesSeleccionadas[capacidad] ?? 1;
+                            
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedCapacidad = capacidad;
-                                  });
-                                },
+                                onTap: yaAgregada ? null : () => _showNivelSelector(capacidad, nivel, isDark),
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(
                                   padding: const EdgeInsets.all(16),
@@ -912,19 +981,18 @@ class _CapacidadesWorkerSelectorSheetState
                                             end: Alignment.bottomRight,
                                           )
                                         : null,
-                                    color: isSelected ? null : cardColor,
+                                    color: isSelected ? null : (yaAgregada ? (isDark ? const Color(0xFF0F1419) : const Color(0xFFE5E7EB)) : cardColor),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: isSelected
                                           ? const Color(0xFF6366F1)
-                                          : borderColor,
+                                          : (yaAgregada ? (isDark ? const Color(0xFF374151) : const Color(0xFFD1D5DB)) : borderColor),
                                       width: isSelected ? 2 : 1,
                                     ),
                                     boxShadow: isSelected
                                         ? [
                                             BoxShadow(
-                                              color:
-                                                  const Color(0xFF6366F1).withOpacity(0.3),
+                                              color: const Color(0xFF6366F1).withOpacity(0.3),
                                               blurRadius: 8,
                                               offset: const Offset(0, 4),
                                             ),
@@ -937,20 +1005,41 @@ class _CapacidadesWorkerSelectorSheetState
                                         child: Text(
                                           capacidad,
                                           style: TextStyle(
-                                            color: isSelected
-                                                ? Colors.white
-                                                : textPrimary,
+                                            color: isSelected ? Colors.white : (yaAgregada ? (isDark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF)) : textPrimary),
                                             fontSize: 15,
-                                            fontWeight: isSelected
-                                                ? FontWeight.w600
-                                                : FontWeight.w500,
+                                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                            decoration: yaAgregada ? TextDecoration.lineThrough : null,
                                           ),
                                         ),
                                       ),
-                                      if (isSelected)
+                                      if (yaAgregada) ...[
+                                        const Icon(
+                                          Icons.check_circle,
+                                          color: Color(0xFF10B981),
+                                          size: 24,
+                                        ),
+                                      ] else if (isSelected) ...[
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: List.generate(
+                                            nivel,
+                                            (index) => const Icon(
+                                              Icons.star,
+                                              size: 16,
+                                              color: Color(0xFFF59E0B),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
                                         const Icon(
                                           Icons.check_circle,
                                           color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ] else
+                                        const Icon(
+                                          Icons.add_circle_outline,
+                                          color: Color(0xFF6366F1),
                                           size: 24,
                                         ),
                                     ],
@@ -971,5 +1060,166 @@ class _CapacidadesWorkerSelectorSheetState
         );
       },
     );
+  }
+}
+
+// Dialog para seleccionar nivel de una capacidad
+class _NivelSelectorDialog extends StatefulWidget {
+  final String capacidad;
+  final int nivelInicial;
+  final bool isDark;
+  final Function(int) onNivelSelected;
+  final VoidCallback onRemove;
+
+  const _NivelSelectorDialog({
+    required this.capacidad,
+    required this.nivelInicial,
+    required this.isDark,
+    required this.onNivelSelected,
+    required this.onRemove,
+  });
+
+  @override
+  State<_NivelSelectorDialog> createState() => _NivelSelectorDialogState();
+}
+
+class _NivelSelectorDialogState extends State<_NivelSelectorDialog> {
+  late int _nivelSeleccionado;
+
+  @override
+  void initState() {
+    super.initState();
+    _nivelSeleccionado = widget.nivelInicial;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cardColor = widget.isDark ? const Color(0xFF192233) : Colors.white;
+    final textPrimary = widget.isDark ? const Color(0xFFF4F6F8) : const Color(0xFF212529);
+    final textSecondary = widget.isDark ? const Color(0xFF92a4c9) : const Color(0xFF6C757D);
+
+    return AlertDialog(
+      backgroundColor: cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Column(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.star, color: Colors.white, size: 30),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.capacidad,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: textPrimary,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Selecciona tu nivel de dominio:',
+            style: TextStyle(
+              fontSize: 14,
+              color: textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              5,
+              (index) => IconButton(
+                icon: Icon(
+                  index < _nivelSeleccionado ? Icons.star : Icons.star_border,
+                  color: const Color(0xFFF59E0B),
+                  size: 36,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _nivelSeleccionado = index + 1;
+                  });
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _getNivelText(_nivelSeleccionado),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: textPrimary,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        if (widget.nivelInicial > 0)
+          TextButton.icon(
+            onPressed: () {
+              widget.onRemove();
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
+            label: const Text(
+              'Quitar',
+              style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+            ),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancelar',
+            style: TextStyle(color: textSecondary, fontWeight: FontWeight.w600),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            widget.onNivelSelected(_nivelSeleccionado);
+            Navigator.pop(context);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6366F1),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          ),
+          child: const Text(
+            'Confirmar',
+            style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getNivelText(int nivel) {
+    switch (nivel) {
+      case 1:
+        return 'Principiante';
+      case 2:
+        return 'Básico';
+      case 3:
+        return 'Intermedio';
+      case 4:
+        return 'Avanzado';
+      case 5:
+        return 'Experto';
+      default:
+        return '';
+    }
   }
 }

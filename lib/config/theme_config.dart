@@ -65,7 +65,8 @@ class AppTheme {
   static const double radiusSmall = 8.0;
   static const double radiusMedium = 12.0;
   static const double radiusLarge = 16.0;
-  static const double radiusXLarge = 24.0;
+  static const double radiusXLarge = 20.0;
+  static const double radiusXXLarge = 24.0;
   static const double radiusCircle = 999.0;
 
   // Spacing
@@ -73,30 +74,39 @@ class AppTheme {
   static const double spaceSmall = 8.0;
   static const double spaceMedium = 12.0;
   static const double spaceRegular = 16.0;
-  static const double spaceLarge = 24.0;
-  static const double spaceXLarge = 32.0;
-  static const double spaceXXLarge = 48.0;
+  static const double spaceLarge = 20.0;
+  static const double spaceXLarge = 24.0;
+  static const double spaceXXLarge = 32.0;
+  static const double spaceHuge = 48.0;
 
   // Font Sizes
+  static const double fontSizeXSmall = 11.0;
   static const double fontSizeSmall = 12.0;
   static const double fontSizeRegular = 14.0;
   static const double fontSizeMedium = 16.0;
   static const double fontSizeLarge = 18.0;
   static const double fontSizeXLarge = 22.0;
-  static const double fontSizeXXLarge = 28.0;
-  static const double fontSizeHuge = 34.0;
+  static const double fontSizeXXLarge = 26.0;
+  static const double fontSizeHuge = 32.0;
 
   // Icon Sizes
-  static const double iconSmall = 20.0;
-  static const double iconRegular = 24.0;
-  static const double iconMedium = 28.0;
+  static const double iconSmall = 18.0;
+  static const double iconRegular = 22.0;
+  static const double iconMedium = 26.0;
   static const double iconLarge = 32.0;
+  static const double iconXLarge = 40.0;
 
   // Elevation
   static const double elevationNone = 0.0;
   static const double elevationSmall = 2.0;
   static const double elevationMedium = 4.0;
   static const double elevationLarge = 8.0;
+  static const double elevationXLarge = 12.0;
+
+  // Animation Durations
+  static const Duration animationFast = Duration(milliseconds: 150);
+  static const Duration animationNormal = Duration(milliseconds: 250);
+  static const Duration animationSlow = Duration(milliseconds: 350);
 
   // ─────────────── THEME DATA ───────────────
 

@@ -3,6 +3,8 @@ import 'super_admin_home_tab.dart';
 import 'super_admin_companies_tab.dart';
 import 'super_admin_chats_tab.dart';
 import 'super_admin_profile_tab.dart';
+import '../../widgets/premium_widgets.dart';
+import '../../config/theme_config.dart';
 
 class SuperAdminMainScreen extends StatefulWidget {
   const SuperAdminMainScreen({super.key});
@@ -32,90 +34,70 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF192233) : Colors.white,
+          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                ? AppTheme.darkBorder.withOpacity(0.3)
+                : AppTheme.lightBorder,
+              width: 1,
+            ),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spaceRegular,
+              vertical: AppTheme.spaceSmall,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(
+                PremiumNavItem(
                   icon: Icons.dashboard_outlined,
-                  activeIcon: Icons.dashboard,
+                  activeIcon: Icons.dashboard_rounded,
                   label: 'Home',
-                  index: 0,
+                  isActive: _currentIndex == 0,
+                  activeColor: AppTheme.primaryPurple,
+                  isDark: isDark,
+                  onTap: () => setState(() => _currentIndex = 0),
                 ),
-                _buildNavItem(
+                PremiumNavItem(
                   icon: Icons.business_outlined,
-                  activeIcon: Icons.business,
+                  activeIcon: Icons.business_rounded,
                   label: 'Empresas',
-                  index: 1,
+                  isActive: _currentIndex == 1,
+                  activeColor: AppTheme.primaryPurple,
+                  isDark: isDark,
+                  onTap: () => setState(() => _currentIndex = 1),
                 ),
-                _buildNavItem(
+                PremiumNavItem(
                   icon: Icons.chat_bubble_outline,
-                  activeIcon: Icons.chat_bubble,
+                  activeIcon: Icons.chat_bubble_rounded,
                   label: 'Chats',
-                  index: 2,
+                  isActive: _currentIndex == 2,
+                  activeColor: AppTheme.primaryPurple,
+                  isDark: isDark,
+                  onTap: () => setState(() => _currentIndex = 2),
                 ),
-                _buildNavItem(
+                PremiumNavItem(
                   icon: Icons.person_outline,
-                  activeIcon: Icons.person,
+                  activeIcon: Icons.person_rounded,
                   label: 'Perfil',
-                  index: 3,
+                  isActive: _currentIndex == 3,
+                  activeColor: AppTheme.primaryPurple,
+                  isDark: isDark,
+                  onTap: () => setState(() => _currentIndex = 3),
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-    required int index,
-  }) {
-    final isActive = _currentIndex == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => _currentIndex = index),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isActive ? activeIcon : icon,
-                color: isActive
-                    ? const Color(0xFF7C3AED)
-                    : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                size: 26,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  color: isActive
-                      ? const Color(0xFF7C3AED)
-                      : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                ),
-              ),
-            ],
           ),
         ),
       ),

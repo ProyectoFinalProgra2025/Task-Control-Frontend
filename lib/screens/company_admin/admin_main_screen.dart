@@ -4,6 +4,8 @@ import 'admin_chats_tab.dart';
 import 'admin_tasks_tab.dart';
 import 'admin_profile_tab.dart';
 import '../../widgets/create_task_modal.dart';
+import '../../widgets/premium_widgets.dart';
+import '../../config/theme_config.dart';
 
 class AdminMainScreen extends StatefulWidget {
   const AdminMainScreen({super.key});
@@ -15,12 +17,18 @@ class AdminMainScreen extends StatefulWidget {
 class _AdminMainScreenState extends State<AdminMainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const AdminHomeTab(),
-    const AdminChatsTab(),
-    const AdminTasksTab(),
-    const AdminProfileTab(),
-  ];
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      AdminHomeTab(onNavigateToTasks: () => setState(() => _currentIndex = 2)),
+      const AdminChatsTab(),
+      const AdminTasksTab(),
+      const AdminProfileTab(),
+    ];
+  }
 
   void _showCreateTaskModal() {
     showModalBottomSheet(
@@ -42,46 +50,69 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF192233) : Colors.white,
+          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                ? AppTheme.darkBorder.withOpacity(0.3)
+                : AppTheme.lightBorder,
+              width: 1,
+            ),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spaceSmall,
+              vertical: AppTheme.spaceSmall,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(
+                PremiumNavItem(
                   icon: Icons.home_outlined,
-                  activeIcon: Icons.home,
+                  activeIcon: Icons.home_rounded,
                   label: 'Home',
-                  index: 0,
+                  isActive: _currentIndex == 0,
+                  activeColor: AppTheme.primaryBlue,
+                  isDark: isDark,
+                  onTap: () => setState(() => _currentIndex = 0),
                 ),
-                _buildNavItem(
+                PremiumNavItem(
                   icon: Icons.chat_bubble_outline,
-                  activeIcon: Icons.chat_bubble,
+                  activeIcon: Icons.chat_bubble_rounded,
                   label: 'Chats',
-                  index: 1,
+                  isActive: _currentIndex == 1,
+                  activeColor: AppTheme.primaryBlue,
+                  isDark: isDark,
+                  onTap: () => setState(() => _currentIndex = 1),
                 ),
                 // Center FAB for creating tasks
                 _buildCenterFAB(),
-                _buildNavItem(
+                PremiumNavItem(
                   icon: Icons.assignment_outlined,
-                  activeIcon: Icons.assignment,
+                  activeIcon: Icons.assignment_rounded,
                   label: 'Tasks',
-                  index: 2,
+                  isActive: _currentIndex == 2,
+                  activeColor: AppTheme.primaryBlue,
+                  isDark: isDark,
+                  onTap: () => setState(() => _currentIndex = 2),
                 ),
-                _buildNavItem(
+                PremiumNavItem(
                   icon: Icons.person_outline,
-                  activeIcon: Icons.person,
+                  activeIcon: Icons.person_rounded,
                   label: 'Profile',
-                  index: 3,
+                  isActive: _currentIndex == 3,
+                  activeColor: AppTheme.primaryBlue,
+                  isDark: isDark,
+                  onTap: () => setState(() => _currentIndex = 3),
                 ),
               ],
             ),
@@ -91,60 +122,34 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     );
   }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-    required int index,
-  }) {
-    final isActive = _currentIndex == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => _currentIndex = index),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isActive ? activeIcon : icon,
-                color: isActive
-                    ? const Color(0xFF135bec)
-                    : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                size: 26,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  color: isActive
-                      ? const Color(0xFF135bec)
-                      : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildCenterFAB() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      child: FloatingActionButton(
-        onPressed: _showCreateTaskModal,
-        backgroundColor: const Color(0xFF135bec),
-        elevation: 2,
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-          size: 32,
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spaceSmall),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: AppTheme.gradientBlue,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryBlue.withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: _showCreateTaskModal,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: const Icon(
+            Icons.add_rounded,
+            color: Colors.white,
+            size: 32,
+          ),
         ),
       ),
     );

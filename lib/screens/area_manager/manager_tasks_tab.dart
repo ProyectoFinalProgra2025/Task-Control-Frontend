@@ -5,7 +5,8 @@ import '../../providers/admin_tarea_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../models/enums/prioridad_tarea.dart';
-import '../../widgets/tarea_detail_widget.dart';
+import '../../config/theme_config.dart';
+import 'manager_task_detail_screen.dart';
 
 class ManagerTasksTab extends StatefulWidget {
   const ManagerTasksTab({super.key});
@@ -40,34 +41,109 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: const Text('Tareas'),
-        backgroundColor: cardColor,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Mis Tareas'),
-            Tab(text: 'Todas'),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Premium Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Gestión de Tareas',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Supervisa y administra el trabajo',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.filter_list_rounded, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+                          onPressed: _showFilterDialog,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Premium Tab Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: (isDark ? Colors.black : Colors.grey[100])?.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      indicator: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppTheme.successGreen, Color(0xFF059669)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      labelColor: Colors.white,
+                      unselectedLabelColor: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      tabs: const [
+                        Tab(text: 'Mis Tareas'),
+                        Tab(text: 'Todas'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Tab Views
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildMisTareasTab(),
+                  _buildTodasTareasTab(),
+                ],
+              ),
+            ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterDialog,
-          ),
-        ],
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMisTareasTab(),
-          _buildTodasTareasTab(),
-        ],
       ),
     );
   }
@@ -146,33 +222,30 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProv
 
   Widget _buildTaskCard(Tarea tarea) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
 
     Color getPriorityColor(PrioridadTarea prioridad) {
       switch (prioridad) {
         case PrioridadTarea.low:
-          return const Color(0xFF10b981);
+          return AppTheme.successGreen;
         case PrioridadTarea.medium:
-          return const Color(0xFFf59e0b);
+          return AppTheme.warningOrange;
         case PrioridadTarea.high:
-          return const Color(0xFFef4444);
+          return AppTheme.dangerRed;
       }
     }
 
     Color getStatusColor(EstadoTarea estado) {
       switch (estado) {
         case EstadoTarea.pendiente:
-          return const Color(0xFF9CA3AF);
+          return Colors.grey;
         case EstadoTarea.asignada:
-          return const Color(0xFF3B82F6);
+          return AppTheme.primaryBlue;
         case EstadoTarea.aceptada:
-          return const Color(0xFFF59E0B);
+          return AppTheme.warningOrange;
         case EstadoTarea.finalizada:
-          return const Color(0xFF10B981);
+          return AppTheme.successGreen;
         case EstadoTarea.cancelada:
-          return const Color(0xFFEF4444);
+          return AppTheme.dangerRed;
       }
     }
 
@@ -196,7 +269,7 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProv
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TareaDetailWidget(tareaId: tarea.id),
+            builder: (context) => ManagerTaskDetailScreen(tareaId: tarea.id),
           ),
         );
       },
@@ -204,12 +277,15 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProv
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(12),
+          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
+              color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+              blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
@@ -224,8 +300,8 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProv
                     tarea.titulo,
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: textPrimary,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -233,30 +309,35 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProv
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: getStatusColor(tarea.estado).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: getStatusColor(tarea.estado),
-                      width: 1,
+                    gradient: LinearGradient(
+                      colors: [
+                        getStatusColor(tarea.estado),
+                        getStatusColor(tarea.estado).withOpacity(0.7),
+                      ],
                     ),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     getStatusText(tarea.estado),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: getStatusColor(tarea.estado),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               tarea.descripcion,
-              style: TextStyle(fontSize: 14, color: textSecondary),
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                height: 1.4,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -278,54 +359,66 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProv
                       : tarea.prioridad == PrioridadTarea.medium
                           ? 'Media'
                           : 'Alta',
-                  style: TextStyle(fontSize: 12, color: textSecondary),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const Spacer(),
                 // Mostrar rechazo si existe
                 if (tarea.delegacionAceptada == false && 
                     tarea.motivoRechazoJefe != null) ...[
-                  Icon(Icons.block, size: 14, color: Colors.red),
+                  Icon(Icons.block, size: 14, color: AppTheme.dangerRed),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       'Rechazada',
-                      style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 12, color: AppTheme.dangerRed, fontWeight: FontWeight.bold),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ]
                 else if (tarea.asignadoANombre != null) ...[
-                  Icon(Icons.person_outline, size: 14, color: textSecondary),
+                  Icon(Icons.person_outline, size: 14, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       tarea.asignadoANombre!,
-                      style: TextStyle(fontSize: 12, color: textSecondary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ]
                 else ...[
-                  Icon(Icons.person_off_outlined, size: 14, color: Colors.orange),
+                  Icon(Icons.person_off_outlined, size: 14, color: AppTheme.warningOrange),
                   const SizedBox(width: 4),
                   Text(
                     'Sin asignar',
-                    style: TextStyle(fontSize: 12, color: Colors.orange),
+                    style: TextStyle(fontSize: 12, color: AppTheme.warningOrange, fontWeight: FontWeight.w600),
                   ),
                 ],
               ],
             ),
             if (tarea.dueDate != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Row(
                 children: [
-                  Icon(Icons.calendar_today, size: 14, color: textSecondary),
+                  Icon(Icons.calendar_today, size: 14, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                   const SizedBox(width: 4),
                   Text(
                     '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
-                    style: TextStyle(fontSize: 12, color: textSecondary),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -333,22 +426,22 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProv
             // Mostrar motivo de rechazo si existe
             if (tarea.delegacionAceptada == false && 
                 tarea.motivoRechazoJefe != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  color: AppTheme.dangerRed.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.dangerRed.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 14, color: Colors.red),
-                    const SizedBox(width: 4),
+                    Icon(Icons.info_outline, size: 14, color: AppTheme.dangerRed),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'Motivo: ${tarea.motivoRechazoJefe}',
-                        style: const TextStyle(fontSize: 11, color: Colors.red),
+                        style: TextStyle(fontSize: 11, color: AppTheme.dangerRed, fontWeight: FontWeight.w600),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -366,45 +459,100 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProv
   Widget _buildEmptyWidget(String message) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.task_alt,
-            size: 64,
-            color: isDark ? Colors.grey[700] : Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: 18,
-              color: isDark ? Colors.grey[300] : Colors.grey[800],
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppTheme.successGreen.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.task_alt,
+                size: 40,
+                color: AppTheme.successGreen,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Las tareas aparecerán aquí cuando estén disponibles',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildErrorWidget(String error, VoidCallback onRetry) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(
-            error,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: onRetry,
-            child: const Text('Reintentar'),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppTheme.dangerRed.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline, size: 40, color: AppTheme.dangerRed),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Error al cargar',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reintentar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.successGreen,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

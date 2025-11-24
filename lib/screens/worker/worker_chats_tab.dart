@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../models/chat_model.dart';
+import '../../widgets/premium_widgets.dart';
+import '../../config/theme_config.dart';
 import 'worker_chat_detail_screen.dart';
 import '../common/create_chat_screen.dart';
 
@@ -56,155 +58,214 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: Column(
-        children: [
-          // Header
-          Container(
-            color: backgroundColor,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Chats',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: textPrimary,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Premium Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                border: Border(bottom: BorderSide(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder, width: 1)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 24),
                           ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.refresh,
-                            color: isDark ? Colors.grey[300] : Colors.grey[600],
+                          const SizedBox(width: 12),
+                          Text(
+                            'Mensajes',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                              letterSpacing: -0.5,
+                            ),
                           ),
-                          onPressed: _loadChats,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Search Bar
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (value) {
-                        setState(() => _searchQuery = value);
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search chats...',
-                        hintStyle: TextStyle(color: textSecondary),
-                        prefixIcon: Icon(Icons.search, color: textSecondary),
-                        filled: true,
-                        fillColor: cardColor,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF135bec)),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ],
                       ),
-                      style: TextStyle(color: textPrimary),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.refresh_rounded, color: AppTheme.primaryBlue, size: 22),
+                          onPressed: _loadChats,
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Search Bar
+                  TextField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar chats...',
+                      hintStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                      prefixIcon: Icon(Icons.search_rounded, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                      filled: true,
+                      fillColor: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
-                  ],
-                ),
+                    style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+                  ),
+                ],
               ),
             ),
-          ),
-          // Chat List
-          Expanded(
-            child: Consumer<ChatProvider>(
-              builder: (context, chatProvider, child) {
-                if (chatProvider.isLoading && chatProvider.chats.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF135BEC)),
+            // Chat List
+            Expanded(
+              child: Consumer<ChatProvider>(
+                builder: (context, chatProvider, child) {
+                  if (chatProvider.isLoading && chatProvider.chats.isEmpty) {
+                    return Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue));
+                  }
+
+                  if (chatProvider.error != null && chatProvider.chats.isEmpty) {
+                    return _buildErrorState(chatProvider.error!, isDark);
+                  }
+
+                  final filteredChats = _filteredChats;
+
+                  if (filteredChats.isEmpty) {
+                    return _buildEmptyState(isDark);
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: _loadChats,
+                    color: AppTheme.primaryBlue,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: filteredChats.length,
+                      itemBuilder: (context, index) {
+                        final chat = filteredChats[index];
+                        return _buildChatCard(chat, isDark);
+                      },
+                    ),
                   );
-                }
-
-                if (chatProvider.error != null && chatProvider.chats.isEmpty) {
-                  return _buildErrorState(chatProvider.error!, isDark);
-                }
-
-                final filteredChats = _filteredChats;
-
-                if (filteredChats.isEmpty) {
-                  return _buildEmptyState(isDark);
-                }
-
-                return RefreshIndicator(
-                  onRefresh: _loadChats,
-                  color: const Color(0xFF135BEC),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    itemCount: filteredChats.length,
-                    itemBuilder: (context, index) {
-                      final chat = filteredChats[index];
-                      return _buildChatItem(chat, isDark);
-                    },
-                  ),
-                );
-              },
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreateChatScreen()),
-          );
-        },
-        backgroundColor: const Color(0xFF135BEC),
-        child: const Icon(Icons.add_comment, size: 28),
+      floatingActionButton: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+            colors: [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryBlue.withOpacity(0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CreateChatScreen()),
+              );
+            },
+            borderRadius: BorderRadius.circular(30),
+            child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildChatItem(ChatModel chat, bool isDark) {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => WorkerChatDetailScreen(
-              chatId: chat.id,
-              chatName: chat.displayName,
-              chatType: chat.type == ChatType.oneToOne ? '1:1' : 'group',
+  Widget _buildChatCard(ChatModel chat, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: PremiumCard(
+        isDark: isDark,
+        padding: const EdgeInsets.all(16),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WorkerChatDetailScreen(
+                chatId: chat.id,
+                chatName: chat.displayName,
+                chatType: chat.type == ChatType.oneToOne ? '1:1' : 'group',
+              ),
             ),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        margin: const EdgeInsets.symmetric(vertical: 2),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-        ),
+          );
+        },
         child: Row(
           children: [
             // Avatar
-            _buildAvatar(chat, isDark),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryBlue.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  chat.type == ChatType.group ? Icons.group_rounded : Icons.person_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
             const SizedBox(width: 16),
             // Content
             Expanded(
@@ -215,20 +276,21 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
                     chat.displayName,
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.grey[900],
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                      letterSpacing: -0.3,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (chat.lastMessage != null) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       chat.lastMessage!.body,
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.normal,
-                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -238,91 +300,44 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
               ),
             ),
             const SizedBox(width: 12),
-            // Time
-            if (chat.lastMessage != null)
-              Text(
-                chat.lastMessage!.formattedTime,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? Colors.grey[600] : Colors.grey[400],
+            // Time and Badge
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (chat.lastMessage != null)
+                  Text(
+                    chat.lastMessage!.formattedTime,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                 ),
-              ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAvatar(ChatModel chat, bool isDark) {
-    if (chat.type == ChatType.group) {
-      return Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: const Color(0xFF135BEC).withOpacity(0.2),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.group,
-          color: Color(0xFF135BEC),
-          size: 28,
-        ),
-      );
-    } else {
-      return CircleAvatar(
-        radius: 28,
-        backgroundColor: const Color(0xFF135BEC),
-        child: Text(
-          chat.displayName.isNotEmpty ? chat.displayName[0].toUpperCase() : 'C',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
-    }
-  }
+
 
   Widget _buildEmptyState(bool isDark) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: const Color(0xFF135BEC).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.chat,
-                size: 48,
-                color: Color(0xFF135BEC),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No conversations yet',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : Colors.grey[900],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap the button below to start a new chat',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? Colors.grey[500] : Colors.grey[600],
-              ),
-            ),
-          ],
+        child: PremiumEmptyState(
+          icon: Icons.chat_bubble_outline,
+          title: 'Sin Conversaciones',
+          subtitle: 'Toca el botón + para iniciar un nuevo chat',
+          isDark: isDark,
         ),
       ),
     );
@@ -332,42 +347,16 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: isDark ? Colors.grey[600] : Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading chats',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : Colors.grey[900],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? Colors.grey[500] : Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _loadChats,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF135BEC),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Retry'),
-            ),
-          ],
+        child: PremiumEmptyState(
+          icon: Icons.error_outline,
+          title: 'Error al cargar chats',
+          subtitle: error,
+          isDark: isDark,
+          action: PremiumButton(
+            text: 'Reintentar',
+            onPressed: _loadChats,
+            icon: Icons.refresh_rounded,
+          ),
         ),
       ),
     );

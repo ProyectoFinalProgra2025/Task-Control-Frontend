@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../services/storage_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/usuario_service.dart';
+import '../../models/usuario.dart';
+import '../../config/theme_config.dart';
 
 class SuperAdminProfileTab extends StatefulWidget {
   const SuperAdminProfileTab({super.key});
@@ -10,10 +12,11 @@ class SuperAdminProfileTab extends StatefulWidget {
 }
 
 class _SuperAdminProfileTabState extends State<SuperAdminProfileTab> {
-  final StorageService _storage = StorageService();
+  final UsuarioService _usuarioService = UsuarioService();
   final AuthService _authService = AuthService();
-  Map<String, dynamic>? _userData;
+  Usuario? _usuario;
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -22,41 +25,84 @@ class _SuperAdminProfileTabState extends State<SuperAdminProfileTab> {
   }
 
   Future<void> _loadUserData() async {
-    final userData = await _storage.getUserData();
-    setState(() {
-      _userData = userData;
-      _isLoading = false;
-    });
+    try {
+      final usuario = await _usuarioService.getMe();
+      if (mounted) {
+        setState(() {
+          _usuario = usuario;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _handleLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.logout, color: Color(0xFFEF4444)),
-            SizedBox(width: 12),
-            Text('Cerrar Sesión'),
-          ],
-        ),
-        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.dangerRed.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.logout_rounded, color: AppTheme.dangerRed, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Cerrar Sesión',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              foregroundColor: Colors.white,
+          content: Text(
+            '¿Está seguro que desea cerrar sesión?',
+            style: TextStyle(
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              fontSize: 15,
             ),
-            child: const Text('Cerrar Sesión'),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.dangerRed,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: const Text('Cerrar Sesión', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed == true) {
@@ -69,17 +115,60 @@ class _SuperAdminProfileTabState extends State<SuperAdminProfileTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf0f2f5);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     if (_isLoading) {
       return Scaffold(
         backgroundColor: backgroundColor,
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryPurple)),
       );
     }
+
+    if (_error != null || _usuario == null) {
+      return Scaffold(
+        backgroundColor: backgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: AppTheme.dangerRed),
+              const SizedBox(height: 16),
+              Text(
+                'Error al cargar perfil',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  _error ?? 'Error desconocido',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _loadUserData,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryPurple,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final userName = _usuario!.nombreCompleto;
+    final userInitials = _getInitials(userName);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -87,223 +176,183 @@ class _SuperAdminProfileTabState extends State<SuperAdminProfileTab> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Top App Bar
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Mi Perfil',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: textPrimary,
+              // Professional Header Card
+              Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
                   ),
-                ),
-              ),
-
-              // Profile Header
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundColor: const Color(0xFF7C3AED).withOpacity(0.1),
-                      child: const Icon(
-                        Icons.admin_panel_settings,
-                        size: 60,
-                        color: Color(0xFF7C3AED),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _userData?['nombreCompleto'] ?? 'Super Admin',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Administrador General',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Función en desarrollo'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7C3AED),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Editar Perfil'),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-              ),
-
-              // Profile Info
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
-                    ),
-                  ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
-                      _buildInfoTile(
-                        icon: Icons.email,
-                        label: 'Email',
-                        value: _userData?['email'] ?? '',
-                        isDark: isDark,
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
+                      // Avatar
+                      Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryPurple.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppTheme.primaryPurple.withOpacity(0.3),
+                            width: 3,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            userInitials,
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryPurple,
+                            ),
+                          ),
+                        ),
                       ),
-                      Divider(
-                        height: 1,
-                        color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
+                      const SizedBox(height: 16),
+                      Text(
+                        userName,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      _buildInfoTile(
-                        icon: Icons.phone,
-                        label: 'Teléfono',
-                        value: _userData?['telefono'] ?? 'No especificado',
-                        isDark: isDark,
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                      ),
-                      Divider(
-                        height: 1,
-                        color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
-                      ),
-                      _buildInfoTile(
-                        icon: Icons.badge,
-                        label: 'Rol',
-                        value: 'Administrador General',
-                        isDark: isDark,
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryPurple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppTheme.primaryPurple.withOpacity(0.3),
+                          ),
+                        ),
+                        child: const Text(
+                          'Super Administrador',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.primaryPurple,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
 
-              // Settings Section
-              Padding(
-                padding: const EdgeInsets.all(16),
+              // Information Card
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Configuración',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'Información Personal',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          _buildSettingTile(
-                            icon: Icons.lock,
-                            label: 'Cambiar Contraseña',
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Función en desarrollo'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            isDark: isDark,
-                            textPrimary: textPrimary,
-                          ),
-                          Divider(
-                            height: 1,
-                            color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
-                          ),
-                          _buildSettingTile(
-                            icon: Icons.notifications,
-                            label: 'Notificaciones',
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Función en desarrollo'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            isDark: isDark,
-                            textPrimary: textPrimary,
-                          ),
-                          Divider(
-                            height: 1,
-                            color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
-                          ),
-                          _buildSettingTile(
-                            icon: Icons.help,
-                            label: 'Ayuda y Soporte',
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Función en desarrollo'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            isDark: isDark,
-                            textPrimary: textPrimary,
-                          ),
-                        ],
+                    ),
+                    Divider(height: 1, color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                    _buildInfoTile(
+                      icon: Icons.email_rounded,
+                      label: 'Correo Electrónico',
+                      value: _usuario!.email,
+                      isDark: isDark,
+                    ),
+                    Divider(height: 1, color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                    _buildInfoTile(
+                      icon: Icons.phone_rounded,
+                      label: 'Teléfono',
+                      value: _usuario!.telefono ?? 'No especificado',
+                      isDark: isDark,
+                    ),
+                    Divider(height: 1, color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                    _buildInfoTile(
+                      icon: Icons.badge_rounded,
+                      label: 'Rol del Sistema',
+                      value: 'AdminGeneral',
+                      isDark: isDark,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Action Buttons
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Función en desarrollo')),
+                          );
+                        },
+                        icon: const Icon(Icons.edit_rounded, size: 20),
+                        label: const Text('Editar Perfil', style: TextStyle(fontWeight: FontWeight.w600)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryPurple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _handleLogout,
+                        icon: const Icon(Icons.logout_rounded, size: 20),
+                        label: const Text('Cerrar Sesión', style: TextStyle(fontWeight: FontWeight.w600)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.dangerRed,
+                          side: const BorderSide(color: AppTheme.dangerRed, width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Logout Button
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: ElevatedButton.icon(
-                  onPressed: _handleLogout,
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Cerrar Sesión'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF4444),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
               const SizedBox(height: 100),
             ],
           ),
@@ -317,8 +366,6 @@ class _SuperAdminProfileTabState extends State<SuperAdminProfileTab> {
     required String label,
     required String value,
     required bool isDark,
-    required Color textPrimary,
-    required Color textSecondary,
   }) {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -327,12 +374,12 @@ class _SuperAdminProfileTabState extends State<SuperAdminProfileTab> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF7C3AED).withOpacity(0.1),
+              color: AppTheme.primaryPurple.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: const Color(0xFF7C3AED), size: 20),
+            child: Icon(icon, color: AppTheme.primaryPurple, size: 22),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,16 +388,17 @@ class _SuperAdminProfileTabState extends State<SuperAdminProfileTab> {
                   label,
                   style: TextStyle(
                     fontSize: 13,
-                    color: textSecondary,
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   value,
                   style: TextStyle(
                     fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: textPrimary,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                   ),
                 ),
               ],
@@ -361,39 +409,10 @@ class _SuperAdminProfileTabState extends State<SuperAdminProfileTab> {
     );
   }
 
-  Widget _buildSettingTile({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    required bool isDark,
-    required Color textPrimary,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(icon, color: const Color(0xFF7C3AED), size: 24),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: textPrimary,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b),
-            ),
-          ],
-        ),
-      ),
-    );
+  String _getInitials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 }

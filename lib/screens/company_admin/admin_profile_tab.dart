@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../services/storage_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/usuario_service.dart';
+import '../../models/usuario.dart';
+import '../../config/theme_config.dart';
 
 class AdminProfileTab extends StatefulWidget {
   const AdminProfileTab({super.key});
@@ -10,10 +12,11 @@ class AdminProfileTab extends StatefulWidget {
 }
 
 class _AdminProfileTabState extends State<AdminProfileTab> {
-  final StorageService _storage = StorageService();
+  final UsuarioService _usuarioService = UsuarioService();
   final AuthService _authService = AuthService();
-  Map<String, dynamic>? _userData;
+  Usuario? _usuario;
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -22,41 +25,85 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
   }
 
   Future<void> _loadUserData() async {
-    final userData = await _storage.getUserData();
-    setState(() {
-      _userData = userData;
-      _isLoading = false;
-    });
+    try {
+      final usuario = await _usuarioService.getMe();
+      
+      if (mounted) {
+        setState(() {
+          _usuario = usuario;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _handleLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.logout, color: Color(0xFFEF4444)),
-            SizedBox(width: 12),
-            Text('Cerrar Sesión'),
-          ],
-        ),
-        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.dangerRed.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.logout_rounded, color: AppTheme.dangerRed, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Cerrar Sesión',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              foregroundColor: Colors.white,
+          content: Text(
+            '¿Está seguro que desea cerrar sesión?',
+            style: TextStyle(
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              fontSize: 15,
             ),
-            child: const Text('Cerrar Sesión'),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.dangerRed,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: const Text('Cerrar Sesión', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed == true) {
@@ -69,17 +116,60 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf0f2f5);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     if (_isLoading) {
       return Scaffold(
         backgroundColor: backgroundColor,
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue)),
       );
     }
+
+    if (_error != null || _usuario == null) {
+      return Scaffold(
+        backgroundColor: backgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: AppTheme.dangerRed),
+              const SizedBox(height: 16),
+              Text(
+                'Error al cargar perfil',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  _error ?? 'Error desconocido',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _loadUserData,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final userName = _usuario!.nombreCompleto;
+    final userInitials = _getInitials(userName);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -87,203 +177,182 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Top App Bar
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'My Profile',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: textPrimary,
-                  ),
+              const SizedBox(height: 20),
+              // Profile Header Card
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ),
-
-              // Profile Header
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundColor: const Color(0xFF005A9C).withOpacity(0.1),
-                      child: const Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Color(0xFF005A9C),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _userData?['nombreCompleto'] ?? 'Admin User',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Company Admin',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF005A9C),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3), width: 3),
+                        ),
+                        child: Center(
+                          child: Text(
+                            userInitials,
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryBlue,
+                            ),
+                          ),
                         ),
                       ),
-                      child: const Text('Edit Profile'),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Personal Information Section
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Personal Information',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
+                      const SizedBox(height: 16),
+                      Text(
+                        userName,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+                        ),
+                        child: const Text(
+                          'Company Admin',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.primaryBlue,
+                            letterSpacing: 0.3,
                           ),
-                        ],
+                        ),
                       ),
-                      child: Column(
-                        children: [
-                          _buildInfoItem(
-                            icon: Icons.person,
-                            label: 'Full Name',
-                            value: _userData?['nombreCompleto'] ?? 'N/A',
-                            textPrimary: textPrimary,
-                            textSecondary: textSecondary,
-                          ),
-                          Divider(color: Colors.grey.withOpacity(0.2), height: 1),
-                          _buildInfoItem(
-                            icon: Icons.badge,
-                            label: 'Job Title',
-                            value: 'Project Manager',
-                            textPrimary: textPrimary,
-                            textSecondary: textSecondary,
-                          ),
-                          Divider(color: Colors.grey.withOpacity(0.2), height: 1),
-                          _buildInfoItem(
-                            icon: Icons.email,
-                            label: 'Email Address',
-                            value: _userData?['email'] ?? 'N/A',
-                            textPrimary: textPrimary,
-                            textSecondary: textSecondary,
-                          ),
-                          Divider(color: Colors.grey.withOpacity(0.2), height: 1),
-                          _buildInfoItem(
-                            icon: Icons.phone,
-                            label: 'Phone',
-                            value: _userData?['telefono'] ?? 'N/A',
-                            textPrimary: textPrimary,
-                            textSecondary: textSecondary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Company Information Section
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Company Information',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          _buildInfoItem(
-                            icon: Icons.business,
-                            label: 'Company Name',
-                            value: _userData?['nombreEmpresa'] ?? 'N/A',
-                            textPrimary: textPrimary,
-                            textSecondary: textSecondary,
-                          ),
-                          Divider(color: Colors.grey.withOpacity(0.2), height: 1),
-                          _buildInfoItem(
-                            icon: Icons.admin_panel_settings,
-                            label: 'Role',
-                            value: _userData?['rol'] ?? 'Admin',
-                            textPrimary: textPrimary,
-                            textSecondary: textSecondary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Logout Button
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: ElevatedButton.icon(
-                  onPressed: _handleLogout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD93025),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    ],
                   ),
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Logout'),
                 ),
               ),
-              const SizedBox(height: 100), // Extra space for bottom nav
+
+              const SizedBox(height: 20),
+
+              // Information Section
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'Información Personal',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                    ),
+                    Divider(height: 1, color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                    _buildInfoTile(
+                      icon: Icons.person_rounded,
+                      label: 'Nombre Completo',
+                      value: userName,
+                      isDark: isDark,
+                    ),
+                    Divider(height: 1, color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                    _buildInfoTile(
+                      icon: Icons.email_rounded,
+                      label: 'Correo Electrónico',
+                      value: _usuario!.email,
+                      isDark: isDark,
+                    ),
+                    Divider(height: 1, color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                    _buildInfoTile(
+                      icon: Icons.phone_rounded,
+                      label: 'Teléfono',
+                      value: _usuario!.telefono ?? 'No especificado',
+                      isDark: isDark,
+                    ),
+                    Divider(height: 1, color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                    _buildInfoTile(
+                      icon: Icons.badge_rounded,
+                      label: 'Rol',
+                      value: 'AdminEmpresa',
+                      isDark: isDark,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Actions
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.edit_rounded, size: 20),
+                        label: const Text('Editar Perfil', style: TextStyle(fontWeight: FontWeight.w600)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _handleLogout,
+                        icon: const Icon(Icons.logout_rounded, size: 20),
+                        label: const Text('Cerrar Sesión', style: TextStyle(fontWeight: FontWeight.w600)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.dangerRed,
+                          side: const BorderSide(color: AppTheme.dangerRed, width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 100),
             ],
           ),
         ),
@@ -291,26 +360,25 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
     );
   }
 
-  Widget _buildInfoItem({
+  Widget _buildInfoTile({
     required IconData icon,
     required String label,
     required String value,
-    required Color textPrimary,
-    required Color textSecondary,
+    required bool isDark,
   }) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF005A9C).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: AppTheme.primaryBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: const Color(0xFF005A9C)),
+            child: Icon(icon, color: AppTheme.primaryBlue, size: 22),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,17 +386,18 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 14,
-                    color: textSecondary,
+                    fontSize: 13,
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: textPrimary,
+                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                   ),
                 ),
               ],
@@ -337,5 +406,12 @@ class _AdminProfileTabState extends State<AdminProfileTab> {
         ],
       ),
     );
+  }
+
+  String _getInitials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 }

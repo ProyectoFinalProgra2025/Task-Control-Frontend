@@ -3,6 +3,7 @@ import '../../models/usuario.dart';
 import '../../services/usuario_service.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/theme_toggle_button.dart';
+import '../../config/theme_config.dart';
 
 /// Profile tab for Area Managers
 class ManagerProfileTab extends StatefulWidget {
@@ -106,15 +107,12 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     if (_isLoading) {
       return Scaffold(
         backgroundColor: backgroundColor,
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator(color: AppTheme.successGreen)),
       );
     }
 
@@ -122,18 +120,54 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
       return Scaffold(
         backgroundColor: backgroundColor,
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('Error: $_error', style: TextStyle(color: textPrimary)),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadUserProfile,
-                child: const Text('Reintentar'),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppTheme.dangerRed.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.error_outline, size: 40, color: AppTheme.dangerRed),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Error al cargar',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: _loadUserProfile,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Reintentar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.successGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -149,9 +183,18 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16),
+              // Premium Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
+                      width: 1,
+                    ),
+                  ),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -159,42 +202,57 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
                       'Perfil',
                       style: TextStyle(
                         fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                        letterSpacing: -0.3,
                       ),
                     ),
                     const ThemeToggleButton(),
                   ],
                 ),
               ),
+              const SizedBox(height: 20),
 
-              // Profile Card
+              // Profile Card - Premium Style
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: cardColor,
+                    color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                        color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
                   child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: const Color(0xFF135bec).withOpacity(0.1),
-                        child: Text(
-                          userInitials,
-                          style: const TextStyle(
-                            color: Color(0xFF135bec),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 32,
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: AppTheme.successGreen.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppTheme.successGreen.withOpacity(0.2),
+                            width: 3,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            userInitials,
+                            style: const TextStyle(
+                              color: AppTheme.successGreen,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 32,
+                            ),
                           ),
                         ),
                       ),
@@ -203,14 +261,18 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
                         _currentUser?.nombreCompleto ?? 'N/A',
                         style: TextStyle(
                           fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: textPrimary,
+                          fontWeight: FontWeight.w900,
+                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         _currentUser?.email ?? 'N/A',
-                        style: TextStyle(fontSize: 14, color: textSecondary),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Container(
@@ -219,15 +281,18 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF135bec).withOpacity(0.1),
+                          color: AppTheme.successGreen.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppTheme.successGreen.withOpacity(0.3),
+                          ),
                         ),
                         child: Text(
                           'Jefe de Área - $departamento',
                           style: const TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF135bec),
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.successGreen,
                           ),
                         ),
                       ),
@@ -240,28 +305,31 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
               if (_currentUser != null && _currentUser!.capacidades.isNotEmpty) ...[
                 const SizedBox(height: 20),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
                     'Capacidades',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: textPrimary,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(12),
+                      color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
+                          color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+                          blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -276,15 +344,15 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF135bec).withOpacity(0.1),
+                            color: AppTheme.successGreen.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             cap.nombre,
                             style: const TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF135bec),
-                              fontWeight: FontWeight.w600,
+                              color: AppTheme.successGreen,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         );
@@ -297,27 +365,30 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
               // Settings Section
               const SizedBox(height: 20),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   'Configuración',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: textPrimary,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                   ),
                 ),
               ),
               const SizedBox(height: 12),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(12),
+                    color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
+                        color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+                        blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
@@ -329,26 +400,23 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
                         title: 'Notificaciones',
                         subtitle: 'Gestiona tus notificaciones',
                         onTap: () {},
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
+                        isDark: isDark,
                       ),
-                      Divider(height: 1, color: textSecondary.withOpacity(0.1)),
+                      Divider(height: 1, color: (isDark ? AppTheme.darkBorder : AppTheme.lightBorder).withOpacity(0.5)),
                       _buildSettingsTile(
                         icon: Icons.security_outlined,
                         title: 'Privacidad y Seguridad',
                         subtitle: 'Configuración de seguridad',
                         onTap: () {},
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
+                        isDark: isDark,
                       ),
-                      Divider(height: 1, color: textSecondary.withOpacity(0.1)),
+                      Divider(height: 1, color: (isDark ? AppTheme.darkBorder : AppTheme.lightBorder).withOpacity(0.5)),
                       _buildSettingsTile(
                         icon: Icons.help_outline,
                         title: 'Ayuda y Soporte',
                         subtitle: 'Obtén ayuda',
                         onTap: () {},
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
+                        isDark: isDark,
                       ),
                     ],
                   ),
@@ -358,26 +426,29 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
               // Logout Button
               const SizedBox(height: 20),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(12),
+                    color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
+                        color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+                        blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
                   child: ListTile(
-                    leading: const Icon(Icons.logout, color: Color(0xFFef4444)),
+                    leading: const Icon(Icons.logout, color: AppTheme.dangerRed),
                     title: Text(
                       'Cerrar Sesión',
                       style: TextStyle(
-                        color: textPrimary,
-                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     onTap: _handleLogout,
@@ -398,23 +469,30 @@ class _ManagerProfileTabState extends State<ManagerProfileTab> {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-    required Color textPrimary,
-    required Color textSecondary,
+    required bool isDark,
   }) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF135bec)),
+      leading: Icon(icon, color: AppTheme.successGreen),
       title: Text(
         title,
         style: TextStyle(
-          color: textPrimary,
-          fontWeight: FontWeight.w600,
+          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+          fontWeight: FontWeight.w700,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(color: textSecondary, fontSize: 12),
+        style: TextStyle(
+          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
       ),
-      trailing: Icon(Icons.arrow_forward_ios, size: 16, color: textSecondary),
+      trailing: Icon(
+        Icons.arrow_forward_ios_rounded,
+        size: 16,
+        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+      ),
       onTap: onTap,
     );
   }

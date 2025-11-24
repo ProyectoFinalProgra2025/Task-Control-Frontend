@@ -95,14 +95,52 @@ class UsuarioProvider extends ChangeNotifier {
       // Actualizar en el backend
       await _usuarioService.updateMisCapacidades(capacidadesActuales);
 
-      // Recargar perfil
-      await cargarPerfil();
+      // Recargar perfil silenciosamente (sin cambiar isLoading)
+      await _recargarPerfilSilencioso();
       _error = null;
       return true;
     } catch (e) {
       _error = e.toString();
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Agregar múltiples capacidades de una sola vez
+  Future<bool> agregarCapacidadesMultiples(List<CapacidadNivelItem> nuevasCapacidades) async {
+    try {
+      // Obtener las capacidades actuales
+      final capacidadesActuales = _usuario?.capacidades
+              .map((c) => CapacidadNivelItem(nombre: c.nombre, nivel: c.nivel))
+              .toList() ??
+          [];
+
+      // Agregar todas las nuevas capacidades
+      capacidadesActuales.addAll(nuevasCapacidades);
+
+      // Actualizar en el backend de una sola vez
+      await _usuarioService.updateMisCapacidades(capacidadesActuales);
+
+      // Recargar perfil silenciosamente (sin cambiar isLoading)
+      await _recargarPerfilSilencioso();
+      _error = null;
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Recargar perfil sin activar el estado de loading (para actualizaciones en background)
+  Future<void> _recargarPerfilSilencioso() async {
+    try {
+      _usuario = await _usuarioService.getMe();
+      _error = null;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
     }
   }
 
