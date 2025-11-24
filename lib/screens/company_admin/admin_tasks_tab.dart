@@ -418,7 +418,24 @@ class _AdminTasksTabState extends State<AdminTasksTab> {
             const SizedBox(height: 12),
             Row(
               children: [
-                if (tarea.asignadoANombre != null) ...[
+                // Mostrar rechazo si existe
+                if (tarea.delegacionAceptada == false && 
+                    tarea.motivoRechazoJefe != null) ...[
+                  Icon(Icons.block, size: 16, color: Colors.red),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      'Rechazada',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ]
+                else if (tarea.asignadoANombre != null) ...[
                   Icon(Icons.person_outline, size: 16, color: textSecondary),
                   const SizedBox(width: 4),
                   Flexible(
@@ -474,6 +491,33 @@ class _AdminTasksTabState extends State<AdminTasksTab> {
                 ),
               ],
             ),
+            // Mostrar motivo de rechazo si existe
+            if (tarea.delegacionAceptada == false && 
+                tarea.motivoRechazoJefe != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 14, color: Colors.red),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Motivo del rechazo: ${tarea.motivoRechazoJefe}',
+                        style: const TextStyle(fontSize: 12, color: Colors.red),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

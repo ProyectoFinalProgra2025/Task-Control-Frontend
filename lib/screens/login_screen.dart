@@ -91,6 +91,8 @@ class _LoginScreenState extends State<LoginScreen> {
         route = '/super-admin';
       } else if (authResponse.usuario.isAdminEmpresa) {
         route = '/admin';
+      } else if (authResponse.usuario.isManagerDepartamento) {
+        route = '/manager';
       } else {
         route = '/home';
       }

@@ -71,9 +71,9 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
       
       if (!mounted) return;
       
-      // Filtrar solo trabajadores activos
+      // Filtrar trabajadores y managers activos
       final trabajadores = usuarios
-          .where((u) => u.rol == 'Usuario' && u.isActive)
+          .where((u) => (u.rol == 'Usuario' || u.rol == 'ManagerDepartamento') && u.isActive)
           .toList();
       
       if (trabajadores.isEmpty) {

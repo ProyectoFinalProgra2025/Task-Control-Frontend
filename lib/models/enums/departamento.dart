@@ -4,15 +4,14 @@ enum Departamento {
   mantenimiento(2, 'Mantenimiento'),
   produccion(3, 'Producción'),
   marketing(4, 'Marketing'),
-  logistica(5, 'Logística'),
-  recursosHumanos(6, 'Recursos Humanos');
+  logistica(5, 'Logística');
 
   final int value;
   final String label;
 
   const Departamento(this.value, this.label);
   
-  // Lista de los 5 departamentos principales (sin Ninguno y RecursosHumanos)
+  // Lista de los 5 departamentos principales (sin Ninguno)
   static List<Departamento> get principales => [
     finanzas,
     mantenimiento,

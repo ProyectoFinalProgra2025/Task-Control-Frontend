@@ -6,12 +6,14 @@ import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/company_admin/admin_main_screen.dart';
+import 'screens/area_manager/manager_main_screen.dart';
 import 'screens/super_admin/super_admin_main_screen.dart';
 import 'screens/worker/worker_main_screen.dart';
 import 'services/storage_service.dart';
 import 'config/theme_config.dart';
 import 'providers/theme_provider.dart' as theme_prov;
 import 'providers/tarea_provider.dart';
+import 'providers/admin_tarea_provider.dart';
 import 'providers/usuario_provider.dart';
 import 'providers/chat_provider.dart';
 
@@ -21,6 +23,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => theme_prov.ThemeProvider()),
         ChangeNotifierProvider(create: (_) => TareaProvider()),
+        ChangeNotifierProvider(create: (_) => AdminTareaProvider()),
         ChangeNotifierProvider(create: (_) => UsuarioProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
@@ -49,6 +52,7 @@ class TaskControlApp extends StatelessWidget {
             '/signup': (context) => const SignUpScreen(),
             '/home': (context) => const HomeScreen(),
             '/admin': (context) => const AdminMainScreen(),
+            '/manager': (context) => const ManagerMainScreen(),
             '/super-admin': (context) => const SuperAdminMainScreen(),
             '/worker': (context) => const WorkerMainScreen(),
           },
@@ -114,6 +118,9 @@ class _InitialRouteHandlerState extends State<InitialRouteHandler> {
         } else if (user.isAdminEmpresa) {
           // Admin de Empresa va al dashboard de admin
           Navigator.of(context).pushReplacementNamed('/admin');
+        } else if (user.isManagerDepartamento) {
+          // Manager de Departamento va al dashboard de manager
+          Navigator.of(context).pushReplacementNamed('/manager');
         } else {
           // Usuario normal va al home
           Navigator.of(context).pushReplacementNamed('/home');

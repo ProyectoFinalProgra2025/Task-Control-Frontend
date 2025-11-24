@@ -43,5 +43,6 @@ class UserModel {
 
   bool get isAdminGeneral => rol == 'AdminGeneral';
   bool get isAdminEmpresa => rol == 'AdminEmpresa';
+  bool get isManagerDepartamento => rol == 'ManagerDepartamento';
   bool get isUsuario => rol == 'Usuario';
 }
