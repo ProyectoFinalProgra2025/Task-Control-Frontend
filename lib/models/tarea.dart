@@ -19,6 +19,15 @@ class Tarea {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  // Campos de delegación entre jefes
+  final bool estaDelegada;
+  final String? delegadoPorUsuarioId;
+  final String? delegadoAUsuarioId;
+  final DateTime? delegadaAt;
+  final bool? delegacionAceptada; // null = pendiente, true = aceptada, false = rechazada
+  final String? motivoRechazoJefe;
+  final DateTime? delegacionResueltaAt;
+
   Tarea({
     required this.id,
     required this.titulo,
@@ -35,6 +44,13 @@ class Tarea {
     required this.capacidadesRequeridas,
     required this.createdAt,
     required this.updatedAt,
+    this.estaDelegada = false,
+    this.delegadoPorUsuarioId,
+    this.delegadoAUsuarioId,
+    this.delegadaAt,
+    this.delegacionAceptada,
+    this.motivoRechazoJefe,
+    this.delegacionResueltaAt,
   });
 
   factory Tarea.fromJson(Map<String, dynamic> json) {
@@ -54,7 +70,7 @@ class Tarea {
       dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate']) : null,
       empresaId: json['empresaId']?.toString() ?? '',
       asignadoAUsuarioId: json['asignadoAUsuarioId']?.toString(),
-      asignadoANombre: json['asignadoANombre'],
+      asignadoANombre: json['asignadoAUsuarioNombre'] ?? json['asignadoANombre'],
       createdByUsuarioId: json['createdByUsuarioId']?.toString() ?? '',
       createdByUsuarioNombre: json['createdByUsuarioNombre'] ?? '',
       capacidadesRequeridas: json['capacidadesRequeridas'] != null
@@ -66,6 +82,15 @@ class Tarea {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : DateTime.now(),
+      estaDelegada: json['estaDelegada'] ?? false,
+      delegadoPorUsuarioId: json['delegadoPorUsuarioId']?.toString(),
+      delegadoAUsuarioId: json['delegadoAUsuarioId']?.toString(),
+      delegadaAt: json['delegadaAt'] != null ? DateTime.parse(json['delegadaAt']) : null,
+      delegacionAceptada: json['delegacionAceptada'],
+      motivoRechazoJefe: json['motivoRechazoJefe'],
+      delegacionResueltaAt: json['delegacionResueltaAt'] != null
+          ? DateTime.parse(json['delegacionResueltaAt'])
+          : null,
     );
   }
 

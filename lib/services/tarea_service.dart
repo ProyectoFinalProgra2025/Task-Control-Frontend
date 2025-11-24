@@ -268,4 +268,106 @@ class TareaService {
       throw Exception('Error al finalizar tarea: $e');
     }
   }
+
+  /// Delegar tarea a otro jefe de área
+  Future<void> delegarTarea(String tareaId, String jefeDestinoId) async {
+    try {
+      final response = await _http.put(
+        '/api/tareas/$tareaId/delegar',
+        body: {'jefeDestinoId': jefeDestinoId},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Error al delegar tarea');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('No autorizado. Solo ManagerDepartamento puede delegar.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Tarea o jefe destino no encontrado');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al delegar tarea');
+      }
+    } catch (e) {
+      throw Exception('Error al delegar tarea: $e');
+    }
+  }
+
+  /// Aceptar delegación de tarea
+  Future<void> aceptarDelegacion(String tareaId) async {
+    try {
+      final response = await _http.put(
+        '/api/tareas/$tareaId/aceptar-delegacion',
+        body: {},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Error al aceptar delegación');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('No autorizado.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Tarea no encontrada');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al aceptar delegación');
+      }
+    } catch (e) {
+      throw Exception('Error al aceptar delegación: $e');
+    }
+  }
+
+  /// Rechazar delegación de tarea con motivo
+  Future<void> rechazarDelegacion(String tareaId, String motivo) async {
+    try {
+      final response = await _http.put(
+        '/api/tareas/$tareaId/rechazar-delegacion',
+        body: {'motivo': motivo},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Error al rechazar delegación');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('No autorizado.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Tarea no encontrada');
+      } else if (response.statusCode == 422) {
+        throw Exception('El motivo es requerido (mínimo 10 caracteres).');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al rechazar delegación');
+      }
+    } catch (e) {
+      throw Exception('Error al rechazar delegación: $e');
+    }
+  }
+
+  /// Obtener lista de jefes de área (para delegación)
+  Future<List<Map<String, dynamic>>> getJefesArea() async {
+    try {
+      final response = await _http.get('/api/usuarios?rol=ManagerDepartamento');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final List<dynamic> jefesJson = data['data'] ?? [];
+          return jefesJson.cast<Map<String, dynamic>>();
+        } else {
+          throw Exception(data['message'] ?? 'Error al obtener jefes');
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al obtener jefes');
+      }
+    } catch (e) {
+      throw Exception('Error al obtener jefes: $e');
+    }
+  }
 }

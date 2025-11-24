@@ -18,6 +18,7 @@ class _CreateUserModalState extends State<CreateUserModal> {
   final _telefonoController = TextEditingController();
   final UsuarioService _usuarioService = UsuarioService();
 
+  RolUsuario _rol = RolUsuario.usuario;
   Departamento? _departamento;
   int? _nivelHabilidad;
   bool _isLoading = false;
@@ -38,6 +39,18 @@ class _CreateUserModalState extends State<CreateUserModal> {
     setState(() => _isLoading = true);
 
     try {
+      // Validar que ManagerDepartamento tenga departamento
+      if (_rol == RolUsuario.managerDepartamento && _departamento == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Los Jefes de Área deben tener un departamento asignado'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
       final dto = CreateUsuarioDTO(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -45,6 +58,7 @@ class _CreateUserModalState extends State<CreateUserModal> {
         telefono: _telefonoController.text.trim().isEmpty
             ? null
             : _telefonoController.text.trim(),
+        rol: _rol,
         departamento: _departamento,
         nivelHabilidad: _nivelHabilidad,
       );
@@ -215,15 +229,48 @@ class _CreateUserModalState extends State<CreateUserModal> {
               ),
               const SizedBox(height: 16),
 
+              // Rol
+              DropdownButtonFormField<RolUsuario>(
+                value: _rol,
+                decoration: InputDecoration(
+                  labelText: 'Rol *',
+                  prefixIcon: const Icon(Icons.badge_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                items: RolUsuario.values.map((rol) {
+                  return DropdownMenuItem(
+                    value: rol,
+                    child: Text(rol.label),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _rol = value!;
+                    // Si cambia a ManagerDepartamento, requerir departamento
+                    if (_rol == RolUsuario.managerDepartamento && _departamento == null) {
+                      // Mostrar hint visual
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+
               // Departamento
               DropdownButtonFormField<Departamento>(
                 value: _departamento,
                 decoration: InputDecoration(
-                  labelText: 'Departamento',
+                  labelText: _rol == RolUsuario.managerDepartamento
+                      ? 'Departamento *'
+                      : 'Departamento',
                   prefixIcon: const Icon(Icons.business_outlined),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  helperText: _rol == RolUsuario.managerDepartamento
+                      ? 'Requerido para Jefes de Área'
+                      : null,
                 ),
                 items: Departamento.values.map((dept) {
                   return DropdownMenuItem(
