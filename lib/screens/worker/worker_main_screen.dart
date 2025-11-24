@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'worker_home_tab.dart';
 import 'worker_chats_tab.dart';
 import 'worker_profile_tab.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../config/theme_config.dart';
+import '../../providers/chat_provider.dart';
 
 class WorkerMainScreen extends StatefulWidget {
   const WorkerMainScreen({super.key});
@@ -59,52 +61,57 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
         physics: const BouncingScrollPhysics(),
         children: _tabs,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-          border: Border(
-            top: BorderSide(
-              color: isDark
-                ? AppTheme.darkBorder.withOpacity(0.3)
-                : AppTheme.lightBorder,
-              width: 1,
-            ),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spaceRegular,
-              vertical: AppTheme.spaceSmall,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                PremiumNavItem(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home_rounded,
-                  label: 'Home',
-                  isActive: _currentIndex == 0,
-                  activeColor: AppTheme.primaryBlue,
-                  isDark: isDark,
-                  onTap: () => _onNavItemTapped(0),
+      bottomNavigationBar: Consumer<ChatProvider>(
+        builder: (context, chatProvider, child) {
+          final unreadCount = chatProvider.totalUnreadCount;
+          
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+              border: Border(
+                top: BorderSide(
+                  color: isDark
+                    ? AppTheme.darkBorder.withOpacity(0.3)
+                    : AppTheme.lightBorder,
+                  width: 1,
                 ),
-                PremiumNavItem(
-                  icon: Icons.chat_bubble_outline,
-                  activeIcon: Icons.chat_bubble_rounded,
-                  label: 'Chats',
-                  isActive: _currentIndex == 1,
-                  activeColor: AppTheme.primaryBlue,
-                  isDark: isDark,
-                  onTap: () => _onNavItemTapped(1),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, -4),
                 ),
+              ],
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spaceRegular,
+                  vertical: AppTheme.spaceSmall,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    PremiumNavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'Home',
+                      isActive: _currentIndex == 0,
+                      activeColor: AppTheme.primaryBlue,
+                      isDark: isDark,
+                      onTap: () => _onNavItemTapped(0),
+                    ),
+                    PremiumNavItem(
+                      icon: Icons.chat_bubble_outline,
+                      activeIcon: Icons.chat_bubble_rounded,
+                      label: 'Chats',
+                      isActive: _currentIndex == 1,
+                      activeColor: AppTheme.primaryBlue,
+                      isDark: isDark,
+                      badgeCount: unreadCount,
+                      onTap: () => _onNavItemTapped(1),
+                    ),
                 PremiumNavItem(
                   icon: Icons.person_outline,
                   activeIcon: Icons.person_rounded,
@@ -118,6 +125,8 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
             ),
           ),
         ),
+        );
+        },
       ),
     );
   }

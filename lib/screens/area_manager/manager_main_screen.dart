@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'manager_home_tab.dart';
 import 'manager_chats_tab.dart';
 import 'manager_tasks_tab.dart';
@@ -7,6 +8,7 @@ import 'manager_profile_tab.dart';
 import '../../widgets/create_task_modal.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../config/theme_config.dart';
+import '../../providers/chat_provider.dart';
 
 /// Main screen for Area Managers (ManagerDepartamento)
 /// Combines functionality from both AdminEmpresa and Usuario (Worker)
@@ -59,52 +61,57 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-          border: Border(
-            top: BorderSide(
-              color: isDark
-                ? AppTheme.darkBorder.withOpacity(0.3)
-                : AppTheme.lightBorder,
-              width: 1,
-            ),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spaceRegular,
-              vertical: AppTheme.spaceSmall,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                PremiumNavItem(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home_rounded,
-                  label: 'Home',
-                  isActive: _currentIndex == 0,
-                  activeColor: AppTheme.successGreen,
-                  isDark: isDark,
-                  onTap: () => setState(() => _currentIndex = 0),
+      bottomNavigationBar: Consumer<ChatProvider>(
+        builder: (context, chatProvider, child) {
+          final unreadCount = chatProvider.totalUnreadCount;
+          
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+              border: Border(
+                top: BorderSide(
+                  color: isDark
+                    ? AppTheme.darkBorder.withOpacity(0.3)
+                    : AppTheme.lightBorder,
+                  width: 1,
                 ),
-                PremiumNavItem(
-                  icon: Icons.chat_bubble_outline,
-                  activeIcon: Icons.chat_bubble_rounded,
-                  label: 'Chats',
-                  isActive: _currentIndex == 1,
-                  activeColor: AppTheme.successGreen,
-                  isDark: isDark,
-                  onTap: () => setState(() => _currentIndex = 1),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, -4),
                 ),
+              ],
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spaceRegular,
+                  vertical: AppTheme.spaceSmall,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    PremiumNavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'Home',
+                      isActive: _currentIndex == 0,
+                      activeColor: AppTheme.successGreen,
+                      isDark: isDark,
+                      onTap: () => setState(() => _currentIndex = 0),
+                    ),
+                    PremiumNavItem(
+                      icon: Icons.chat_bubble_outline,
+                      activeIcon: Icons.chat_bubble_rounded,
+                      label: 'Chats',
+                      isActive: _currentIndex == 1,
+                      activeColor: AppTheme.successGreen,
+                      isDark: isDark,
+                      badgeCount: unreadCount,
+                      onTap: () => setState(() => _currentIndex = 1),
+                    ),
                 PremiumNavItem(
                   icon: Icons.assignment_outlined,
                   activeIcon: Icons.assignment_rounded,
@@ -136,6 +143,8 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
             ),
           ),
         ),
+        );
+        },
       ),
     );
   }

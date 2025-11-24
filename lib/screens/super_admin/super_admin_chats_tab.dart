@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/realtime_provider.dart';
 import '../../models/chat_model.dart';
 import '../worker/worker_chat_detail_screen.dart';
 import '../common/create_chat_screen.dart';
@@ -23,7 +24,20 @@ class _SuperAdminChatsTabState extends State<SuperAdminChatsTab> {
 
   Future<void> _loadChats() async {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    await chatProvider.connectSignalR();
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    // Try to connect to real-time (optional)
+    if (!realtimeProvider.isConnected) {
+      try {
+        await realtimeProvider.connect(isSuperAdmin: true);
+        print('SuperAdminChatsTab: ✅ Real-time enabled');
+      } catch (e) {
+        print('SuperAdminChatsTab: ⚠️ Real-time not available: $e');
+        // Continue without real-time
+      }
+    }
+    
+    // SignalR already connected globally on app start/login
     await chatProvider.loadChats();
   }
 
@@ -268,23 +282,51 @@ class _SuperAdminChatsTabState extends State<SuperAdminChatsTab> {
                   ],
                 ),
               ),
-              // Time badge
-              if (chat.lastMessage != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: (isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary).withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    chat.lastMessage!.formattedTime,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary,
+              // Time badge and unread count
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (chat.lastMessage != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary).withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        chat.lastMessage!.formattedTime,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  if (chat.unreadCount > 0) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.dangerRed,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                      ),
+                      child: Text(
+                        chat.unreadCount > 99 ? '99+' : chat.unreadCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ),

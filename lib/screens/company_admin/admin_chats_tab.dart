@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../providers/chat_provider.dart';
+import '../../providers/realtime_provider.dart';
 import '../../models/chat_model.dart';
 import '../worker/worker_chat_detail_screen.dart';
 import '../common/create_chat_screen.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/premium_widgets.dart';
+import '../../services/storage_service.dart';
 
 class AdminChatsTab extends StatefulWidget {
   const AdminChatsTab({super.key});
@@ -15,16 +18,33 @@ class AdminChatsTab extends StatefulWidget {
 }
 
 class _AdminChatsTabState extends State<AdminChatsTab> {
+  final StorageService _storage = StorageService();
+  
   @override
   void initState() {
     super.initState();
     _loadChats();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectRealtime();
+    });
   }
 
   Future<void> _loadChats() async {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    await chatProvider.connectSignalR();
+    // SignalR already connected globally on app start/login
     await chatProvider.loadChats();
+  }
+  
+  Future<void> _connectRealtime() async {
+    try {
+      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        await realtimeProvider.connect(empresaId: empresaId);
+      }
+    } catch (e) {
+      debugPrint('Error connecting to realtime: $e');
+    }
   }
 
   @override
@@ -212,15 +232,39 @@ class _AdminChatsTabState extends State<AdminChatsTab> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      chat.displayName,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            chat.displayName,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (chat.unreadCount > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${chat.unreadCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     if (chat.lastMessage != null) ...[
                       const SizedBox(height: 5),
@@ -238,7 +282,8 @@ class _AdminChatsTabState extends State<AdminChatsTab> {
                   ],
                 ),
               ),
-              if (chat.lastMessage != null)
+              if (chat.lastMessage != null) ...[
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
@@ -254,6 +299,7 @@ class _AdminChatsTabState extends State<AdminChatsTab> {
                     ),
                   ),
                 ),
+              ],
             ],
           ),
         ),

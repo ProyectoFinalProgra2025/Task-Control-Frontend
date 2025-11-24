@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../widgets/theme_toggle_button.dart';
 import '../../widgets/task_progress_indicator.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/usuario_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../config/theme_config.dart';
+import '../../services/storage_service.dart';
 import 'worker_tasks_list_screen.dart';
 import 'worker_chat_detail_screen.dart';
 
@@ -20,11 +23,65 @@ class WorkerHomeTab extends StatefulWidget {
 }
 
 class _WorkerHomeTabState extends State<WorkerHomeTab> {
+  final StorageService _storage = StorageService();
+  StreamSubscription? _tareaEventSubscription;
+  
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
+      _connectRealtime();
+      _subscribeToRealtimeEvents();
+    });
+  }
+  
+  @override
+  void dispose() {
+    _tareaEventSubscription?.cancel();
+    super.dispose();
+  }
+  
+  Future<void> _connectRealtime() async {
+    try {
+      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        await realtimeProvider.connect(empresaId: empresaId);
+      }
+    } catch (e) {
+      debugPrint('Error connecting to realtime: $e');
+    }
+  }
+  
+  void _subscribeToRealtimeEvents() {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
+      debugPrint('💼 Worker Home: Tarea event received: ${event['action']}');
+      _loadData();
+      
+      if (mounted) {
+        final action = event['action'] ?? '';
+        String message = '';
+        if (action == 'tarea:assigned') {
+          message = 'Nueva tarea asignada';
+        } else if (action == 'tarea:accepted') {
+          message = 'Tarea aceptada';
+        } else if (action == 'tarea:completed') {
+          message = 'Tarea completada';
+        }
+        
+        if (message.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     });
   }
 

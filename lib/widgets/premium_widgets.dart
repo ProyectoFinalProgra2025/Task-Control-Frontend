@@ -332,6 +332,8 @@ class PremiumNavItem extends StatelessWidget {
   final bool isDark;
   final VoidCallback onTap;
 
+  final int? badgeCount;
+
   const PremiumNavItem({
     super.key,
     required this.icon,
@@ -341,6 +343,7 @@ class PremiumNavItem extends StatelessWidget {
     required this.activeColor,
     required this.isDark,
     required this.onTap,
+    this.badgeCount,
   });
 
   @override
@@ -357,26 +360,61 @@ class PremiumNavItem extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Icon con background animado
-              AnimatedContainer(
-                duration: AppTheme.animationNormal,
-                padding: isActive
-                    ? const EdgeInsets.symmetric(
-                        horizontal: AppTheme.spaceMedium,
-                        vertical: AppTheme.spaceXSmall,
-                      )
-                    : EdgeInsets.zero,
-                decoration: isActive
-                    ? BoxDecoration(
-                        color: activeColor.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                      )
-                    : null,
-                child: Icon(
-                  isActive ? activeIcon : icon,
-                  color: isActive ? activeColor : inactiveColor,
-                  size: AppTheme.iconRegular,
-                ),
+              // Icon con background animado y badge
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AnimatedContainer(
+                    duration: AppTheme.animationNormal,
+                    padding: isActive
+                        ? const EdgeInsets.symmetric(
+                            horizontal: AppTheme.spaceMedium,
+                            vertical: AppTheme.spaceXSmall,
+                          )
+                        : EdgeInsets.zero,
+                    decoration: isActive
+                        ? BoxDecoration(
+                            color: activeColor.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                          )
+                        : null,
+                    child: Icon(
+                      isActive ? activeIcon : icon,
+                      color: isActive ? activeColor : inactiveColor,
+                      size: AppTheme.iconRegular,
+                    ),
+                  ),
+                  if (badgeCount != null && badgeCount! > 0)
+                    Positioned(
+                      right: -6,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.dangerRed,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                            width: 1.5,
+                          ),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Text(
+                          badgeCount! > 99 ? '99+' : badgeCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: AppTheme.spaceXSmall),
               // Label

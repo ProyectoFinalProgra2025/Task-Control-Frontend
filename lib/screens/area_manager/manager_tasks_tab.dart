@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../providers/tarea_provider.dart';
 import '../../providers/admin_tarea_provider.dart';
+import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../models/enums/prioridad_tarea.dart';
 import '../../config/theme_config.dart';
+import '../../services/storage_service.dart';
 import 'manager_task_detail_screen.dart';
 
 class ManagerTasksTab extends StatefulWidget {
@@ -16,9 +19,11 @@ class ManagerTasksTab extends StatefulWidget {
 }
 
 class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProviderStateMixin {
+  final StorageService _storage = StorageService();
   late TabController _tabController;
   EstadoTarea? _filtroEstado;
   PrioridadTarea? _filtroPrioridad;
+  StreamSubscription? _tareaEventSubscription;
 
   @override
   void initState() {
@@ -29,13 +34,62 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with SingleTickerProv
       Provider.of<TareaProvider>(context, listen: false).cargarMisTareas();
       // Cargar TODAS las tareas del departamento
       Provider.of<AdminTareaProvider>(context, listen: false).cargarTodasLasTareas();
+      _connectRealtime();
+      _subscribeToRealtimeEvents();
     });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _tareaEventSubscription?.cancel();
     super.dispose();
+  }
+  
+  Future<void> _connectRealtime() async {
+    try {
+      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        await realtimeProvider.connect(empresaId: empresaId);
+      }
+    } catch (e) {
+      debugPrint('Error connecting to realtime: $e');
+    }
+  }
+  
+  void _subscribeToRealtimeEvents() {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
+      debugPrint('📋 Manager Tasks: Tarea event received: ${event['action']}');
+      Provider.of<TareaProvider>(context, listen: false).cargarMisTareas();
+      Provider.of<AdminTareaProvider>(context, listen: false).cargarTodasLasTareas();
+      
+      if (mounted) {
+        final action = event['action'] ?? '';
+        String message = '';
+        if (action == 'tarea:created') {
+          message = 'Nueva tarea creada';
+        } else if (action == 'tarea:assigned') {
+          message = 'Tarea asignada';
+        } else if (action == 'tarea:accepted') {
+          message = 'Tarea aceptada';
+        } else if (action == 'tarea:completed') {
+          message = 'Tarea completada';
+        }
+        
+        if (message.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    });
   }
 
   @override

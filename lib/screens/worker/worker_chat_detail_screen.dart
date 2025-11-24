@@ -42,6 +42,9 @@ class _WorkerChatDetailScreenState extends State<WorkerChatDetailScreen> {
       _currentUserId = userData?['id']?.toString();
     });
 
+    // Mark chat as read
+    chatProvider.markChatAsRead(widget.chatId);
+
     // Load messages and join SignalR room
     await chatProvider.loadMessages(widget.chatId);
     await chatProvider.joinChatRoom(widget.chatId);

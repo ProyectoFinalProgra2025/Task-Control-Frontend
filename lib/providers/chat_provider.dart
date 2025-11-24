@@ -24,6 +24,11 @@ class ChatProvider with ChangeNotifier {
   String? get error => _error;
   ChatModel? get currentChat => _currentChat;
   bool get isSignalRConnected => _signalRService.isConnected;
+  
+  // Get total unread messages count across all chats
+  int get totalUnreadCount {
+    return _chats.fold(0, (sum, chat) => sum + chat.unreadCount);
+  }
 
   ChatProvider() {
     _initializeCurrentUser();
@@ -51,7 +56,7 @@ class ChatProvider with ChangeNotifier {
   }
 
   // Connect to SignalR
-  Future<void> connectSignalR() async {
+  Future<void> connectSignalR({String? empresaId, bool isSuperAdmin = false}) async {
     try {
       final token = await _storage.getAccessToken();
       if (token == null) {
@@ -59,6 +64,14 @@ class ChatProvider with ChangeNotifier {
       }
 
       await _signalRService.connect(token);
+      
+      // Join appropriate groups based on user role
+      if (isSuperAdmin) {
+        await _signalRService.joinSuperAdminGroup();
+      } else if (empresaId != null) {
+        await _signalRService.joinEmpresaGroup(empresaId);
+      }
+      
       notifyListeners();
     } catch (e) {
       print('ChatProvider: Failed to connect SignalR: $e');
@@ -120,27 +133,39 @@ class ChatProvider with ChangeNotifier {
   }
 
   // Add incoming message from SignalR
-  void addIncomingMessage(MessageModel message) {
+  void addIncomingMessage(MessageModel message) async {
+    final userData = await _storage.getUserData();
+    final currentUserId = userData?['id']?.toString();
+    
     // Add to messages cache
     if (_messagesByChat[message.chatId] != null) {
-      // Check if message already exists (from optimistic update)
+      // Check if message already exists
       final exists = _messagesByChat[message.chatId]!.any((m) => m.id == message.id);
       if (!exists) {
         _messagesByChat[message.chatId]!.add(message);
       }
     }
 
-    // Update last message in chat list
+    // Update last message in chat list and increment unread if not from current user
     final chatIndex = _chats.indexWhere((c) => c.id == message.chatId);
     if (chatIndex != -1) {
-      // Update the chat's last message and move to top
+      final oldChat = _chats[chatIndex];
+      final isFromOtherUser = message.senderId != currentUserId;
+      final isNotInCurrentChat = _currentChat?.id != message.chatId;
+      
+      // Increment unread count if message is from another user and chat is not open
+      final newUnreadCount = (isFromOtherUser && isNotInCurrentChat) 
+          ? oldChat.unreadCount + 1 
+          : oldChat.unreadCount;
+      
       final updatedChat = ChatModel(
-        id: _chats[chatIndex].id,
-        type: _chats[chatIndex].type,
-        name: _chats[chatIndex].name,
-        members: _chats[chatIndex].members,
+        id: oldChat.id,
+        type: oldChat.type,
+        name: oldChat.name,
+        members: oldChat.members,
         lastMessage: message,
-        createdAt: _chats[chatIndex].createdAt,
+        createdAt: oldChat.createdAt,
+        unreadCount: newUnreadCount,
       );
       
       _chats.removeAt(chatIndex);
@@ -148,6 +173,25 @@ class ChatProvider with ChangeNotifier {
     }
 
     notifyListeners();
+  }
+  
+  // Mark chat as read when opening it
+  void markChatAsRead(String chatId) {
+    final chatIndex = _chats.indexWhere((c) => c.id == chatId);
+    if (chatIndex != -1) {
+      final oldChat = _chats[chatIndex];
+      final updatedChat = ChatModel(
+        id: oldChat.id,
+        type: oldChat.type,
+        name: oldChat.name,
+        members: oldChat.members,
+        lastMessage: oldChat.lastMessage,
+        createdAt: oldChat.createdAt,
+        unreadCount: 0,
+      );
+      _chats[chatIndex] = updatedChat;
+      notifyListeners();
+    }
   }
 
   // Create 1:1 chat

@@ -16,6 +16,7 @@ import 'providers/tarea_provider.dart';
 import 'providers/admin_tarea_provider.dart';
 import 'providers/usuario_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/realtime_provider.dart';
 
 void main() {
   runApp(
@@ -26,6 +27,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => AdminTareaProvider()),
         ChangeNotifierProvider(create: (_) => UsuarioProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(create: (_) => RealtimeProvider()),
       ],
       child: const TaskControlApp(),
     ),
@@ -87,10 +89,18 @@ class _InitialRouteHandlerState extends State<InitialRouteHandler> {
     // Verificar token almacenado
     final token = await _storage.getAccessToken();
     
-    // Si hay token, podríamos validar sesión aquí
+    // Si hay token, inicializar ChatProvider automáticamente
     if (token != null && token.isNotEmpty) {
-      // Usuario tiene sesión activa
-      // En el futuro, validar con el backend si el token es válido
+      // Usuario tiene sesión activa - conectar ChatProvider
+      try {
+        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+        await chatProvider.connectSignalR();
+        await chatProvider.loadChats();
+        debugPrint('✅ ChatProvider initialized automatically on app start');
+      } catch (e) {
+        debugPrint('⚠️ Error initializing ChatProvider: $e');
+        // Continuar aunque falle - no es crítico
+      }
     }
 
     // ════════════════════════════════════════════════════════════

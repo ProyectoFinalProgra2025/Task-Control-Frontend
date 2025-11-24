@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../providers/tarea_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
+import '../../services/storage_service.dart';
 import 'worker_chat_detail_screen.dart';
 
 class WorkerTaskDetailScreen extends StatefulWidget {
@@ -16,13 +19,49 @@ class WorkerTaskDetailScreen extends StatefulWidget {
 }
 
 class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
+  final StorageService _storage = StorageService();
   Tarea? _tarea;
   bool _isLoading = true;
+  StreamSubscription? _tareaEventSubscription;
 
   @override
   void initState() {
     super.initState();
     _cargarDetalle();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectRealtime();
+      _subscribeToRealtimeEvents();
+    });
+  }
+  
+  @override
+  void dispose() {
+    _tareaEventSubscription?.cancel();
+    super.dispose();
+  }
+  
+  Future<void> _connectRealtime() async {
+    try {
+      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        await realtimeProvider.connect(empresaId: empresaId);
+      }
+    } catch (e) {
+      debugPrint('Error connecting to realtime: $e');
+    }
+  }
+  
+  void _subscribeToRealtimeEvents() {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
+      final eventTareaId = event['tareaId']?.toString();
+      if (eventTareaId == widget.tareaId) {
+        debugPrint('📝 Worker Task Detail: Task event for this task - reloading');
+        _cargarDetalle();
+      }
+    });
   }
 
   Future<void> _cargarDetalle() async {

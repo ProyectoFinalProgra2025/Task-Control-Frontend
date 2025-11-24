@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/empresa_service.dart';
 import '../../models/empresa_model.dart';
 import '../../widgets/theme_toggle_button.dart';
 import '../../config/theme_config.dart';
+import '../../providers/realtime_provider.dart';
 
 class SuperAdminHomeTab extends StatefulWidget {
   const SuperAdminHomeTab({super.key});
@@ -17,6 +20,8 @@ class _SuperAdminHomeTabState extends State<SuperAdminHomeTab> with SingleTicker
   bool _isLoading = true;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  StreamSubscription? _tareaEventSubscription;
+  StreamSubscription? _empresaEventSubscription;
 
   @override
   void initState() {
@@ -29,25 +34,63 @@ class _SuperAdminHomeTabState extends State<SuperAdminHomeTab> with SingleTicker
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _loadStats();
+    // Esperar un frame antes de conectar real-time
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectRealtime();
+      _subscribeToRealtimeEvents();
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _tareaEventSubscription?.cancel();
+    _empresaEventSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _connectRealtime() async {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    if (!realtimeProvider.isConnected) {
+      try {
+        await realtimeProvider.connect(isSuperAdmin: true);
+        print('SuperAdminHomeTab: ✅ Connected to real-time updates');
+      } catch (e) {
+        print('SuperAdminHomeTab: ⚠️ Real-time not available (backend may be offline): $e');
+        // Continue without real-time - app still works
+      }
+    }
+  }
+
+  void _subscribeToRealtimeEvents() {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    // Subscribe to tarea events
+    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
+      print('SuperAdminHomeTab: 📊 Tarea event: ${event['eventType']}');
+      _loadStats();
+    });
+
+    // Subscribe to empresa events
+    _empresaEventSubscription = realtimeProvider.empresaEventStream.listen((event) {
+      print('SuperAdminHomeTab: 🏢 Empresa event: ${event['eventType']}');
+      _loadStats();
+    });
   }
 
   Future<void> _loadStats() async {
     try {
       final stats = await _empresaService.obtenerEstadisticasGenerales();
-      setState(() {
-        _stats = stats;
-        _isLoading = false;
-      });
-      _animationController.forward();
-    } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() {
+          _stats = stats;
+          _isLoading = false;
+        });
+        _animationController.forward();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar estadísticas: $e'),

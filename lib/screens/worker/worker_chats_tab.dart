@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/realtime_provider.dart';
 import '../../models/chat_model.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../config/theme_config.dart';
+import '../../services/storage_service.dart';
 import 'worker_chat_detail_screen.dart';
 import '../common/create_chat_screen.dart';
 
@@ -16,30 +18,35 @@ class WorkerChatsTab extends StatefulWidget {
 }
 
 class _WorkerChatsTabState extends State<WorkerChatsTab> {
+  final StorageService _storage = StorageService();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadChats();
-    _startAutoRefresh();
-  }
-
-  void _startAutoRefresh() {
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      if (mounted) {
-        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-        chatProvider.loadChats();
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectRealtime();
     });
   }
 
   Future<void> _loadChats() async {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    await chatProvider.connectSignalR();
+    // SignalR already connected globally on app start/login
     await chatProvider.loadChats();
+  }
+  
+  Future<void> _connectRealtime() async {
+    try {
+      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        await realtimeProvider.connect(empresaId: empresaId);
+      }
+    } catch (e) {
+      debugPrint('Error connecting to realtime: $e');
+    }
   }
 
   List<ChatModel> get _filteredChats {
@@ -314,11 +321,28 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
                     ),
                   ),
                 const SizedBox(height: 4),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 16,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                ),
+                if (chat.unreadCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${chat.unreadCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  ),
               ],
             ),
           ],
@@ -364,7 +388,6 @@ class _WorkerChatsTabState extends State<WorkerChatsTab> {
 
   @override
   void dispose() {
-    _autoRefreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
