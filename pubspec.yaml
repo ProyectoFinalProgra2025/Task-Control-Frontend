@@ -1,7 +1,7 @@
 name: task_control_frontend
-description: A new Flutter project.
+description: TaskControl - Plataforma empresarial multi-tenant para gestión de tareas con roles jerárquicos, delegación de tareas y comunicación en tiempo real.
 publish_to: 'none'
-version: 0.1.0
+version: 1.0.0+1
 
 environment:
   sdk: ^3.9.2
