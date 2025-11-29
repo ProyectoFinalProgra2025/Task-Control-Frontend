@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../widgets/create_task_modal.dart';
 import '../../widgets/theme_toggle_button.dart';
+import '../../widgets/calendar/task_calendar_widget.dart';
 import '../../services/usuario_service.dart';
 import '../../services/empresa_service.dart';
 import '../../services/tarea_service.dart';
@@ -11,6 +12,7 @@ import '../../models/usuario.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import 'team_management_screen.dart';
+import 'admin_task_detail_screen.dart';
 import '../../config/theme_config.dart';
 import '../../providers/realtime_provider.dart';
 
@@ -32,6 +34,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   Usuario? _currentUser;
   Map<String, dynamic>? _estadisticas;
   List<Tarea> _tareasRecientes = [];
+  List<Tarea> _todasLasTareas = []; // Para el calendario
   bool _isLoading = true;
   String? _error;
   
@@ -134,6 +137,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
         setState(() {
           _currentUser = user;
           _estadisticas = stats;
+          _todasLasTareas = todasTareas;
           _tareasRecientes = tareasOngoing;
           _isLoading = false;
         });
@@ -399,6 +403,26 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                         isDark: isDark,
                       ),
                     ],
+                  ),
+                ),
+
+                // Task Calendar
+                const SizedBox(height: 28),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TaskCalendarWidget(
+                    tareas: _todasLasTareas,
+                    title: 'Calendario de la Empresa',
+                    primaryColor: AppTheme.primaryBlue,
+                    isLoading: _isLoading,
+                    onTaskTap: (tarea) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AdminTaskDetailScreen(tareaId: tarea.id),
+                        ),
+                      ).then((_) => _loadData());
+                    },
                   ),
                 ),
 

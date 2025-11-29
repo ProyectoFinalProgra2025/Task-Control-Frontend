@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../widgets/theme_toggle_button.dart';
+import '../../widgets/calendar/task_calendar_widget.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/usuario_provider.dart';
+import '../../providers/admin_tarea_provider.dart';
 import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
@@ -11,6 +13,7 @@ import '../../services/usuario_service.dart';
 import '../../services/tarea_service.dart';
 import '../../services/storage_service.dart';
 import '../../config/theme_config.dart';
+import 'manager_task_detail_screen.dart';
 
 class ManagerHomeTab extends StatefulWidget {
   const ManagerHomeTab({super.key});
@@ -94,9 +97,11 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
   Future<void> _loadData() async {
     final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
     final usuarioProvider = Provider.of<UsuarioProvider>(context, listen: false);
+    final adminTareaProvider = Provider.of<AdminTareaProvider>(context, listen: false);
     await Future.wait([
       tareaProvider.cargarMisTareas(),
       usuarioProvider.cargarPerfil(),
+      adminTareaProvider.cargarTodasLasTareas(), // Tareas del departamento para el calendario
     ]);
   }
 
@@ -111,8 +116,8 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: Consumer2<TareaProvider, UsuarioProvider>(
-        builder: (context, tareaProvider, usuarioProvider, child) {
+      body: Consumer3<TareaProvider, UsuarioProvider, AdminTareaProvider>(
+        builder: (context, tareaProvider, usuarioProvider, adminTareaProvider, child) {
           if (tareaProvider.isLoading || usuarioProvider.isLoading) {
             return Center(child: CircularProgressIndicator(color: AppTheme.successGreen));
           }
@@ -123,6 +128,7 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
           final nombreUsuario = usuarioProvider.usuario?.nombreCompleto ?? 'Manager';
           final firstName = nombreUsuario.split(' ').first;
           final userInitials = _getInitials(nombreUsuario);
+          final tareasDepartamento = adminTareaProvider.todasLasTareas; // Tareas del departamento
 
           return SafeArea(
             child: RefreshIndicator(
@@ -302,6 +308,27 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
                           ? _buildTaskCard(tarea: tareaActiva, isDark: isDark)
                           : _buildEmptyState(isDark: isDark),
                     ),
+
+                    // Department Calendar
+                    const SizedBox(height: 28),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: TaskCalendarWidget(
+                        tareas: tareasDepartamento,
+                        title: 'Calendario del Departamento',
+                        primaryColor: AppTheme.successGreen,
+                        isLoading: adminTareaProvider.isLoading,
+                        onTaskTap: (tarea) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ManagerTaskDetailScreen(tareaId: tarea.id),
+                            ),
+                          ).then((_) => _loadData());
+                        },
+                      ),
+                    ),
+
                     const SizedBox(height: 100),
                   ],
                 ),
