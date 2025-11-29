@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/empresa_service.dart';
 import '../../models/empresa_model.dart';
 import '../../widgets/theme_toggle_button.dart';
+import '../../config/theme_config.dart';
+import '../../providers/realtime_provider.dart';
 
 class SuperAdminHomeTab extends StatefulWidget {
   const SuperAdminHomeTab({super.key});
@@ -10,31 +14,91 @@ class SuperAdminHomeTab extends StatefulWidget {
   State<SuperAdminHomeTab> createState() => _SuperAdminHomeTabState();
 }
 
-class _SuperAdminHomeTabState extends State<SuperAdminHomeTab> {
+class _SuperAdminHomeTabState extends State<SuperAdminHomeTab> with SingleTickerProviderStateMixin {
   final EmpresaService _empresaService = EmpresaService();
   SystemStatsModel? _stats;
   bool _isLoading = true;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  StreamSubscription? _tareaEventSubscription;
+  StreamSubscription? _empresaEventSubscription;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
     _loadStats();
+    // Esperar un frame antes de conectar real-time
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectRealtime();
+      _subscribeToRealtimeEvents();
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _tareaEventSubscription?.cancel();
+    _empresaEventSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _connectRealtime() async {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    if (!realtimeProvider.isConnected) {
+      try {
+        await realtimeProvider.connect(isSuperAdmin: true);
+        print('SuperAdminHomeTab: ✅ Connected to real-time updates');
+      } catch (e) {
+        print('SuperAdminHomeTab: ⚠️ Real-time not available (backend may be offline): $e');
+        // Continue without real-time - app still works
+      }
+    }
+  }
+
+  void _subscribeToRealtimeEvents() {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    // Subscribe to tarea events
+    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
+      print('SuperAdminHomeTab: 📊 Tarea event: ${event['eventType']}');
+      _loadStats();
+    });
+
+    // Subscribe to empresa events
+    _empresaEventSubscription = realtimeProvider.empresaEventStream.listen((event) {
+      print('SuperAdminHomeTab: 🏢 Empresa event: ${event['eventType']}');
+      _loadStats();
+    });
   }
 
   Future<void> _loadStats() async {
     try {
       final stats = await _empresaService.obtenerEstadisticasGenerales();
-      setState(() {
-        _stats = stats;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() {
+          _stats = stats;
+          _isLoading = false;
+        });
+        _animationController.forward();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar estadísticas: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            ),
           ),
         );
       }
@@ -44,305 +108,534 @@ class _SuperAdminHomeTabState extends State<SuperAdminHomeTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadStats,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top App Bar
-                Padding(
-                  padding: const EdgeInsets.all(16),
+          color: AppTheme.primaryPurple,
+          strokeWidth: 3,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            slivers: [
+              // Premium App Bar con animación
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(
+                    AppTheme.spaceRegular,
+                    AppTheme.spaceRegular,
+                    AppTheme.spaceRegular,
+                    0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Header con avatar y acciones
                       Row(
                         children: [
-                          CircleAvatar(
-                            radius: 24,
-                            backgroundColor: const Color(0xFF7C3AED).withOpacity(0.1),
-                            child: const Icon(Icons.admin_panel_settings, color: Color(0xFF7C3AED)),
+                          // Avatar con gradiente animado
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: AppTheme.gradientPurple,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primaryPurple.withOpacity(0.4),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.transparent,
+                              child: Icon(
+                                Icons.admin_panel_settings_rounded,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
                           ),
                           const Spacer(),
-                          const ThemeToggleButton(),
-                          IconButton(
-                            icon: Icon(Icons.notifications_outlined, color: textPrimary),
-                            onPressed: () {},
+                          // Theme toggle con estilo
+                          Container(
+                            decoration: BoxDecoration(
+                              color: (isDark ? AppTheme.darkCard : AppTheme.lightCard)
+                                  .withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusCircle),
+                              border: Border.all(
+                                color: (isDark ? AppTheme.darkBorder : AppTheme.lightBorder)
+                                    .withOpacity(0.5),
+                              ),
+                            ),
+                            child: const ThemeToggleButton(),
+                          ),
+                          const SizedBox(width: AppTheme.spaceSmall),
+                          // Notification badge
+                          Container(
+                            decoration: BoxDecoration(
+                              color: (isDark ? AppTheme.darkCard : AppTheme.lightCard)
+                                  .withOpacity(0.6),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: (isDark ? AppTheme.darkBorder : AppTheme.lightBorder)
+                                    .withOpacity(0.5),
+                              ),
+                            ),
+                            child: IconButton(
+                              icon: Badge(
+                                backgroundColor: AppTheme.dangerRed,
+                                smallSize: 8,
+                                child: Icon(
+                                  Icons.notifications_outlined,
+                                  color: isDark
+                                      ? AppTheme.darkTextPrimary
+                                      : AppTheme.lightTextPrimary,
+                                ),
+                              ),
+                              onPressed: () {},
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Dashboard Admin',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: textPrimary,
+                      const SizedBox(height: AppTheme.spaceXLarge),
+                      // Título con gradiente
+                      ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: AppTheme.gradientPurple,
+                        ).createShader(bounds),
+                        child: Text(
+                          'Dashboard Admin',
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeHuge,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            height: 1.1,
+                            letterSpacing: -0.5,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppTheme.spaceXSmall),
                       Text(
                         'Panel de control general del sistema',
                         style: TextStyle(
-                          fontSize: 14,
-                          color: textSecondary,
+                          fontSize: AppTheme.fontSizeMedium,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
                 ),
+              ),
 
-                if (_isLoading)
-                  const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else ...[
-                  // Stats Grid
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.4,
+              // Stats Grid con animación
+              if (_isLoading)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildStatCard(
-                          icon: Icons.business,
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: AppTheme.gradientPurple,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              strokeWidth: 3,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppTheme.spaceRegular),
+                        Text(
+                          'Cargando estadísticas...',
+                          style: TextStyle(
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.all(AppTheme.spaceRegular),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: AppTheme.spaceMedium,
+                      crossAxisSpacing: AppTheme.spaceMedium,
+                      childAspectRatio: 1.35,
+                    ),
+                    delegate: SliverChildListDelegate([
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: _buildAnimatedStatCard(
+                          icon: Icons.business_center_rounded,
                           title: 'Total Empresas',
                           value: '${_stats?.totalEmpresas ?? 0}',
-                          color: const Color(0xFF7C3AED),
-                          cardColor: cardColor,
-                          textColor: textPrimary,
-                          descColor: textSecondary,
+                          gradientColors: AppTheme.gradientPurple,
+                          isDark: isDark,
+                          delay: 0,
                         ),
-                        _buildStatCard(
-                          icon: Icons.pending,
+                      ),
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: _buildAnimatedStatCard(
+                          icon: Icons.pending_actions_rounded,
                           title: 'Pendientes',
                           value: '${_stats?.empresasPendientes ?? 0}',
-                          color: const Color(0xFFF59E0B),
-                          cardColor: cardColor,
-                          textColor: textPrimary,
-                          descColor: textSecondary,
+                          gradientColors: AppTheme.gradientOrange,
+                          isDark: isDark,
+                          delay: 100,
                         ),
-                        _buildStatCard(
-                          icon: Icons.check_circle,
+                      ),
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: _buildAnimatedStatCard(
+                          icon: Icons.check_circle_rounded,
                           title: 'Aprobadas',
                           value: '${_stats?.empresasAprobadas ?? 0}',
-                          color: const Color(0xFF10B981),
-                          cardColor: cardColor,
-                          textColor: textPrimary,
-                          descColor: textSecondary,
+                          gradientColors: [AppTheme.successGreen, const Color(0xFF059669)],
+                          isDark: isDark,
+                          delay: 200,
                         ),
-                        _buildStatCard(
-                          icon: Icons.cancel,
+                      ),
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: _buildAnimatedStatCard(
+                          icon: Icons.cancel_rounded,
                           title: 'Rechazadas',
                           value: '${_stats?.empresasRechazadas ?? 0}',
-                          color: const Color(0xFFEF4444),
-                          cardColor: cardColor,
-                          textColor: textPrimary,
-                          descColor: textSecondary,
+                          gradientColors: [AppTheme.dangerRed, const Color(0xFFDC2626)],
+                          isDark: isDark,
+                          delay: 300,
                         ),
-                      ],
-                    ),
-                  ),
-
-                  // System Overview Section
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Resumen del Sistema',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
                       ),
-                    ),
+                    ]),
                   ),
+                ),
 
-                  // Overview Cards
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      children: [
-                        _buildOverviewCard(
-                          icon: Icons.groups,
-                          title: 'Total Trabajadores',
-                          value: '${_stats?.totalTrabajadores ?? 0}',
-                          subtitle: 'Usuarios activos en el sistema',
-                          color: const Color(0xFF135bec),
-                          cardColor: cardColor,
-                          textColor: textPrimary,
-                          descColor: textSecondary,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildOverviewCard(
-                          icon: Icons.assignment,
-                          title: 'Tareas Activas',
-                          value: '${_stats?.tareasActivas ?? 0}',
-                          subtitle: 'Tareas en progreso',
-                          color: const Color(0xFF7C3AED),
-                          cardColor: cardColor,
-                          textColor: textPrimary,
-                          descColor: textSecondary,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildOverviewCard(
-                          icon: Icons.task_alt,
-                          title: 'Tareas Completadas',
-                          value: '${_stats?.tareasCompletadas ?? 0}',
-                          subtitle: 'Tareas finalizadas exitosamente',
-                          color: const Color(0xFF10B981),
-                          cardColor: cardColor,
-                          textColor: textPrimary,
-                          descColor: textSecondary,
-                        ),
-                      ],
-                    ),
+              // System Overview Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.spaceRegular,
+                    AppTheme.spaceXLarge,
+                    AppTheme.spaceRegular,
+                    AppTheme.spaceMedium,
                   ),
-                ],
-                const SizedBox(height: 100), // Extra space for bottom nav
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-    required Color cardColor,
-    required Color textColor,
-    required Color descColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF324467)
-              : const Color(0xFFE5E7EB),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: AppTheme.gradientPurple,
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: AppTheme.spaceMedium),
+                      Text(
+                        'Resumen del Sistema',
+                        style: TextStyle(
+                          fontSize: AppTheme.fontSizeXLarge,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: descColor,
+
+              // Overview Cards
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceRegular),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    _buildPremiumOverviewCard(
+                      icon: Icons.groups_rounded,
+                      title: 'Total Trabajadores',
+                      value: '${_stats?.totalTrabajadores ?? 0}',
+                      subtitle: 'Usuarios activos en el sistema',
+                      color: AppTheme.primaryBlue,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: AppTheme.spaceMedium),
+                    _buildPremiumOverviewCard(
+                      icon: Icons.assignment_rounded,
+                      title: 'Tareas Activas',
+                      value: '${_stats?.tareasActivas ?? 0}',
+                      subtitle: 'Tareas en progreso',
+                      color: AppTheme.primaryPurple,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: AppTheme.spaceMedium),
+                    _buildPremiumOverviewCard(
+                      icon: Icons.task_alt_rounded,
+                      title: 'Tareas Completadas',
+                      value: '${_stats?.tareasCompletadas ?? 0}',
+                      subtitle: 'Tareas finalizadas exitosamente',
+                      color: AppTheme.successGreen,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 100), // Extra space for bottom nav
+                  ]),
                 ),
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildOverviewCard({
+  Widget _buildAnimatedStatCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required List<Color> gradientColors,
+    required bool isDark,
+    required int delay,
+  }) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 600 + delay),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: child,
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradientColors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
+          boxShadow: [
+            BoxShadow(
+              color: gradientColors.first.withOpacity(0.4),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Patrón de fondo sutil
+            Positioned(
+              right: -20,
+              top: -20,
+              child: Opacity(
+                opacity: 0.1,
+                child: Icon(
+                  icon,
+                  size: 120,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            // Contenido
+            Padding(
+              padding: const EdgeInsets.all(AppTheme.spaceRegular),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Icon container
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Icon(icon, color: Colors.white, size: AppTheme.iconRegular),
+                  ),
+                  // Value and title
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        value,
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          height: 1,
+                          letterSpacing: -1,
+                        ),
+                      ),
+                      const SizedBox(height: AppTheme.spaceXSmall),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: AppTheme.fontSizeSmall,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withOpacity(0.9),
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumOverviewCard({
     required IconData icon,
     required String title,
     required String value,
     required String subtitle,
     required Color color,
-    required Color cardColor,
-    required Color textColor,
-    required Color descColor,
+    required bool isDark,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+        borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
         border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF324467)
-              : const Color(0xFFE5E7EB),
+          color: isDark
+              ? AppTheme.darkBorder.withOpacity(0.5)
+              : AppTheme.lightBorder,
+          width: 1,
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 28),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: descColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spaceRegular),
+        child: Row(
+          children: [
+            // Icon container con gradiente
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spaceMedium),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    color.withOpacity(0.2),
+                    color.withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                border: Border.all(
+                  color: color.withOpacity(0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Icon(icon, color: color, size: AppTheme.iconMedium),
+            ),
+            const SizedBox(width: AppTheme.spaceRegular),
+            // Textos
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeMedium,
+                      fontWeight: FontWeight.w700,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.spaceXSmall),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeSmall,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppTheme.spaceSmall),
+            // Value con efecto
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spaceMedium,
+                vertical: AppTheme.spaceSmall,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    color.withOpacity(0.15),
+                    color.withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                border: Border.all(
+                  color: color.withOpacity(0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeXXLarge,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

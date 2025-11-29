@@ -1,6 +1,7 @@
 class ApiConfig {
-  // URL base del API
-  static const String baseUrl = 'http://localhost:5080';
+  // URL base del API - Cambiar para producción
+  // static const String baseUrl = 'https://api.taskcontrol.work'; // Producción
+  static const String baseUrl = 'http://localhost:5080'; // Desarrollo
   
   // Endpoints de autenticación
   static const String loginEndpoint = '/api/Auth/login';
@@ -22,6 +23,12 @@ class ApiConfig {
   static const String chatsEndpoint = '/api/chats';
   static String chatMessagesEndpoint(String chatId) => '/api/chats/$chatId/messages';
   static String chatMembersEndpoint(String chatId) => '/api/chats/$chatId/members';
+
+  // Endpoints de lectura de mensajes
+  static String chatMarkMessageReadEndpoint(String messageId) => '/api/chats/messages/$messageId/mark-read';
+  static String chatMarkAllReadEndpoint(String chatId) => '/api/chats/$chatId/mark-all-read';
+  static const String chatUnreadCountEndpoint = '/api/chats/unread-count';
+  static const String chatUnreadByChatEndpoint = '/api/chats/unread-by-chat';
   
   // SignalR Hub
   static String get signalRHubUrl => '$baseUrl/apphub';

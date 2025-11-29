@@ -16,6 +16,11 @@ class ChatProvider with ChangeNotifier {
   String? _error;
   ChatModel? _currentChat;
   StreamSubscription? _messageSubscription;
+  StreamSubscription? _newChatSubscription;
+  StreamSubscription? _messageReadSubscription;
+  StreamSubscription? _messagesReadSubscription;
+  Timer? _pollingTimer;
+  String? _currentUserId;
 
   // Getters
   List<ChatModel> get chats => _chats;
@@ -24,6 +29,11 @@ class ChatProvider with ChangeNotifier {
   String? get error => _error;
   ChatModel? get currentChat => _currentChat;
   bool get isSignalRConnected => _signalRService.isConnected;
+  
+  // Get total unread messages count across all chats
+  int get totalUnreadCount {
+    return _chats.fold(0, (sum, chat) => sum + chat.unreadCount);
+  }
 
   ChatProvider() {
     _initializeCurrentUser();
@@ -33,8 +43,7 @@ class ChatProvider with ChangeNotifier {
   Future<void> _initializeCurrentUser() async {
     final userData = await _storage.getUserData();
     if (userData != null) {
-      // Inicialización del usuario actual
-      // En el futuro, usar para filtrar mensajes propios
+      _currentUserId = userData['id']?.toString();
     }
   }
 
@@ -48,10 +57,111 @@ class ChatProvider with ChangeNotifier {
         print('ChatProvider: Error in message stream: $error');
       },
     );
+
+    // Suscribirse a notificaciones de chats nuevos
+    _newChatSubscription = _signalRService.newChatStream.listen(
+      (chatId) {
+        _handleNewChat(chatId);
+      },
+      onError: (error) {
+        print('ChatProvider: Error in newChat stream: $error');
+      },
+    );
+
+    // Suscribirse a eventos de mensaje leído
+    _messageReadSubscription = _signalRService.messageReadStream.listen(
+      (data) {
+        _handleMessageRead(data);
+      },
+      onError: (error) {
+        print('ChatProvider: Error in messageRead stream: $error');
+      },
+    );
+
+    // Suscribirse a eventos de múltiples mensajes leídos
+    _messagesReadSubscription = _signalRService.messagesReadStream.listen(
+      (data) {
+        _handleMessagesRead(data);
+      },
+      onError: (error) {
+        print('ChatProvider: Error in messagesRead stream: $error');
+      },
+    );
+  }
+
+  // Manejar evento de mensaje individual leído
+  void _handleMessageRead(Map<String, dynamic> data) {
+    final messageId = data['messageId']?.toString();
+    final chatId = data['chatId']?.toString();
+    final readAt = data['readAt']?.toString();
+    
+    if (messageId == null || chatId == null) return;
+    
+    // Actualizar el mensaje en caché
+    if (_messagesByChat[chatId] != null) {
+      final messageIndex = _messagesByChat[chatId]!.indexWhere((m) => m.id == messageId);
+      if (messageIndex != -1) {
+        final oldMessage = _messagesByChat[chatId]![messageIndex];
+        _messagesByChat[chatId]![messageIndex] = MessageModel(
+          id: oldMessage.id,
+          chatId: oldMessage.chatId,
+          senderId: oldMessage.senderId,
+          body: oldMessage.body,
+          createdAt: oldMessage.createdAt,
+          isRead: true,
+          readAt: readAt != null ? DateTime.tryParse(readAt) : DateTime.now(),
+        );
+        notifyListeners();
+      }
+    }
+  }
+
+  // Manejar evento de múltiples mensajes leídos
+  void _handleMessagesRead(Map<String, dynamic> data) {
+    final chatId = data['chatId']?.toString();
+    final messageIds = (data['messageIds'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+    final readAt = data['readAt']?.toString();
+    
+    if (chatId == null || messageIds.isEmpty) return;
+    
+    // Actualizar los mensajes en caché
+    if (_messagesByChat[chatId] != null) {
+      bool updated = false;
+      for (int i = 0; i < _messagesByChat[chatId]!.length; i++) {
+        final message = _messagesByChat[chatId]![i];
+        if (messageIds.contains(message.id) && !message.isRead) {
+          _messagesByChat[chatId]![i] = MessageModel(
+            id: message.id,
+            chatId: message.chatId,
+            senderId: message.senderId,
+            body: message.body,
+            createdAt: message.createdAt,
+            isRead: true,
+            readAt: readAt != null ? DateTime.tryParse(readAt) : DateTime.now(),
+          );
+          updated = true;
+        }
+      }
+      if (updated) {
+        notifyListeners();
+      }
+    }
+  }
+
+  // Manejar notificación de chat nuevo
+  Future<void> _handleNewChat(String chatId) async {
+    print('ChatProvider: Received notification for new chat: $chatId');
+
+    // Verificar si ya tenemos este chat
+    final exists = _chats.any((c) => c.id == chatId);
+    if (!exists) {
+      // Recargar todos los chats para obtener el nuevo
+      await loadChats();
+    }
   }
 
   // Connect to SignalR
-  Future<void> connectSignalR() async {
+  Future<void> connectSignalR({String? empresaId, bool isSuperAdmin = false}) async {
     try {
       final token = await _storage.getAccessToken();
       if (token == null) {
@@ -59,6 +169,14 @@ class ChatProvider with ChangeNotifier {
       }
 
       await _signalRService.connect(token);
+      
+      // Join appropriate groups based on user role
+      if (isSuperAdmin) {
+        await _signalRService.joinSuperAdminGroup();
+      } else if (empresaId != null) {
+        await _signalRService.joinEmpresaGroup(empresaId);
+      }
+      
       notifyListeners();
     } catch (e) {
       print('ChatProvider: Failed to connect SignalR: $e');
@@ -107,9 +225,18 @@ class ChatProvider with ChangeNotifier {
   // Send a message
   Future<void> sendMessage(String chatId, String text) async {
     try {
-      await _chatService.sendMessage(chatId, text);
-      // Don't add to local cache - wait for SignalR to broadcast it back
-      // This prevents duplicate messages
+      final message = await _chatService.sendMessage(chatId, text);
+
+      // Add message to local cache immediately for sender
+      if (_messagesByChat[chatId] != null) {
+        // Check if message already exists (to prevent duplicates)
+        final exists = _messagesByChat[chatId]!.any((m) => m.id == message.id);
+        if (!exists) {
+          _messagesByChat[chatId]!.add(message);
+          notifyListeners();
+        }
+      }
+
       _error = null;
     } catch (e) {
       _error = 'Failed to send message: $e';
@@ -120,34 +247,118 @@ class ChatProvider with ChangeNotifier {
   }
 
   // Add incoming message from SignalR
-  void addIncomingMessage(MessageModel message) {
-    // Add to messages cache
+  void addIncomingMessage(MessageModel message) async {
+    final userData = await _storage.getUserData();
+    final currentUserId = userData?['id']?.toString();
+
+    // Add to messages cache - SIEMPRE agregar aunque no exista la lista
     if (_messagesByChat[message.chatId] != null) {
-      // Check if message already exists (from optimistic update)
+      // Check if message already exists
       final exists = _messagesByChat[message.chatId]!.any((m) => m.id == message.id);
       if (!exists) {
         _messagesByChat[message.chatId]!.add(message);
+        print('ChatProvider: Added message to existing chat ${message.chatId}');
       }
+    } else {
+      // Si el chat no está en caché, crear la lista con este mensaje
+      _messagesByChat[message.chatId] = [message];
+      print('ChatProvider: Created new message list for chat ${message.chatId}');
     }
 
-    // Update last message in chat list
+    // Update last message in chat list and increment unread if not from current user
     final chatIndex = _chats.indexWhere((c) => c.id == message.chatId);
     if (chatIndex != -1) {
-      // Update the chat's last message and move to top
+      final oldChat = _chats[chatIndex];
+      final isFromOtherUser = message.senderId != currentUserId;
+      final isNotInCurrentChat = _currentChat?.id != message.chatId;
+
+      // Increment unread count if message is from another user and chat is not open
+      final newUnreadCount = (isFromOtherUser && isNotInCurrentChat)
+          ? oldChat.unreadCount + 1
+          : oldChat.unreadCount;
+
       final updatedChat = ChatModel(
-        id: _chats[chatIndex].id,
-        type: _chats[chatIndex].type,
-        name: _chats[chatIndex].name,
-        members: _chats[chatIndex].members,
+        id: oldChat.id,
+        type: oldChat.type,
+        name: oldChat.name,
+        members: oldChat.members,
         lastMessage: message,
-        createdAt: _chats[chatIndex].createdAt,
+        createdAt: oldChat.createdAt,
+        unreadCount: newUnreadCount,
       );
-      
+
       _chats.removeAt(chatIndex);
       _chats.insert(0, updatedChat);
+      print('ChatProvider: Updated chat list for chat ${message.chatId}');
+    } else {
+      print('ChatProvider: Warning - received message for unknown chat ${message.chatId}');
     }
 
+    // CRÍTICO: Siempre notificar cambios para actualizar la UI
     notifyListeners();
+  }
+  
+  // Mark chat as read when opening it - now calls API
+  Future<void> markChatAsRead(String chatId) async {
+    try {
+      // Llamar al API para marcar todos los mensajes como leídos
+      await _chatService.markAllChatAsRead(chatId);
+      
+      // Actualizar localmente
+      final chatIndex = _chats.indexWhere((c) => c.id == chatId);
+      if (chatIndex != -1) {
+        _chats[chatIndex].unreadCount = 0;
+        
+        // También marcar los mensajes en caché como leídos
+        if (_messagesByChat[chatId] != null) {
+          for (int i = 0; i < _messagesByChat[chatId]!.length; i++) {
+            final msg = _messagesByChat[chatId]![i];
+            if (!msg.isRead && msg.senderId != _currentUserId) {
+              _messagesByChat[chatId]![i] = MessageModel(
+                id: msg.id,
+                chatId: msg.chatId,
+                senderId: msg.senderId,
+                body: msg.body,
+                createdAt: msg.createdAt,
+                isRead: true,
+                readAt: DateTime.now(),
+              );
+            }
+          }
+        }
+        
+        notifyListeners();
+      }
+    } catch (e) {
+      print('ChatProvider: Error marking chat as read: $e');
+    }
+  }
+
+  // Start polling for chat updates (llamar cuando la app está en primer plano)
+  void startPolling({Duration interval = const Duration(seconds: 30)}) {
+    stopPolling(); // Cancelar cualquier polling anterior
+    _pollingTimer = Timer.periodic(interval, (_) {
+      refreshChats();
+    });
+    print('ChatProvider: Started polling with interval ${interval.inSeconds}s');
+  }
+
+  // Stop polling
+  void stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  // Refresh chats silently (for polling or when returning to screen)
+  Future<void> refreshChats() async {
+    try {
+      final newChats = await _chatService.getChats();
+      _chats = newChats;
+      notifyListeners();
+      print('ChatProvider: Refreshed ${newChats.length} chats');
+    } catch (e) {
+      print('ChatProvider: Error refreshing chats: $e');
+    }
   }
 
   // Create 1:1 chat
@@ -251,6 +462,10 @@ class ChatProvider with ChangeNotifier {
   @override
   void dispose() {
     _messageSubscription?.cancel();
+    _newChatSubscription?.cancel();
+    _messageReadSubscription?.cancel();
+    _messagesReadSubscription?.cancel();
+    stopPolling();
     _signalRService.dispose();
     super.dispose();
   }

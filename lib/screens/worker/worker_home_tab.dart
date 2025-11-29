@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../widgets/theme_toggle_button.dart';
+import '../../widgets/task_progress_indicator.dart';
+import '../../widgets/premium_widgets.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/usuario_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
+import '../../config/theme_config.dart';
+import '../../services/storage_service.dart';
 import 'worker_tasks_list_screen.dart';
-import 'worker_chat_detail_screen.dart';
+import '../common/chat_detail_screen.dart';
 
 class WorkerHomeTab extends StatefulWidget {
   const WorkerHomeTab({super.key});
@@ -17,11 +23,65 @@ class WorkerHomeTab extends StatefulWidget {
 }
 
 class _WorkerHomeTabState extends State<WorkerHomeTab> {
+  final StorageService _storage = StorageService();
+  StreamSubscription? _tareaEventSubscription;
+  
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
+      _connectRealtime();
+      _subscribeToRealtimeEvents();
+    });
+  }
+  
+  @override
+  void dispose() {
+    _tareaEventSubscription?.cancel();
+    super.dispose();
+  }
+  
+  Future<void> _connectRealtime() async {
+    try {
+      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        await realtimeProvider.connect(empresaId: empresaId);
+      }
+    } catch (e) {
+      debugPrint('Error connecting to realtime: $e');
+    }
+  }
+  
+  void _subscribeToRealtimeEvents() {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
+      debugPrint('💼 Worker Home: Tarea event received: ${event['action']}');
+      _loadData();
+      
+      if (mounted) {
+        final action = event['action'] ?? '';
+        String message = '';
+        if (action == 'tarea:assigned') {
+          message = 'Nueva tarea asignada';
+        } else if (action == 'tarea:accepted') {
+          message = 'Tarea aceptada';
+        } else if (action == 'tarea:completed') {
+          message = 'Tarea completada';
+        }
+        
+        if (message.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     });
   }
 
@@ -41,134 +101,181 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       body: Consumer2<TareaProvider, UsuarioProvider>(
         builder: (context, tareaProvider, usuarioProvider, child) {
           if (tareaProvider.isLoading || usuarioProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue));
           }
 
           final tareasPendientes = tareaProvider.tareasPendientes.length;
-          final tareaActiva = tareaProvider.tareaActiva;
-          final nombreUsuario = usuarioProvider.usuario?.nombreCompleto ?? 'Usuario';
+          final tareaActiva = tareaProvider.tareaActiva ??
+              (tareaProvider.tareasPendientes.isNotEmpty ? tareaProvider.tareasPendientes.first : null);
+          final nombreUsuario = usuarioProvider.usuario?.nombreCompleto ?? 'Worker';
+          final firstName = nombreUsuario.split(' ').first;
+          final userInitials = _getInitials(nombreUsuario);
 
-          return RefreshIndicator(
-            onRefresh: _refreshData,
-            child: CustomScrollView(
-              slivers: [
-                // App Bar
-                SliverAppBar(
-                  pinned: true,
-                  backgroundColor: backgroundColor,
-                  elevation: 0,
-                  expandedHeight: 120,
-                  collapsedHeight: 120,
-                  flexibleSpace: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          return SafeArea(
+            child: RefreshIndicator(
+              onRefresh: _refreshData,
+              color: AppTheme.primaryBlue,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Premium Header
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                        border: Border(bottom: BorderSide(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder, width: 1)),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: const Color(0xFF6366F1),
-                                child: const Icon(Icons.person, color: Colors.white, size: 20),
-                              ),
                               Row(
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const ThemeToggleButton(),
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.notifications_outlined,
-                                      color: textPrimary,
-                                      size: 24,
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: const LinearGradient(
+                                        colors: [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppTheme.primaryBlue.withOpacity(0.3),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
                                     ),
-                                    padding: EdgeInsets.all(8),
-                                    constraints: BoxConstraints(),
-                                    onPressed: () {
-                                      // TODO: Navigate to notifications
-                                    },
+                                    child: Center(
+                                      child: Text(
+                                        userInitials,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Hola, $firstName',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w900,
+                                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Worker',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.primaryBlue,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
+                              const ThemeToggleButton(),
                             ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Hola, $nombreUsuario',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ),
-                // Content
-                SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Stats Cards
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatCard(
-                                title: 'Tareas Pendientes',
-                                value: '$tareasPendientes',
-                                isDark: isDark,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildViewAllTasksCard(isDark: isDark),
-                            ),
-                          ],
-                        ),
-                      ),
 
-                      // Section Header
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                        child: Text(
-                          'Tarea en Progreso',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : Colors.grey[900],
+                    const SizedBox(height: 20),
+
+                    // Stats Cards
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: StatCard(
+                              title: 'Pendientes',
+                              value: '$tareasPendientes',
+                              icon: Icons.assignment_outlined,
+                              color: AppTheme.primaryBlue,
+                              isDark: isDark,
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildViewAllTasksCard(isDark: isDark),
+                          ),
+                        ],
                       ),
+                    ),
 
-                      // Task Card or Empty State
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        child: tareaActiva != null
-                            ? _buildTaskCard(tarea: tareaActiva, isDark: isDark)
-                            : _buildEmptyState(isDark: isDark),
+                    const SizedBox(height: 24),
+
+                    // Section Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.assignment_outlined,
+                              color: AppTheme.primaryBlue,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Tarea Activa',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Task Card or Empty State
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: tareaActiva != null
+                          ? _buildTaskCard(tarea: tareaActiva, isDark: isDark)
+                          : _buildPremiumEmptyState(isDark: isDark),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -176,61 +283,14 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
     );
   }
 
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: isDark
-            ? LinearGradient(
-                colors: [Color(0xFF192233), Color(0xFF1a2942)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : LinearGradient(
-                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withOpacity(0.3)
-                : Color(0xFF6366F1).withOpacity(0.3),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Colors.white.withOpacity(0.9),
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
+  String _getInitials(String nombre) {
+    final parts = nombre.trim().split(' ');
+    if (parts.isEmpty) return 'W';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
+
+
 
   Widget _buildViewAllTasksCard({required bool isDark}) {
     return InkWell(
@@ -296,278 +356,187 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
   }
 
   Widget _buildTaskCard({required Tarea tarea, required bool isDark}) {
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
-
-    String getEstadoText(EstadoTarea estado) {
-      switch (estado) {
-        case EstadoTarea.asignada:
-          return 'Asignada';
-        case EstadoTarea.aceptada:
-          return 'En Progreso';
-        case EstadoTarea.finalizada:
-          return 'Finalizada';
-        case EstadoTarea.cancelada:
-          return 'Cancelada';
-        default:
-          return 'Pendiente';
-      }
-    }
-
     Color getEstadoColor(EstadoTarea estado) {
       switch (estado) {
         case EstadoTarea.asignada:
-          return const Color(0xFF3B82F6);
+          return AppTheme.primaryBlue;
         case EstadoTarea.aceptada:
           return const Color(0xFFF59E0B);
         case EstadoTarea.finalizada:
-          return const Color(0xFF10B981);
+          return AppTheme.successGreen;
         case EstadoTarea.cancelada:
           return const Color(0xFFEF4444);
-        default:
+        case EstadoTarea.pendiente:
           return Colors.grey;
       }
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: isDark
-            ? LinearGradient(
-                colors: [Color(0xFF192233), Color(0xFF1a2942)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : LinearGradient(
-                colors: [Colors.white, Color(0xFFF8FAFC)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? const Color(0xFF324467) : const Color(0xFFE2E8F0),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+    return PremiumCard(
+      isDark: isDark,
+      padding: const EdgeInsets.all(20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Task Info
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        tarea.titulo,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: textPrimary,
-                          letterSpacing: 0.3,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            getEstadoColor(tarea.estado),
-                            getEstadoColor(tarea.estado).withOpacity(0.7),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: getEstadoColor(tarea.estado).withOpacity(0.3),
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        getEstadoText(tarea.estado),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  tarea.descripcion,
+          // Task Header
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  tarea.titulo,
                   style: TextStyle(
-                    fontSize: 14,
-                    color: textSecondary,
-                    height: 1.4,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                    letterSpacing: -0.5,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.tag,
-                          size: 16,
-                          color: textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Tarea #${tarea.id}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (tarea.dueDate != null)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 16,
-                            color: textSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-                if (tarea.createdByUsuarioNombre.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.person_outline,
-                        size: 16,
-                        color: textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Creado por: ${tarea.createdByUsuarioNombre}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      getEstadoColor(tarea.estado),
+                      getEstadoColor(tarea.estado).withOpacity(0.7),
                     ],
                   ),
-                ],
-              ],
-            ),
-          ),
-          // Action Buttons
-          Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.black.withOpacity(0.2)
-                  : Colors.grey.shade50,
-              border: Border(
-                top: BorderSide(
-                  color: isDark ? const Color(0xFF324467) : const Color(0xFFE2E8F0),
-                  width: 1,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: getEstadoColor(tarea.estado).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Chat Button
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      _openChatWithCreator(tarea);
-                    },
-                    icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                    label: const Text(
-                      'Chat',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? const Color(0xFF6366F1)
-                          : const Color(0xFF8B5CF6),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                child: Text(
+                  tarea.estado.label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
                   ),
                 ),
-                const SizedBox(width: 10),
-                // Finish Button
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Description
+          Text(
+            tarea.descripcion,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              height: 1.5,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+
+          const SizedBox(height: 20),
+
+          // Task Progress Indicator
+          TaskProgressIndicator(
+            estadoActual: tarea.estado,
+            primaryColor: AppTheme.primaryBlue,
+            showLabels: true,
+            height: 70,
+          ),
+
+          const SizedBox(height: 20),
+
+          // Task Info
+          Row(
+            children: [
+              Icon(Icons.tag, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+              const SizedBox(width: 6),
+              Text(
+                '#${tarea.id}',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                ),
+              ),
+              const SizedBox(width: 16),
+              if (tarea.dueDate != null) ...[
+                Icon(Icons.calendar_today, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                const SizedBox(width: 6),
+                Text(
+                  '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+
+          if (tarea.createdByUsuarioNombre.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.person_outline, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Creado por: ${tarea.createdByUsuarioNombre}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 20),
+
+          // Action Buttons
+          Row(
+            children: [
+              Expanded(
+                child: PremiumButton(
+                  text: 'Chat',
+                  icon: Icons.chat_bubble_outline,
+                  onPressed: () => _openChatWithCreator(tarea),
+                  isOutlined: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Show Aceptar if asignada, Finalizar if aceptada
+              if (tarea.estado == EstadoTarea.asignada)
                 Expanded(
                   flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      _showFinishTaskDialog(tarea);
-                    },
-                    icon: const Icon(Icons.check_circle_outline, size: 16),
-                    label: const Text(
-                      'Finalizar',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                  child: PremiumButton(
+                    text: 'Aceptar',
+                    icon: Icons.play_circle_outline,
+                    onPressed: () => _showAcceptTaskDialog(tarea),
+                    gradientColors: const [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
+                  ),
+                )
+              else if (tarea.estado == EstadoTarea.aceptada)
+                Expanded(
+                  flex: 2,
+                  child: PremiumButton(
+                    text: 'Finalizar',
+                    icon: Icons.check_circle_outline,
+                    onPressed: () => _showFinishTaskDialog(tarea),
+                    gradientColors: const [AppTheme.successGreen, AppTheme.successGreen],
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ],
       ),
@@ -592,8 +561,8 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF135BEC)),
+        builder: (context) => Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryBlue),
         ),
       );
 
@@ -609,10 +578,10 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => WorkerChatDetailScreen(
+          builder: (context) => ChatDetailScreen(
             chatId: chat.id,
-            chatName: tarea.createdByUsuarioNombre,
-            chatType: '1:1',
+            recipientName: tarea.createdByUsuarioNombre,
+            isGroup: false,
           ),
         ),
       );
@@ -631,44 +600,12 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
     }
   }
 
-  Widget _buildEmptyState({required bool isDark}) {
-    return Container(
-      padding: const EdgeInsets.all(48),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0A0A0A) : Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
-          width: 2,
-          style: BorderStyle.solid,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.task_alt,
-            size: 64,
-            color: isDark ? Colors.grey[700] : Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Active Task',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.grey[300] : Colors.grey[800],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Ready for your next assignment!',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.grey[500] : Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
+  Widget _buildPremiumEmptyState({required bool isDark}) {
+    return PremiumEmptyState(
+      icon: Icons.assignment_outlined,
+      title: 'Sin Tareas Activas',
+      subtitle: 'No tienes tareas asignadas en este momento.',
+      isDark: isDark,
     );
   }
 
@@ -737,6 +674,53 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
               backgroundColor: Colors.green,
             ),
             child: const Text('Finalizar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAcceptTaskDialog(Tarea tarea) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Aceptar Tarea'),
+        content: Text('¿Deseas aceptar la tarea "${tarea.titulo}"?\n\nAl aceptar, comenzarás a trabajar en esta tarea.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              
+              final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+              final success = await tareaProvider.aceptarTarea(tarea.id);
+
+              if (!mounted) return;
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('¡Tarea aceptada! Ahora puedes comenzar a trabajar.'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                await tareaProvider.cargarMisTareas();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(tareaProvider.error ?? 'Error al aceptar tarea'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+            ),
+            child: const Text('Aceptar'),
           ),
         ],
       ),

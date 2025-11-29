@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'manager_home_tab.dart';
-import 'manager_chats_tab.dart';
+import '../common/chat_list_screen.dart';
 import 'manager_tasks_tab.dart';
 import 'manager_team_tab.dart';
 import 'manager_profile_tab.dart';
 import '../../widgets/create_task_modal.dart';
+import '../../widgets/premium_widgets.dart';
+import '../../config/theme_config.dart';
+import '../../providers/chat_provider.dart';
 
 /// Main screen for Area Managers (ManagerDepartamento)
 /// Combines functionality from both AdminEmpresa and Usuario (Worker)
@@ -20,11 +24,24 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
 
   final List<Widget> _screens = [
     const ManagerHomeTab(),
-    const ManagerChatsTab(),
+    const ChatListScreen(),
     const ManagerTasksTab(),
     const ManagerTeamTab(),
     const ManagerProfileTab(),
   ];
+
+  void _navigateTo(int index) {
+    setState(() => _currentIndex = index);
+    // Refresh chats when navigating to chat tab
+    if (index == 1) {
+      _refreshChats();
+    }
+  }
+
+  void _refreshChats() {
+    final chatProvider = context.read<ChatProvider>();
+    chatProvider.refreshChats();
+  }
 
   void _showCreateTaskModal() {
     showModalBottomSheet(
@@ -40,121 +57,145 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF192233) : Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: _currentIndex,
+            children: _screens,
+          ),
+          // Floating FAB above navbar
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 10, // Slightly above navbar, better integrated
+            child: Center(
+              child: _buildFloatingFAB(isDark),
             ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                  icon: Icons.dashboard_outlined,
-                  activeIcon: Icons.dashboard,
-                  label: 'Home',
-                  index: 0,
+          ),
+        ],
+      ),
+      bottomNavigationBar: Consumer<ChatProvider>(
+        builder: (context, chatProvider, child) {
+          final unreadCount = chatProvider.totalUnreadCount;
+          
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+              border: Border(
+                top: BorderSide(
+                  color: isDark
+                    ? AppTheme.darkBorder.withOpacity(0.3)
+                    : AppTheme.lightBorder,
+                  width: 1,
                 ),
-                _buildNavItem(
-                  icon: Icons.chat_bubble_outline,
-                  activeIcon: Icons.chat_bubble,
-                  label: 'Chats',
-                  index: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, -4),
                 ),
-                // Center FAB for creating tasks
-                _buildCenterFAB(),
-                _buildNavItem(
+              ],
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spaceRegular,
+                  vertical: AppTheme.spaceSmall,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    PremiumNavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'Home',
+                      isActive: _currentIndex == 0,
+                      activeColor: AppTheme.successGreen,
+                      isDark: isDark,
+                      onTap: () => _navigateTo(0),
+                    ),
+                    PremiumNavItem(
+                      icon: Icons.chat_bubble_outline,
+                      activeIcon: Icons.chat_bubble_rounded,
+                      label: 'Chats',
+                      isActive: _currentIndex == 1,
+                      activeColor: AppTheme.successGreen,
+                      isDark: isDark,
+                      badgeCount: unreadCount,
+                      onTap: () => _navigateTo(1),
+                    ),
+                PremiumNavItem(
                   icon: Icons.assignment_outlined,
-                  activeIcon: Icons.assignment,
+                  activeIcon: Icons.assignment_rounded,
                   label: 'Tasks',
-                  index: 2,
+                  isActive: _currentIndex == 2,
+                  activeColor: AppTheme.successGreen,
+                  isDark: isDark,
+                  onTap: () => _navigateTo(2),
                 ),
-                _buildNavItem(
+                PremiumNavItem(
                   icon: Icons.people_outline,
-                  activeIcon: Icons.people,
+                  activeIcon: Icons.people_rounded,
                   label: 'Team',
-                  index: 3,
+                  isActive: _currentIndex == 3,
+                  activeColor: AppTheme.successGreen,
+                  isDark: isDark,
+                  onTap: () => _navigateTo(3),
                 ),
-                _buildNavItem(
+                PremiumNavItem(
                   icon: Icons.person_outline,
-                  activeIcon: Icons.person,
+                  activeIcon: Icons.person_rounded,
                   label: 'Profile',
-                  index: 4,
+                  isActive: _currentIndex == 4,
+                  activeColor: AppTheme.successGreen,
+                  isDark: isDark,
+                  onTap: () => _navigateTo(4),
                 ),
               ],
             ),
           ),
         ),
+        );
+        },
       ),
     );
   }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-    required int index,
-  }) {
-    final isActive = _currentIndex == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => _currentIndex = index),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isActive ? activeIcon : icon,
-                color: isActive
-                    ? const Color(0xFF135bec)
-                    : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                size: 26,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  color: isActive
-                      ? const Color(0xFF135bec)
-                      : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCenterFAB() {
+  Widget _buildFloatingFAB(bool isDark) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      child: FloatingActionButton(
-        onPressed: _showCreateTaskModal,
-        backgroundColor: const Color(0xFF135bec),
-        elevation: 2,
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-          size: 32,
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppTheme.successGreen, Color(0xFF059669)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.successGreen.withOpacity(0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _showCreateTaskModal,
+          borderRadius: BorderRadius.circular(28),
+          child: const Icon(
+            Icons.add_rounded,
+            color: Colors.white,
+            size: 28,
+          ),
         ),
       ),
     );

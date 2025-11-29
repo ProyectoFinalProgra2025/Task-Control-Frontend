@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../widgets/create_task_modal.dart';
 import '../../widgets/theme_toggle_button.dart';
+import '../../widgets/calendar/task_calendar_widget.dart';
 import '../../services/usuario_service.dart';
 import '../../services/empresa_service.dart';
 import '../../services/tarea_service.dart';
@@ -9,9 +12,14 @@ import '../../models/usuario.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import 'team_management_screen.dart';
+import 'admin_task_detail_screen.dart';
+import '../../config/theme_config.dart';
+import '../../providers/realtime_provider.dart';
 
 class AdminHomeTab extends StatefulWidget {
-  const AdminHomeTab({super.key});
+  final VoidCallback? onNavigateToTasks;
+
+  const AdminHomeTab({super.key, this.onNavigateToTasks});
 
   @override
   State<AdminHomeTab> createState() => _AdminHomeTabState();
@@ -26,13 +34,81 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   Usuario? _currentUser;
   Map<String, dynamic>? _estadisticas;
   List<Tarea> _tareasRecientes = [];
+  List<Tarea> _todasLasTareas = []; // Para el calendario
   bool _isLoading = true;
   String? _error;
+  
+  StreamSubscription? _tareaEventSubscription;
+  StreamSubscription? _usuarioEventSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectRealtime();
+      _subscribeToRealtimeEvents();
+    });
+  }
+  
+  @override
+  void dispose() {
+    _tareaEventSubscription?.cancel();
+    _usuarioEventSubscription?.cancel();
+    super.dispose();
+  }
+  
+  Future<void> _connectRealtime() async {
+    try {
+      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        await realtimeProvider.connect(empresaId: empresaId);
+      }
+    } catch (e) {
+      debugPrint('Error connecting to realtime: $e');
+    }
+  }
+  
+  void _subscribeToRealtimeEvents() {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    // Subscribe to tarea events
+    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
+      debugPrint('📊 Admin Home: Tarea event received: ${event['action']}');
+      _loadData(); // Reload stats and recent tasks
+      
+      // Show notification
+      if (mounted) {
+        final action = event['action'] ?? '';
+        String message = '';
+        if (action == 'tarea:created') {
+          message = 'Nueva tarea creada';
+        } else if (action == 'tarea:assigned') {
+          message = 'Tarea asignada';
+        } else if (action == 'tarea:accepted') {
+          message = 'Tarea aceptada';
+        } else if (action == 'tarea:completed') {
+          message = 'Tarea completada';
+        }
+        
+        if (message.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    });
+    
+    // Subscribe to usuario events
+    _usuarioEventSubscription = realtimeProvider.usuarioEventStream.listen((event) {
+      debugPrint('📊 Admin Home: Usuario event received: ${event['action']}');
+      _loadData(); // Reload stats when team members change
+    });
   }
 
   Future<void> _loadData() async {
@@ -42,10 +118,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
     });
 
     try {
-      // Cargar usuario actual
       final user = await _usuarioService.getMe();
-
-      // Cargar estadísticas de la empresa
       final empresaId = await _storage.getEmpresaId();
       Map<String, dynamic> stats;
       if (empresaId != null) {
@@ -54,14 +127,9 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
         throw Exception('No se encontró el ID de la empresa');
       }
 
-      // Cargar tareas recientes (ongoing = asignadas + aceptadas)
       final todasTareas = await _tareaService.getTareas();
       final tareasOngoing = todasTareas
-          .where(
-            (t) =>
-                t.estado == EstadoTarea.asignada ||
-                t.estado == EstadoTarea.aceptada,
-          )
+          .where((t) => t.estado == EstadoTarea.asignada || t.estado == EstadoTarea.aceptada)
           .take(5)
           .toList();
 
@@ -69,6 +137,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
         setState(() {
           _currentUser = user;
           _estadisticas = stats;
+          _todasLasTareas = todasTareas;
           _tareasRecientes = tareasOngoing;
           _isLoading = false;
         });
@@ -91,7 +160,6 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
       builder: (context) => const CreateTaskModal(),
     );
 
-    // Si se creó una tarea, recargar datos
     if (result == true) {
       _loadData();
     }
@@ -100,19 +168,12 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark
-        ? const Color(0xFF101622)
-        : const Color(0xFFf6f6f8);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark
-        ? const Color(0xFF92a4c9)
-        : const Color(0xFF64748b);
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     if (_isLoading) {
       return Scaffold(
         backgroundColor: backgroundColor,
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue)),
       );
     }
 
@@ -123,12 +184,13 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red),
+              Icon(Icons.error_outline, size: 64, color: AppTheme.dangerRed),
               const SizedBox(height: 16),
-              Text('Error: $_error', style: TextStyle(color: textPrimary)),
+              Text('Error: $_error', style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadData,
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
                 child: const Text('Reintentar'),
               ),
             ],
@@ -146,213 +208,267 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadData,
+          color: AppTheme.primaryBlue,
           child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top App Bar
-                Padding(
-                  padding: const EdgeInsets.all(16),
+                // Premium Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                    border: Border(bottom: BorderSide(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder, width: 1)),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          CircleAvatar(
-                            radius: 24,
-                            backgroundColor: const Color(
-                              0xFF135bec,
-                            ).withOpacity(0.1),
-                            child: Text(
-                              userInitials,
-                              style: const TextStyle(
-                                color: Color(0xFF135bec),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3), width: 2),
+                            ),
+                            child: Center(
+                              child: Text(
+                                userInitials,
+                                style: const TextStyle(
+                                  color: AppTheme.primaryBlue,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 20,
+                                ),
                               ),
                             ),
                           ),
                           const Spacer(),
                           const ThemeToggleButton(),
-                          IconButton(
-                            icon: Icon(
-                              Icons.notifications_outlined,
-                              color: textPrimary,
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
                             ),
-                            onPressed: () {},
+                            child: IconButton(
+                              icon: Icon(Icons.notifications_outlined, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+                              onPressed: () {},
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
                       Text(
                         'Bienvenido, $firstName',
                         style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: textPrimary,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                          letterSpacing: -0.5,
                         ),
                       ),
                       if (empresaNombre.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          empresaNombre,
-                          style: TextStyle(fontSize: 16, color: textSecondary),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryBlue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.business_rounded, size: 14, color: AppTheme.primaryBlue),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    empresaNombre,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.primaryBlue,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],
                   ),
                 ),
 
-                // Quick Action Grid
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.3,
-                    children: [
-                      _buildQuickActionCard(
-                        icon: Icons.add_task,
-                        title: 'Create Task',
-                        description: 'Assign new tasks',
-                        color: const Color(0xFF135bec),
-                        cardColor: cardColor,
-                        textColor: textPrimary,
-                        descColor: textSecondary,
-                        onTap: _showCreateTaskModal,
-                      ),
-                      _buildQuickActionCard(
-                        icon: Icons.group,
-                        title: 'View Team',
-                        description:
-                            '${_estadisticas?['totalTrabajadores'] ?? 0} miembros',
-                        color: const Color(0xFF7C3AED),
-                        cardColor: cardColor,
-                        textColor: textPrimary,
-                        descColor: textSecondary,
-                        onTap: _navigateToTeamManagement,
-                      ),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 24),
 
-                // Task Summary Section
+                // Quick Actions
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
-                    'Task Summary',
+                    'Acciones Rápidas',
                     style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                     ),
                   ),
                 ),
-
-                // Task Statistics Grid
+                const SizedBox(height: 14),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionCard(
+                          icon: Icons.add_task_rounded,
+                          title: 'Nueva Tarea',
+                          subtitle: 'Asignar trabajo',
+                          color: AppTheme.primaryBlue,
+                          onTap: _showCreateTaskModal,
+                          isDark: isDark,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionCard(
+                          icon: Icons.groups_rounded,
+                          title: 'Ver Equipo',
+                          subtitle: '${_estadisticas?['totalTrabajadores'] ?? 0} miembros',
+                          color: const Color(0xFF7C3AED),
+                          onTap: _navigateToTeamManagement,
+                          isDark: isDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                // Task Metrics
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    'Métricas de Tareas',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: 2,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 1.5,
+                    childAspectRatio: 1.6,
                     children: [
-                      _buildStatCard(
+                      _buildMetricCard(
                         title: 'Total',
-                        count: _estadisticas?['totalTareas'] ?? 0,
-                        icon: Icons.task_alt,
-                        color: const Color(0xFF135bec),
-                        cardColor: cardColor,
-                        textColor: textPrimary,
+                        value: '${_estadisticas?['totalTareas'] ?? 0}',
+                        icon: Icons.task_alt_rounded,
+                        color: AppTheme.primaryBlue,
                         isDark: isDark,
                       ),
-                      _buildStatCard(
+                      _buildMetricCard(
                         title: 'Pendientes',
-                        count: _estadisticas?['tareasPendientes'] ?? 0,
-                        icon: Icons.pending_actions,
-                        color: const Color(0xFFF59E0B),
-                        cardColor: cardColor,
-                        textColor: textPrimary,
+                        value: '${_estadisticas?['tareasPendientes'] ?? 0}',
+                        icon: Icons.pending_actions_rounded,
+                        color: AppTheme.warningOrange,
                         isDark: isDark,
                       ),
-                      _buildStatCard(
+                      _buildMetricCard(
                         title: 'En Progreso',
-                        count:
-                            ((_estadisticas?['tareasAsignadas'] ?? 0) +
-                            (_estadisticas?['tareasAceptadas'] ?? 0)),
-                        icon: Icons.hourglass_empty,
+                        value: '${((_estadisticas?['tareasAsignadas'] ?? 0) + (_estadisticas?['tareasAceptadas'] ?? 0))}',
+                        icon: Icons.hourglass_empty_rounded,
                         color: const Color(0xFF7C3AED),
-                        cardColor: cardColor,
-                        textColor: textPrimary,
                         isDark: isDark,
                       ),
-                      _buildStatCard(
-                        title: 'Finalizadas',
-                        count: _estadisticas?['tareasFinalizadas'] ?? 0,
-                        icon: Icons.check_circle,
-                        color: const Color(0xFF10B981),
-                        cardColor: cardColor,
-                        textColor: textPrimary,
+                      _buildMetricCard(
+                        title: 'Completadas',
+                        value: '${_estadisticas?['tareasFinalizadas'] ?? 0}',
+                        icon: Icons.check_circle_rounded,
+                        color: AppTheme.successGreen,
                         isDark: isDark,
                       ),
                     ],
+                  ),
+                ),
+
+                // Task Calendar
+                const SizedBox(height: 28),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TaskCalendarWidget(
+                    tareas: _todasLasTareas,
+                    title: 'Calendario de la Empresa',
+                    primaryColor: AppTheme.primaryBlue,
+                    isLoading: _isLoading,
+                    onTaskTap: (tarea) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AdminTaskDetailScreen(tareaId: tarea.id),
+                        ),
+                      ).then((_) => _loadData());
+                    },
                   ),
                 ),
 
                 // Recent Tasks
                 if (_tareasRecientes.isNotEmpty) ...[
+                  const SizedBox(height: 28),
                   Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Tareas Recientes',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
-                      ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Tareas Recientes',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: widget.onNavigateToTasks,
+                          child: const Text('Ver todas', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 8),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF324467)
-                              : const Color(0xFFE5E7EB),
-                        ),
+                        color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
                       ),
                       child: ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _tareasRecientes.length,
-                        separatorBuilder: (context, index) => Divider(
-                          height: 1,
-                          color: isDark
-                              ? const Color(0xFF324467)
-                              : const Color(0xFFE5E7EB),
-                        ),
-                        itemBuilder: (context, index) {
-                          final tarea = _tareasRecientes[index];
-                          return _buildTaskItem(
-                            tarea: tarea,
-                            textColor: textPrimary,
-                            descColor: textSecondary,
-                          );
-                        },
+                        separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                        itemBuilder: (context, index) => _buildTaskItem(_tareasRecientes[index], isDark),
                       ),
                     ),
                   ),
                 ],
-                const SizedBox(height: 100), // Extra space for bottom nav
+                const SizedBox(height: 100),
               ],
             ),
           ),
@@ -361,125 +477,167 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
     );
   }
 
-  Widget _buildQuickActionCard({
+  Widget _buildActionCard({
     required IconData icon,
     required String title,
-    required String description,
+    required String subtitle,
     required Color color,
-    required Color cardColor,
-    required Color textColor,
-    required Color descColor,
     required VoidCallback onTap,
+    required bool isDark,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 26),
+            ),
+            const SizedBox(height: 14),
             Text(
               title,
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: textColor,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
               ),
             ),
             const SizedBox(height: 4),
-            Text(description, style: TextStyle(fontSize: 12, color: descColor)),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatCard({
+  Widget _buildMetricCard({
     required String title,
-    required int count,
+    required String value,
     required IconData icon,
     required Color color,
-    required Color cardColor,
-    required Color textColor,
     required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
-        ),
+        color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+            ],
+          ),
           const Spacer(),
           Text(
-            count.toString(),
+            value,
             style: TextStyle(
               fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: textColor,
+              fontWeight: FontWeight.w900,
+              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              height: 1,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(fontSize: 14, color: textColor.withOpacity(0.7)),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTaskItem({
-    required Tarea tarea,
-    required Color textColor,
-    required Color descColor,
-  }) {
+  Widget _buildTaskItem(Tarea tarea, bool isDark) {
     final statusColor = _getStatusColor(tarea.estado);
     final statusText = _getStatusText(tarea.estado);
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       title: Text(
         tarea.titulo,
         style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: textColor,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text(
-        tarea.asignadoANombre ?? 'No asignado',
-        style: TextStyle(fontSize: 14, color: descColor),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(
+          tarea.asignadoANombre ?? 'No asignado',
+          style: TextStyle(
+            fontSize: 13,
+            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: statusColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: statusColor.withOpacity(0.3)),
         ),
         child: Text(
           statusText,
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: statusColor,
           ),
         ),
@@ -490,15 +648,15 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   Color _getStatusColor(EstadoTarea estado) {
     switch (estado) {
       case EstadoTarea.pendiente:
-        return const Color(0xFFF59E0B);
+        return AppTheme.warningOrange;
       case EstadoTarea.asignada:
-        return const Color(0xFF135bec);
+        return AppTheme.primaryBlue;
       case EstadoTarea.aceptada:
         return const Color(0xFF7C3AED);
       case EstadoTarea.finalizada:
-        return const Color(0xFF10B981);
+        return AppTheme.successGreen;
       case EstadoTarea.cancelada:
-        return const Color(0xFFEF4444);
+        return AppTheme.dangerRed;
     }
   }
 

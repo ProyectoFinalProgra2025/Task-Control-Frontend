@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../providers/tarea_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
-import 'worker_chat_detail_screen.dart';
+import '../../config/theme_config.dart';
+import '../../services/storage_service.dart';
+import '../../widgets/task/task_widgets.dart';
+import '../common/chat_detail_screen.dart';
 
 class WorkerTaskDetailScreen extends StatefulWidget {
   final String tareaId;
@@ -16,13 +21,51 @@ class WorkerTaskDetailScreen extends StatefulWidget {
 }
 
 class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
+  final StorageService _storage = StorageService();
   Tarea? _tarea;
   bool _isLoading = true;
+  bool _hasChanges = false; // Track if any changes were made
+  String? _loadingChatUserId;
+  StreamSubscription? _tareaEventSubscription;
 
   @override
   void initState() {
     super.initState();
     _cargarDetalle();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectRealtime();
+      _subscribeToRealtimeEvents();
+    });
+  }
+  
+  @override
+  void dispose() {
+    _tareaEventSubscription?.cancel();
+    super.dispose();
+  }
+  
+  Future<void> _connectRealtime() async {
+    try {
+      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        await realtimeProvider.connect(empresaId: empresaId);
+      }
+    } catch (e) {
+      debugPrint('Error connecting to realtime: $e');
+    }
+  }
+  
+  void _subscribeToRealtimeEvents() {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
+      final eventTareaId = event['tareaId']?.toString();
+      if (eventTareaId == widget.tareaId) {
+        debugPrint('📝 Worker Task Detail: Task event for this task - reloading');
+        _cargarDetalle();
+      }
+    });
   }
 
   Future<void> _cargarDetalle() async {
@@ -41,323 +84,222 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: const Text('Detalle de Tarea'),
-        backgroundColor: isDark ? const Color(0xFF192233) : Colors.white,
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop && _hasChanges) {
+          // Parent will receive true if changes were made
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
+        appBar: AppBar(
+          title: const Text(
+            'Detalle de Tarea',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          backgroundColor: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+          elevation: 0,
+          iconTheme: IconThemeData(
+            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context, _hasChanges),
+          ),
+        ),
+        body: _buildBody(isDark),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _tarea == null
-              ? const Center(child: Text('Error al cargar la tarea'))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Título y Estado
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isDark
-                                ? const Color(0xFF324467)
-                                : const Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    _tarea!.titulo,
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: textPrimary,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _getEstadoColor(_tarea!.estado)
-                                        .withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    _getEstadoText(_tarea!.estado),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: _getEstadoColor(_tarea!.estado),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _tarea!.descripcion,
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+    );
+  }
 
-                      // Información de la Tarea
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isDark
-                                ? const Color(0xFF324467)
-                                : const Color(0xFFE5E7EB),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Información',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildInfoRow(
-                              'Prioridad',
-                              _tarea!.prioridad.name.toUpperCase(),
-                              textSecondary,
-                            ),
-                            if (_tarea!.departamento != null) ...[
-                              const SizedBox(height: 12),
-                              _buildInfoRow(
-                                'Departamento',
-                                _tarea!.departamento!.name,
-                                textSecondary,
-                              ),
-                            ],
-                            if (_tarea!.dueDate != null) ...[
-                              const SizedBox(height: 12),
-                              _buildInfoRow(
-                                'Fecha Límite',
-                                '${_tarea!.dueDate!.day}/${_tarea!.dueDate!.month}/${_tarea!.dueDate!.year}',
-                                textSecondary,
-                              ),
-                            ],
-                            const SizedBox(height: 12),
-                            _buildInfoRow(
-                              'Creada el',
-                              '${_tarea!.createdAt.day}/${_tarea!.createdAt.month}/${_tarea!.createdAt.year}',
-                              textSecondary,
-                            ),
-                          ],
-                        ),
-                      ),
+  Widget _buildBody(bool isDark) {
+    if (_isLoading) {
+      return const TaskLoadingWidget(message: 'Cargando tarea...');
+    }
 
-                      // Capacidades Requeridas
-                      if (_tarea!.capacidadesRequeridas.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: cardColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF324467)
-                                  : const Color(0xFFE5E7EB),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Capacidades Requeridas',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _tarea!.capacidadesRequeridas
-                                    .map(
-                                      (cap) => Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF135BEC)
-                                              .withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          cap,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Color(0xFF135BEC),
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+    if (_tarea == null) {
+      return TaskErrorWidget(
+        message: 'No se pudo cargar la tarea',
+        onRetry: _cargarDetalle,
+      );
+    }
 
-                      // Botón de Chat con Creador
-                      const SizedBox(height: 16),
-                      OutlinedButton.icon(
-                        onPressed: () => _chatWithCreator(),
-                        icon: const Icon(Icons.chat_bubble_outline),
-                        label: Text(
-                          _tarea!.createdByUsuarioNombre.isNotEmpty
-                              ? 'Chat con ${_tarea!.createdByUsuarioNombre}'
-                              : 'Chat con Creador',
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF135BEC),
-                            side: const BorderSide(color: Color(0xFF135BEC)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
+    return RefreshIndicator(
+      onRefresh: _cargarDetalle,
+      color: AppTheme.primaryBlue,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header con título y estado
+            TaskDetailHeader(
+              title: _tarea!.titulo,
+              description: _tarea!.descripcion,
+              statusBadge: TaskStatusBadge(
+                estado: _tarea!.estado,
+                showIcon: true,
+              ),
+            ),
+            const SizedBox(height: 16),
 
-                      // Botones de acción
-                      const SizedBox(height: 16),
-                      if (_tarea!.estado == EstadoTarea.asignada)
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => _aceptarTarea(),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Aceptar Tarea',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (_tarea!.estado == EstadoTarea.aceptada)
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => _finalizarTarea(),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF135BEC),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Finalizar Tarea',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+            // Información de la Tarea
+            TaskInfoSection(
+              title: 'Detalles',
+              items: [
+                TaskInfoItem(
+                  icon: Icons.flag_outlined,
+                  label: 'Prioridad',
+                  value: TaskHelpers.getPrioridadLabel(_tarea!.prioridad),
+                  color: TaskHelpers.getPrioridadColor(_tarea!.prioridad),
                 ),
+                if (_tarea!.departamento != null)
+                  TaskInfoItem(
+                    icon: TaskHelpers.getDepartamentoIcon(_tarea!.departamento),
+                    label: 'Departamento',
+                    value: _tarea!.departamento!.label,
+                    color: TaskHelpers.getDepartamentoColor(_tarea!.departamento),
+                  ),
+                if (_tarea!.dueDate != null)
+                  TaskInfoItem(
+                    icon: Icons.calendar_today_outlined,
+                    label: 'Fecha Límite',
+                    value: TaskHelpers.getRelativeDueDate(_tarea!.dueDate),
+                    color: TaskHelpers.isOverdue(_tarea!.dueDate)
+                        ? AppTheme.dangerRed
+                        : AppTheme.warningOrange,
+                  ),
+                TaskInfoItem(
+                  icon: Icons.history_rounded,
+                  label: 'Creada el',
+                  value: TaskHelpers.formatDueDate(_tarea!.createdAt),
+                ),
+              ],
+            ),
+
+            // Capacidades Requeridas
+            if (_tarea!.capacidadesRequeridas.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              TaskSkillsSection(
+                skills: _tarea!.capacidadesRequeridas,
+                color: AppTheme.primaryBlue,
+              ),
+            ],
+
+            // Banner de rechazo si aplica
+            if (_tarea!.delegacionAceptada == false && 
+                _tarea!.motivoRechazoJefe != null) ...[
+              const SizedBox(height: 16),
+              TaskRejectionBanner(
+                reason: _tarea!.motivoRechazoJefe!,
+              ),
+            ],
+
+            // Sección de Contactos
+            const SizedBox(height: 16),
+            TaskContactsSection(
+              title: 'Comunicación',
+              contacts: _buildContactButtons(),
+            ),
+
+            // Botones de acción según estado
+            const SizedBox(height: 24),
+            _buildActionButtons(),
+
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value, Color textSecondary) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: textSecondary,
-          ),
+  List<TaskContactButton> _buildContactButtons() {
+    final contacts = <TaskContactButton>[];
+
+    // Creador de la tarea
+    if (_tarea!.createdByUsuarioId.isNotEmpty) {
+      contacts.add(TaskContactButton(
+        name: _tarea!.createdByUsuarioNombre,
+        role: 'Creó esta tarea',
+        color: AppTheme.primaryBlue,
+        icon: Icons.chat_bubble_outline_rounded,
+        isLoading: _loadingChatUserId == _tarea!.createdByUsuarioId,
+        onTap: () => _chatWithUser(
+          _tarea!.createdByUsuarioId,
+          _tarea!.createdByUsuarioNombre,
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: textSecondary,
+      ));
+    }
+
+    // Si fue delegada - quien la delegó
+    if (_tarea!.estaDelegada && _tarea!.delegadoPorUsuarioId != null) {
+      // Solo mostrar si es diferente al creador
+      if (_tarea!.delegadoPorUsuarioId != _tarea!.createdByUsuarioId) {
+        contacts.add(TaskContactButton(
+          name: 'Manager que delegó', // El backend no retorna el nombre
+          role: 'Delegó esta tarea',
+          color: AppTheme.warningOrange,
+          icon: Icons.swap_horiz_rounded,
+          isLoading: _loadingChatUserId == _tarea!.delegadoPorUsuarioId,
+          onTap: () => _chatWithUser(
+            _tarea!.delegadoPorUsuarioId!,
+            'Manager',
           ),
+        ));
+      }
+    }
+
+    // Si hay un manager asignado (delegadoA)
+    if (_tarea!.delegadoAUsuarioId != null && 
+        _tarea!.delegacionAceptada == true) {
+      contacts.add(TaskContactButton(
+        name: 'Manager asignado',
+        role: 'Aceptó la delegación',
+        color: AppTheme.successGreen,
+        icon: Icons.person_outline_rounded,
+        isLoading: _loadingChatUserId == _tarea!.delegadoAUsuarioId,
+        onTap: () => _chatWithUser(
+          _tarea!.delegadoAUsuarioId!,
+          'Manager',
         ),
-      ],
+      ));
+    }
+
+    return contacts;
+  }
+
+  Widget _buildActionButtons() {
+    final actions = <Widget>[];
+
+    if (_tarea!.estado == EstadoTarea.asignada) {
+      actions.add(TaskActionButton(
+        label: 'Aceptar Tarea',
+        icon: Icons.check_circle_outline_rounded,
+        color: AppTheme.successGreen,
+        onPressed: _aceptarTarea,
+      ));
+    }
+
+    if (_tarea!.estado == EstadoTarea.aceptada) {
+      actions.add(TaskActionButton(
+        label: 'Finalizar Tarea',
+        icon: Icons.task_alt_rounded,
+        color: AppTheme.primaryBlue,
+        onPressed: _finalizarTarea,
+      ));
+    }
+
+    if (actions.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: actions.map((action) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: action,
+      )).toList(),
     );
-  }
-
-  Color _getEstadoColor(EstadoTarea estado) {
-    switch (estado) {
-      case EstadoTarea.asignada:
-        return Colors.blue;
-      case EstadoTarea.aceptada:
-        return Colors.orange;
-      case EstadoTarea.finalizada:
-        return Colors.green;
-      case EstadoTarea.cancelada:
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getEstadoText(EstadoTarea estado) {
-    switch (estado) {
-      case EstadoTarea.asignada:
-        return 'Asignada';
-      case EstadoTarea.aceptada:
-        return 'En Progreso';
-      case EstadoTarea.finalizada:
-        return 'Finalizada';
-      case EstadoTarea.cancelada:
-        return 'Cancelada';
-      default:
-        return 'Pendiente';
-    }
   }
 
   Future<void> _aceptarTarea() async {
@@ -366,42 +308,66 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
 
     if (!mounted) return;
 
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success 
+            ? '¡Tarea aceptada exitosamente!' 
+            : tareaProvider.error ?? 'Error al aceptar tarea'),
+        backgroundColor: success ? AppTheme.successGreen : AppTheme.dangerRed,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡Tarea aceptada exitosamente!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      _hasChanges = true;
       await _cargarDetalle();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(tareaProvider.error ?? 'Error al aceptar tarea'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
   Future<void> _finalizarTarea() async {
     final evidenciaController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Finalizar Tarea'),
+        backgroundColor: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.successGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.task_alt, color: AppTheme.successGreen, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text('Finalizar Tarea', style: TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('¿Estás seguro de que deseas finalizar esta tarea?'),
+            Text(
+              '¿Estás seguro de que deseas finalizar esta tarea?',
+              style: TextStyle(
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              ),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: evidenciaController,
-              decoration: const InputDecoration(
-                labelText: 'Evidencia (opcional)',
-                hintText: 'Describe el trabajo realizado...',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: 'Evidencia del trabajo',
+                hintText: 'Describe lo que realizaste...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.successGreen, width: 2),
+                ),
               ),
               maxLines: 3,
             ),
@@ -410,14 +376,22 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: AppTheme.successGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Finalizar'),
+            child: const Text('Finalizar', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -435,71 +409,62 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
 
       if (!mounted) return;
 
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success 
+              ? '¡Tarea finalizada exitosamente!' 
+              : tareaProvider.error ?? 'Error al finalizar tarea'),
+          backgroundColor: success ? AppTheme.successGreen : AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('¡Tarea finalizada exitosamente!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _hasChanges = true;
         await _cargarDetalle();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tareaProvider.error ?? 'Error al finalizar tarea'),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
     }
   }
 
-  Future<void> _chatWithCreator() async {
-    if (_tarea == null || _tarea!.createdByUsuarioId.isEmpty) return;
+  Future<void> _chatWithUser(String userId, String userName) async {
+    if (userId.isEmpty) return;
+
+    setState(() {
+      _loadingChatUserId = userId;
+    });
 
     try {
       final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-      
-      // Show loading
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF135BEC)),
-        ),
-      );
-
-      // Create or get existing chat with creator
-      final chat = await chatProvider.createOneToOneChat(_tarea!.createdByUsuarioId);
+      final chat = await chatProvider.createOneToOneChat(userId);
 
       if (!mounted) return;
 
-      // Close loading dialog
-      Navigator.of(context).pop();
-
-      // Navigate to chat
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => WorkerChatDetailScreen(
+          builder: (context) => ChatDetailScreen(
             chatId: chat.id,
-            chatName: _tarea!.createdByUsuarioNombre,
-            chatType: '1:1',
+            recipientName: userName.isNotEmpty ? userName : 'Usuario',
+            isGroup: false,
           ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       
-      // Close loading if still showing
-      Navigator.of(context, rootNavigator: true).pop();
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al abrir chat: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingChatUserId = null;
+        });
+      }
     }
   }
 }

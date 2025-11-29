@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../widgets/theme_toggle_button.dart';
+import '../../widgets/calendar/task_calendar_widget.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/usuario_provider.dart';
+import '../../providers/admin_tarea_provider.dart';
+import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../services/usuario_service.dart';
 import '../../services/tarea_service.dart';
+import '../../services/storage_service.dart';
+import '../../config/theme_config.dart';
+import 'manager_task_detail_screen.dart';
 
 class ManagerHomeTab extends StatefulWidget {
   const ManagerHomeTab({super.key});
@@ -16,10 +23,73 @@ class ManagerHomeTab extends StatefulWidget {
 }
 
 class _ManagerHomeTabState extends State<ManagerHomeTab> {
+  final StorageService _storage = StorageService();
+  StreamSubscription? _tareaEventSubscription;
+  StreamSubscription? _usuarioEventSubscription;
+  
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+      _connectRealtime();
+      _subscribeToRealtimeEvents();
+    });
+  }
+  
+  @override
+  void dispose() {
+    _tareaEventSubscription?.cancel();
+    _usuarioEventSubscription?.cancel();
+    super.dispose();
+  }
+  
+  Future<void> _connectRealtime() async {
+    try {
+      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        await realtimeProvider.connect(empresaId: empresaId);
+      }
+    } catch (e) {
+      debugPrint('Error connecting to realtime: $e');
+    }
+  }
+  
+  void _subscribeToRealtimeEvents() {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
+      debugPrint('📊 Manager Home: Tarea event received: ${event['action']}');
+      _loadData();
+      
+      if (mounted) {
+        final action = event['action'] ?? '';
+        String message = '';
+        if (action == 'tarea:created') {
+          message = 'Nueva tarea creada';
+        } else if (action == 'tarea:assigned') {
+          message = 'Tarea asignada';
+        } else if (action == 'tarea:accepted') {
+          message = 'Tarea aceptada';
+        } else if (action == 'tarea:completed') {
+          message = 'Tarea completada';
+        }
+        
+        if (message.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    });
+    
+    _usuarioEventSubscription = realtimeProvider.usuarioEventStream.listen((event) {
+      debugPrint('📊 Manager Home: Usuario event received: ${event['action']}');
       _loadData();
     });
   }
@@ -27,9 +97,11 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
   Future<void> _loadData() async {
     final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
     final usuarioProvider = Provider.of<UsuarioProvider>(context, listen: false);
+    final adminTareaProvider = Provider.of<AdminTareaProvider>(context, listen: false);
     await Future.wait([
       tareaProvider.cargarMisTareas(),
       usuarioProvider.cargarPerfil(),
+      adminTareaProvider.cargarTodasLasTareas(), // Tareas del departamento para el calendario
     ]);
   }
 
@@ -40,132 +112,227 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: Consumer2<TareaProvider, UsuarioProvider>(
-        builder: (context, tareaProvider, usuarioProvider, child) {
+      body: Consumer3<TareaProvider, UsuarioProvider, AdminTareaProvider>(
+        builder: (context, tareaProvider, usuarioProvider, adminTareaProvider, child) {
           if (tareaProvider.isLoading || usuarioProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator(color: AppTheme.successGreen));
           }
 
           final tareasPendientes = tareaProvider.tareasPendientes.length;
-          // Manager puede tener tareas asignadas O aceptadas
-          final tareaActiva = tareaProvider.tareaActiva ?? 
+          final tareaActiva = tareaProvider.tareaActiva ??
               (tareaProvider.tareasPendientes.isNotEmpty ? tareaProvider.tareasPendientes.first : null);
           final nombreUsuario = usuarioProvider.usuario?.nombreCompleto ?? 'Manager';
+          final firstName = nombreUsuario.split(' ').first;
+          final userInitials = _getInitials(nombreUsuario);
+          final tareasDepartamento = adminTareaProvider.todasLasTareas; // Tareas del departamento
 
-          return RefreshIndicator(
-            onRefresh: _refreshData,
-            child: CustomScrollView(
-              slivers: [
-                // App Bar
-                SliverAppBar(
-                  pinned: true,
-                  backgroundColor: backgroundColor,
-                  elevation: 0,
-                  expandedHeight: 120,
-                  collapsedHeight: 120,
-                  flexibleSpace: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          return SafeArea(
+            child: RefreshIndicator(
+              onRefresh: _refreshData,
+              color: AppTheme.successGreen,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Premium Header
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                        border: Border(bottom: BorderSide(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder, width: 1)),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: const Color(0xFF6366F1),
-                                child: const Icon(Icons.person, color: Colors.white, size: 20),
-                              ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const ThemeToggleButton(),
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.notifications_outlined,
-                                      color: textPrimary,
-                                      size: 24,
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.successGreen.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppTheme.successGreen.withOpacity(0.3), width: 2),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    userInitials,
+                                    style: const TextStyle(
+                                      color: AppTheme.successGreen,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 20,
                                     ),
-                                    padding: EdgeInsets.all(8),
-                                    constraints: BoxConstraints(),
-                                    onPressed: () {
-                                      // TODO: Navigate to notifications
-                                    },
                                   ),
-                                ],
+                                ),
+                              ),
+                              const Spacer(),
+                              const ThemeToggleButton(),
+                              const SizedBox(width: 8),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                                ),
+                                child: IconButton(
+                                  icon: Icon(Icons.notifications_outlined, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+                                  onPressed: () {},
+                                ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 20),
                           Text(
-                            'Hola, $nombreUsuario',
+                            'Bienvenido, $firstName',
                             style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: textPrimary,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                              letterSpacing: -0.5,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: AppTheme.successGreen.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppTheme.successGreen.withOpacity(0.3)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.supervisor_account_rounded, size: 14, color: AppTheme.successGreen),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Area Manager',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.successGreen,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ),
-                // Content
-                SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Stats Cards
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+
+                    const SizedBox(height: 24),
+
+                    // Stats Card
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
                         child: Row(
                           children: [
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: AppTheme.warningOrange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.pending_actions_rounded, color: AppTheme.warningOrange, size: 28),
+                            ),
+                            const SizedBox(width: 16),
                             Expanded(
-                              child: _buildStatCard(
-                                title: 'Tareas Pendientes',
-                                value: '$tareasPendientes',
-                                isDark: isDark,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Tareas Pendientes',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$tareasPendientes',
+                                    style: TextStyle(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w900,
+                                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                      height: 1,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ),
 
-                      // Section Header
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                        child: Text(
-                          'Tarea en Progreso',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : Colors.grey[900],
-                          ),
+                    const SizedBox(height: 28),
+
+                    // Section Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'Tarea en Progreso',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                         ),
                       ),
+                    ),
 
-                      // Task Card or Empty State
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        child: tareaActiva != null
-                            ? _buildTaskCard(tarea: tareaActiva, isDark: isDark)
-                            : _buildEmptyState(isDark: isDark),
+                    const SizedBox(height: 14),
+
+                    // Task Card or Empty State
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: tareaActiva != null
+                          ? _buildTaskCard(tarea: tareaActiva, isDark: isDark)
+                          : _buildEmptyState(isDark: isDark),
+                    ),
+
+                    // Department Calendar
+                    const SizedBox(height: 28),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: TaskCalendarWidget(
+                        tareas: tareasDepartamento,
+                        title: 'Calendario del Departamento',
+                        primaryColor: AppTheme.successGreen,
+                        isLoading: adminTareaProvider.isLoading,
+                        onTaskTap: (tarea) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ManagerTaskDetailScreen(tareaId: tarea.id),
+                            ),
+                          ).then((_) => _loadData());
+                        },
                       ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
+                    ),
+
+                    const SizedBox(height: 100),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -173,66 +340,15 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
     );
   }
 
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: isDark
-            ? LinearGradient(
-                colors: [Color(0xFF192233), Color(0xFF1a2942)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : LinearGradient(
-                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withOpacity(0.3)
-                : Color(0xFF6366F1).withOpacity(0.3),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Colors.white.withOpacity(0.9),
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
+  String _getInitials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-  Widget _buildTaskCard({required Tarea tarea, required bool isDark}) {
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
 
+  Widget _buildTaskCard({required Tarea tarea, required bool isDark}) {
     String getEstadoText(EstadoTarea estado) {
       switch (estado) {
         case EstadoTarea.asignada:
@@ -251,13 +367,13 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
     Color getEstadoColor(EstadoTarea estado) {
       switch (estado) {
         case EstadoTarea.asignada:
-          return const Color(0xFF3B82F6);
+          return AppTheme.primaryBlue;
         case EstadoTarea.aceptada:
-          return const Color(0xFFF59E0B);
+          return AppTheme.warningOrange;
         case EstadoTarea.finalizada:
-          return const Color(0xFF10B981);
+          return AppTheme.successGreen;
         case EstadoTarea.cancelada:
-          return const Color(0xFFEF4444);
+          return AppTheme.dangerRed;
         default:
           return Colors.grey;
       }
@@ -265,29 +381,14 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: isDark
-            ? LinearGradient(
-                colors: [Color(0xFF192233), Color(0xFF1a2942)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : LinearGradient(
-                colors: [Colors.white, Color(0xFFF8FAFC)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? const Color(0xFF324467) : const Color(0xFFE2E8F0),
-          width: 2,
-        ),
+        color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
         boxShadow: [
           BoxShadow(
-            color: isDark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -307,7 +408,7 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: textPrimary,
+                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                           letterSpacing: 0.3,
                         ),
                         maxLines: 2,
@@ -350,7 +451,7 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
                   tarea.descripcion,
                   style: TextStyle(
                     fontSize: 14,
-                    color: textSecondary,
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                     height: 1.4,
                   ),
                   maxLines: 2,
@@ -363,13 +464,13 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
                     if (tarea.createdByUsuarioNombre.isNotEmpty)
                       Row(
                         children: [
-                          Icon(Icons.person_outline, size: 16, color: textSecondary),
+                          Icon(Icons.person_outline, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                           const SizedBox(width: 4),
                           Text(
                             'Creado por: ${tarea.createdByUsuarioNombre}',
                             style: TextStyle(
                               fontSize: 13,
-                              color: textSecondary,
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -378,13 +479,13 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
                     if (tarea.dueDate != null)
                       Row(
                         children: [
-                          Icon(Icons.calendar_today, size: 16, color: textSecondary),
+                          Icon(Icons.calendar_today, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                           const SizedBox(width: 4),
                           Text(
                             '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
                             style: TextStyle(
                               fontSize: 13,
-                              color: textSecondary,
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),

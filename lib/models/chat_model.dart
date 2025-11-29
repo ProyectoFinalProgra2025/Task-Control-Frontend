@@ -17,6 +17,7 @@ class ChatModel {
   final List<ChatMemberModel> members;
   final MessageModel? lastMessage;
   final DateTime createdAt;
+  int unreadCount;
 
   ChatModel({
     required this.id,
@@ -25,6 +26,7 @@ class ChatModel {
     required this.members,
     this.lastMessage,
     required this.createdAt,
+    this.unreadCount = 0,
   });
 
   factory ChatModel.fromJson(Map<String, dynamic> json) {
@@ -73,6 +75,14 @@ class ChatModel {
         created = DateTime.now();
       }
       
+      // Parse unread count from server
+      int unread = 0;
+      if (json['unreadCount'] != null) {
+        unread = json['unreadCount'] is int 
+            ? json['unreadCount'] 
+            : int.tryParse(json['unreadCount'].toString()) ?? 0;
+      }
+      
       return ChatModel(
         id: id,
         type: chatType,
@@ -80,6 +90,7 @@ class ChatModel {
         members: membersList,
         lastMessage: lastMsg,
         createdAt: created,
+        unreadCount: unread,
       );
     } catch (e) {
       print('Error in ChatModel.fromJson: $e');
@@ -157,6 +168,8 @@ class MessageModel {
   final String senderId;
   final String body;
   final DateTime createdAt;
+  final bool isRead;
+  final DateTime? readAt;
 
   MessageModel({
     required this.id,
@@ -164,6 +177,8 @@ class MessageModel {
     required this.senderId,
     required this.body,
     required this.createdAt,
+    this.isRead = false,
+    this.readAt,
   });
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
@@ -176,6 +191,10 @@ class MessageModel {
         createdAt: json['createdAt'] != null
             ? DateTime.parse(json['createdAt'].toString())
             : DateTime.now(),
+        isRead: json['isRead'] ?? false,
+        readAt: json['readAt'] != null
+            ? DateTime.parse(json['readAt'].toString())
+            : null,
       );
     } catch (e) {
       print('Error in MessageModel.fromJson: $e');
@@ -191,6 +210,8 @@ class MessageModel {
       'senderId': senderId,
       'body': body,
       'createdAt': createdAt.toIso8601String(),
+      'isRead': isRead,
+      'readAt': readAt?.toIso8601String(),
     };
   }
 

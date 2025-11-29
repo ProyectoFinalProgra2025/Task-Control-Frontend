@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'worker_home_tab.dart';
-import 'worker_chats_tab.dart';
+import '../common/chat_list_screen.dart';
 import 'worker_profile_tab.dart';
+import '../../widgets/premium_widgets.dart';
+import '../../config/theme_config.dart';
+import '../../providers/chat_provider.dart';
 
 class WorkerMainScreen extends StatefulWidget {
   const WorkerMainScreen({super.key});
@@ -16,7 +20,7 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
 
   final List<Widget> _tabs = const [
     WorkerHomeTab(),
-    WorkerChatsTab(),
+    ChatListScreen(),
     WorkerProfileTab(),
   ];
 
@@ -36,6 +40,10 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
     setState(() {
       _currentIndex = index;
     });
+    // Refresh chats when navigating to chat tab
+    if (index == 1) {
+      _refreshChats();
+    }
   }
 
   void _onNavItemTapped(int index) {
@@ -44,6 +52,15 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+    // Refresh chats when tapping on chat tab
+    if (index == 1) {
+      _refreshChats();
+    }
+  }
+
+  void _refreshChats() {
+    final chatProvider = context.read<ChatProvider>();
+    chatProvider.refreshChats();
   }
 
   @override
@@ -57,88 +74,72 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
         physics: const BouncingScrollPhysics(),
         children: _tabs,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF192233) : Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
+      bottomNavigationBar: Consumer<ChatProvider>(
+        builder: (context, chatProvider, child) {
+          final unreadCount = chatProvider.totalUnreadCount;
+          
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+              border: Border(
+                top: BorderSide(
+                  color: isDark
+                    ? AppTheme.darkBorder.withOpacity(0.3)
+                    : AppTheme.lightBorder,
+                  width: 1,
+                ),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, -4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home,
-                  label: 'Home',
-                  index: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spaceRegular,
+                  vertical: AppTheme.spaceSmall,
                 ),
-                _buildNavItem(
-                  icon: Icons.chat_bubble_outline,
-                  activeIcon: Icons.chat_bubble,
-                  label: 'Chats',
-                  index: 1,
-                ),
-                _buildNavItem(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    PremiumNavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'Home',
+                      isActive: _currentIndex == 0,
+                      activeColor: AppTheme.primaryBlue,
+                      isDark: isDark,
+                      onTap: () => _onNavItemTapped(0),
+                    ),
+                    PremiumNavItem(
+                      icon: Icons.chat_bubble_outline,
+                      activeIcon: Icons.chat_bubble_rounded,
+                      label: 'Chats',
+                      isActive: _currentIndex == 1,
+                      activeColor: AppTheme.primaryBlue,
+                      isDark: isDark,
+                      badgeCount: unreadCount,
+                      onTap: () => _onNavItemTapped(1),
+                    ),
+                PremiumNavItem(
                   icon: Icons.person_outline,
-                  activeIcon: Icons.person,
+                  activeIcon: Icons.person_rounded,
                   label: 'Profile',
-                  index: 2,
+                  isActive: _currentIndex == 2,
+                  activeColor: AppTheme.primaryBlue,
+                  isDark: isDark,
+                  onTap: () => _onNavItemTapped(2),
                 ),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-    required int index,
-  }) {
-    final isActive = _currentIndex == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () => _onNavItemTapped(index),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isActive ? activeIcon : icon,
-                color: isActive
-                    ? const Color(0xFF135bec)
-                    : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                size: 26,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  color: isActive
-                      ? const Color(0xFF135bec)
-                      : (isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b)),
-                ),
-              ),
-            ],
-          ),
-        ),
+        );
+        },
       ),
     );
   }

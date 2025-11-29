@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../models/enums/prioridad_tarea.dart';
 import '../../models/enums/departamento.dart';
 import '../../services/tarea_service.dart';
-import '../../widgets/tarea_detail_widget.dart';
+import '../../config/theme_config.dart';
+import '../../widgets/task/task_widgets.dart';
+import 'admin_task_detail_screen.dart';
+import '../../providers/realtime_provider.dart';
+import '../../services/storage_service.dart';
 
 class AdminTasksTab extends StatefulWidget {
   const AdminTasksTab({super.key});
@@ -13,22 +19,84 @@ class AdminTasksTab extends StatefulWidget {
   State<AdminTasksTab> createState() => _AdminTasksTabState();
 }
 
-class _AdminTasksTabState extends State<AdminTasksTab> {
+class _AdminTasksTabState extends State<AdminTasksTab> with SingleTickerProviderStateMixin {
   final TareaService _tareaService = TareaService();
+  final StorageService _storage = StorageService();
   List<Tarea> _tareas = [];
   bool _isLoading = true;
   String? _error;
 
-  // Filtros
   EstadoTarea? _selectedEstado;
   PrioridadTarea? _selectedPrioridad;
   Departamento? _selectedDepartamento;
   String _searchQuery = '';
 
+  late TabController _tabController;
+  final List<String> _tabs = ['Todas', 'Pendientes', 'En Progreso', 'Completadas'];
+  
+  StreamSubscription? _tareaEventSubscription;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: _tabs.length, vsync: this);
     _loadTareas();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectRealtime();
+      _subscribeToRealtimeEvents();
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _tareaEventSubscription?.cancel();
+    super.dispose();
+  }
+  
+  Future<void> _connectRealtime() async {
+    try {
+      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        await realtimeProvider.connect(empresaId: empresaId);
+      }
+    } catch (e) {
+      debugPrint('Error connecting to realtime: $e');
+    }
+  }
+  
+  void _subscribeToRealtimeEvents() {
+    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
+    
+    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
+      debugPrint('📋 Admin Tasks: Tarea event received: ${event['action']}');
+      _loadTareas(); // Reload task list
+      
+      if (mounted) {
+        final action = event['action'] ?? '';
+        String message = '';
+        if (action == 'tarea:created') {
+          message = 'Nueva tarea creada';
+        } else if (action == 'tarea:assigned') {
+          message = 'Tarea asignada a un trabajador';
+        } else if (action == 'tarea:accepted') {
+          message = 'Tarea aceptada';
+        } else if (action == 'tarea:completed') {
+          message = 'Tarea completada';
+        }
+        
+        if (message.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    });
   }
 
   Future<void> _loadTareas() async {
@@ -43,7 +111,7 @@ class _AdminTasksTabState extends State<AdminTasksTab> {
         prioridad: _selectedPrioridad,
         departamento: _selectedDepartamento,
       );
-      
+
       if (mounted) {
         setState(() {
           _tareas = tareas;
@@ -84,188 +152,267 @@ class _AdminTasksTabState extends State<AdminTasksTab> {
   void _showSearchDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Buscar Tarea'),
-        content: TextField(
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Ingrese título de la tarea...',
-            prefixIcon: Icon(Icons.search),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Buscar Tarea',
+            style: TextStyle(
+              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          onChanged: (value) {
-            setState(() => _searchQuery = value);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() => _searchQuery = '');
-              Navigator.of(context).pop();
-            },
-            child: const Text('Limpiar'),
+          content: TextField(
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'Título de la tarea...',
+              prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryBlue),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
+              ),
+            ),
+            onChanged: (value) => setState(() => _searchQuery = value),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() => _searchQuery = '');
+                Navigator.of(context).pop();
+              },
+              child: const Text('Limpiar', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Cerrar', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        );
+      },
     );
   }
 
   List<Tarea> get _filteredTareas {
-    if (_searchQuery.isEmpty) return _tareas;
-    
-    final query = _searchQuery.toLowerCase();
-    return _tareas.where((tarea) {
-      return tarea.titulo.toLowerCase().contains(query) ||
-          tarea.descripcion.toLowerCase().contains(query);
-    }).toList();
-  }
+    var tareas = _tareas;
 
-  Color _getEstadoColor(EstadoTarea estado) {
-    switch (estado) {
-      case EstadoTarea.pendiente:
-        return const Color(0xFFF59E0B);
-      case EstadoTarea.asignada:
-        return const Color(0xFF3B82F6);
-      case EstadoTarea.aceptada:
-        return const Color(0xFF8B5CF6);
-      case EstadoTarea.finalizada:
-        return const Color(0xFF10B981);
-      case EstadoTarea.cancelada:
-        return const Color(0xFFEF4444);
+    // Filter by search query
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      tareas = tareas.where((tarea) {
+        return tarea.titulo.toLowerCase().contains(query) ||
+            tarea.descripcion.toLowerCase().contains(query);
+      }).toList();
     }
-  }
 
-  Color _getPrioridadColor(PrioridadTarea prioridad) {
-    switch (prioridad) {
-      case PrioridadTarea.low:
-        return const Color(0xFF10B981);
-      case PrioridadTarea.medium:
-        return const Color(0xFFF59E0B);
-      case PrioridadTarea.high:
-        return const Color(0xFFEF4444);
+    // Filter by tab
+    final tabIndex = _tabController.index;
+    if (tabIndex == 1) {
+      tareas = tareas.where((t) => t.estado == EstadoTarea.pendiente).toList();
+    } else if (tabIndex == 2) {
+      tareas = tareas.where((t) =>
+        t.estado == EstadoTarea.asignada || t.estado == EstadoTarea.aceptada
+      ).toList();
+    } else if (tabIndex == 3) {
+      tareas = tareas.where((t) => t.estado == EstadoTarea.finalizada).toList();
     }
+
+    return tareas;
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Top App Bar
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+            // Premium Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.menu, color: textPrimary, size: 28),
-                  const Spacer(),
-                  Text(
-                    'Tareas',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: textPrimary,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Gestión de Tareas',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_filteredTareas.length} tareas encontradas',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder,
+                          ),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.search_rounded,
+                            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                          ),
+                          onPressed: _showSearchDialog,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: (_selectedEstado != null || _selectedPrioridad != null || _selectedDepartamento != null)
+                              ? AppTheme.primaryBlue
+                              : (isDark ? AppTheme.darkCard : AppTheme.lightCard),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: (_selectedEstado != null || _selectedPrioridad != null || _selectedDepartamento != null)
+                                ? AppTheme.primaryBlue
+                                : (isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                          ),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.tune_rounded,
+                            color: (_selectedEstado != null || _selectedPrioridad != null || _selectedDepartamento != null)
+                                ? Colors.white
+                                : (isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+                          ),
+                          onPressed: _showFiltersDialog,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Modern Tab Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkBackground : const Color(0xFFF5F7FA),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(Icons.search, color: textPrimary, size: 28),
-                    onPressed: _showSearchDialog,
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.filter_list, color: textPrimary, size: 28),
-                    onPressed: _showFiltersDialog,
+                    child: TabBar(
+                      controller: _tabController,
+                      onTap: (_) => setState(() {}),
+                      indicator: BoxDecoration(
+                        color: AppTheme.primaryBlue,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: Colors.transparent,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      padding: const EdgeInsets.all(4),
+                      tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // Filter Chips - Mostrar filtros activos
-            if (_selectedEstado != null ||
-                _selectedPrioridad != null ||
-                _selectedDepartamento != null)
+            // Active Filters
+            if (_selectedEstado != null || _selectedPrioridad != null || _selectedDepartamento != null)
               Container(
                 height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
                   children: [
-                    Expanded(
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          if (_selectedEstado != null)
-                            _buildActiveFilterChip(
-                              '${_selectedEstado!.label}',
-                              () {
-                                setState(() => _selectedEstado = null);
-                                _loadTareas();
-                              },
-                              textPrimary,
-                            ),
-                          if (_selectedPrioridad != null)
-                            _buildActiveFilterChip(
-                              '${_selectedPrioridad!.label}',
-                              () {
-                                setState(() => _selectedPrioridad = null);
-                                _loadTareas();
-                              },
-                              textPrimary,
-                            ),
-                          if (_selectedDepartamento != null)
-                            _buildActiveFilterChip(
-                              '${_selectedDepartamento!.label}',
-                              () {
-                                setState(() => _selectedDepartamento = null);
-                                _loadTareas();
-                              },
-                              textPrimary,
-                            ),
-                        ],
-                      ),
-                    ),
+                    if (_selectedEstado != null)
+                      _buildFilterChip(_selectedEstado!.label, () {
+                        setState(() => _selectedEstado = null);
+                        _loadTareas();
+                      }),
+                    if (_selectedPrioridad != null)
+                      _buildFilterChip(_selectedPrioridad!.label, () {
+                        setState(() => _selectedPrioridad = null);
+                        _loadTareas();
+                      }),
+                    if (_selectedDepartamento != null)
+                      _buildFilterChip(_selectedDepartamento!.label, () {
+                        setState(() => _selectedDepartamento = null);
+                        _loadTareas();
+                      }),
                   ],
                 ),
               ),
 
-            const SizedBox(height: 8),
-
             // Task List
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))
                   : _error != null
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.error_outline,
-                                  size: 64, color: textSecondary),
+                              Icon(Icons.error_outline, size: 64, color: AppTheme.dangerRed),
                               const SizedBox(height: 16),
                               Text(
                                 'Error al cargar tareas',
-                                style:
-                                    TextStyle(fontSize: 18, color: textPrimary),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                ),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 _error!,
                                 style: TextStyle(
-                                    fontSize: 14, color: textSecondary),
+                                  fontSize: 14,
+                                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: _loadTareas,
-                                child: const Text('Reintentar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryBlue,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const Text('Reintentar', style: TextStyle(fontWeight: FontWeight.w600)),
                               ),
                             ],
                           ),
@@ -275,38 +422,46 @@ class _AdminTasksTabState extends State<AdminTasksTab> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.assignment_outlined,
-                                      size: 64, color: textSecondary),
+                                  Container(
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.assignment_outlined,
+                                      size: 64,
+                                      color: AppTheme.primaryBlue,
+                                    ),
+                                  ),
                                   const SizedBox(height: 16),
                                   Text(
                                     'No hay tareas',
                                     style: TextStyle(
-                                        fontSize: 18, color: textPrimary),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     'Crea una nueva tarea usando el botón +',
                                     style: TextStyle(
-                                        fontSize: 14, color: textSecondary),
+                                      fontSize: 14,
+                                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                    ),
                                   ),
                                 ],
                               ),
                             )
                           : RefreshIndicator(
                               onRefresh: _loadTareas,
-                              child: ListView.builder(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
+                              color: AppTheme.primaryBlue,
+                              child: ListView.separated(
+                                padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                                 itemCount: _filteredTareas.length,
-                                itemBuilder: (context, index) {
-                                  final tarea = _filteredTareas[index];
-                                  return _buildTaskCard(
-                                    tarea: tarea,
-                                    textPrimary: textPrimary,
-                                    textSecondary: textSecondary,
-                                    isDark: isDark,
-                                  );
-                                },
+                                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                                itemBuilder: (context, index) => _buildTaskCard(_filteredTareas[index], isDark),
                               ),
                             ),
             ),
@@ -316,216 +471,32 @@ class _AdminTasksTabState extends State<AdminTasksTab> {
     );
   }
 
-  Widget _buildActiveFilterChip(
-      String label, VoidCallback onRemove, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Chip(
-        label: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-          ),
-        ),
-        deleteIcon: const Icon(Icons.close, size: 18, color: Colors.white),
-        onDeleted: onRemove,
-        backgroundColor: const Color(0xFF135bec),
-      ),
-    );
+  Widget _buildFilterChip(String label, VoidCallback onRemove) {
+    return TaskFilterChip(label: label, onRemove: onRemove);
   }
 
-  Widget _buildTaskCard({
-    required Tarea tarea,
-    required Color textPrimary,
-    required Color textSecondary,
-    required bool isDark,
-  }) {
-    return GestureDetector(
-      onTap: () async {
-        final result = await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => TareaDetailWidget(tareaId: tarea.id),
-          ),
-        );
-        
-        // Si se modificó algo, recargar la lista
-        if (result == true) {
-          _loadTareas();
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF192233) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    tarea.titulo,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: textPrimary,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getPrioridadColor(tarea.prioridad).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    tarea.prioridad.label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _getPrioridadColor(tarea.prioridad),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              tarea.descripcion,
-              style: TextStyle(
-                fontSize: 14,
-                color: textSecondary,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                // Mostrar rechazo si existe
-                if (tarea.delegacionAceptada == false && 
-                    tarea.motivoRechazoJefe != null) ...[
-                  Icon(Icons.block, size: 16, color: Colors.red),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      'Rechazada',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ]
-                else if (tarea.asignadoANombre != null) ...[
-                  Icon(Icons.person_outline, size: 16, color: textSecondary),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      tarea.asignadoANombre!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: textSecondary,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ] else ...[
-                  Icon(Icons.person_off_outlined, size: 16, color: textSecondary),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Sin asignar',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: textSecondary,
-                    ),
-                  ),
-                ],
-                const SizedBox(width: 16),
-                Icon(Icons.calendar_today_outlined,
-                    size: 16, color: textSecondary),
-                const SizedBox(width: 4),
-                Text(
-                  tarea.dueDate != null
-                      ? '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}'
-                      : 'Sin fecha',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: textSecondary,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getEstadoColor(tarea.estado).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    tarea.estado.label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _getEstadoColor(tarea.estado),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            // Mostrar motivo de rechazo si existe
-            if (tarea.delegacionAceptada == false && 
-                tarea.motivoRechazoJefe != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 14, color: Colors.red),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Motivo del rechazo: ${tarea.motivoRechazoJefe}',
-                        style: const TextStyle(fontSize: 12, color: Colors.red),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
+  Widget _buildTaskCard(Tarea tarea, bool isDark) {
+    return Padding(
+      padding: EdgeInsets.zero,
+      child: TaskCard(
+        tarea: tarea,
+        style: TaskCardStyle.premium,
+        showSkills: true,
+        showAssignee: true,
+        showDueDate: true,
+        showProgressIndicator: true,
+        onTap: () async {
+          final result = await Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => AdminTaskDetailScreen(tareaId: tarea.id)),
+          );
+          if (result == true) _loadTareas();
+        },
       ),
     );
   }
 }
 
-// Sheet para filtros
+// Modern Filters Sheet
 class _FiltersSheet extends StatefulWidget {
   final EstadoTarea? selectedEstado;
   final PrioridadTarea? selectedPrioridad;
@@ -559,14 +530,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor =
-        isDark ? const Color(0xFF101622) : const Color(0xFFF4F6F8);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? const Color(0xFFF4F6F8) : const Color(0xFF212529);
-    final textSecondary =
-        isDark ? const Color(0xFF92a4c9) : const Color(0xFF6C757D);
-    final borderColor =
-        isDark ? const Color(0xFF324467) : const Color(0xFFE0E0E0);
+    final backgroundColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
@@ -576,34 +540,36 @@ class _FiltersSheetState extends State<_FiltersSheet> {
         return Container(
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             children: [
-              // Header
+              // Handle bar
               Container(
-                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: borderColor)),
+                  color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+                  borderRadius: BorderRadius.circular(2),
                 ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(20),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.close, color: textSecondary),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Filtros',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: textPrimary,
-                        ),
+                    Icon(Icons.tune_rounded, color: AppTheme.primaryBlue, size: 28),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Filtros',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                       ),
                     ),
+                    const Spacer(),
                     TextButton(
                       onPressed: () {
                         setState(() {
@@ -612,123 +578,80 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                           _tempDepartamento = null;
                         });
                       },
-                      child: const Text('Limpiar'),
+                      child: const Text('Limpiar', style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
               ),
-
+              Divider(height: 1, color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
               // Filters
               Expanded(
                 child: ListView(
                   controller: scrollController,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   children: [
-                    // Estado
-                    Text(
-                      'Estado',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
-                      ),
+                    _buildSection('Estado', isDark),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: EstadoTarea.values.map((estado) => _buildFilterChip(
+                        estado.label,
+                        _tempEstado == estado,
+                        () => setState(() => _tempEstado = _tempEstado == estado ? null : estado),
+                        isDark,
+                      )).toList(),
                     ),
-                    const SizedBox(height: 8),
-                    ...EstadoTarea.values.map((estado) {
-                      return RadioListTile<EstadoTarea?>(
-                        title: Text(estado.label,
-                            style: TextStyle(color: textPrimary)),
-                        value: estado,
-                        groupValue: _tempEstado,
-                        onChanged: (value) {
-                          setState(() => _tempEstado = value);
-                        },
-                        activeColor: const Color(0xFF005A9C),
-                        tileColor: cardColor,
-                      );
-                    }),
-
-                    const SizedBox(height: 16),
-
-                    // Prioridad
-                    Text(
-                      'Prioridad',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
-                      ),
+                    const SizedBox(height: 24),
+                    _buildSection('Prioridad', isDark),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: PrioridadTarea.values.map((prioridad) => _buildFilterChip(
+                        prioridad.label,
+                        _tempPrioridad == prioridad,
+                        () => setState(() => _tempPrioridad = _tempPrioridad == prioridad ? null : prioridad),
+                        isDark,
+                      )).toList(),
                     ),
-                    const SizedBox(height: 8),
-                    ...PrioridadTarea.values.map((prioridad) {
-                      return RadioListTile<PrioridadTarea?>(
-                        title: Text(prioridad.label,
-                            style: TextStyle(color: textPrimary)),
-                        value: prioridad,
-                        groupValue: _tempPrioridad,
-                        onChanged: (value) {
-                          setState(() => _tempPrioridad = value);
-                        },
-                        activeColor: const Color(0xFF005A9C),
-                        tileColor: cardColor,
-                      );
-                    }),
-
-                    const SizedBox(height: 16),
-
-                    // Departamento
-                    Text(
-                      'Departamento',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
-                      ),
+                    const SizedBox(height: 24),
+                    _buildSection('Departamento', isDark),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: Departamento.principales.map((dept) => _buildFilterChip(
+                        dept.label,
+                        _tempDepartamento == dept,
+                        () => setState(() => _tempDepartamento = _tempDepartamento == dept ? null : dept),
+                        isDark,
+                      )).toList(),
                     ),
-                    const SizedBox(height: 8),
-                    ...Departamento.principales.map((dept) {
-                      return RadioListTile<Departamento?>(
-                        title: Text(dept.label,
-                            style: TextStyle(color: textPrimary)),
-                        value: dept,
-                        groupValue: _tempDepartamento,
-                        onChanged: (value) {
-                          setState(() => _tempDepartamento = value);
-                        },
-                        activeColor: const Color(0xFF005A9C),
-                        tileColor: cardColor,
-                      );
-                    }),
                   ],
                 ),
               ),
-
               // Apply button
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: borderColor)),
+                  color: backgroundColor,
+                  border: Border(top: BorderSide(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder)),
                 ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    widget.onApply(
-                        _tempEstado, _tempPrioridad, _tempDepartamento);
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF005A9C),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      widget.onApply(_tempEstado, _tempPrioridad, _tempDepartamento);
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                  ),
-                  child: const Text(
-                    'Aplicar Filtros',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    child: const Text('Aplicar Filtros', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                   ),
                 ),
               ),
@@ -736,6 +659,42 @@ class _FiltersSheetState extends State<_FiltersSheet> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSection(String title, bool isDark) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap, bool isDark) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryBlue : (isDark ? AppTheme.darkCard : AppTheme.lightCard),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppTheme.primaryBlue : (isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : (isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+          ),
+        ),
+      ),
     );
   }
 }
