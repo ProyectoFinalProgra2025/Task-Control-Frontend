@@ -40,6 +40,10 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
     setState(() {
       _currentIndex = index;
     });
+    // Refresh chats when navigating to chat tab
+    if (index == 1) {
+      _refreshChats();
+    }
   }
 
   void _onNavItemTapped(int index) {
@@ -48,6 +52,15 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+    // Refresh chats when tapping on chat tab
+    if (index == 1) {
+      _refreshChats();
+    }
+  }
+
+  void _refreshChats() {
+    final chatProvider = context.read<ChatProvider>();
+    chatProvider.refreshChats();
   }
 
   @override

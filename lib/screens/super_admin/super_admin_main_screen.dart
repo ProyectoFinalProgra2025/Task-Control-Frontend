@@ -25,6 +25,19 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
     const SuperAdminProfileTab(),
   ];
 
+  void _navigateTo(int index) {
+    setState(() => _currentIndex = index);
+    // Refresh chats when navigating to chat tab
+    if (index == 2) {
+      _refreshChats();
+    }
+  }
+
+  void _refreshChats() {
+    final chatProvider = context.read<ChatProvider>();
+    chatProvider.refreshChats();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -73,7 +86,7 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
                       isActive: _currentIndex == 0,
                       activeColor: AppTheme.primaryPurple,
                       isDark: isDark,
-                      onTap: () => setState(() => _currentIndex = 0),
+                      onTap: () => _navigateTo(0),
                     ),
                     PremiumNavItem(
                       icon: Icons.business_outlined,
@@ -82,7 +95,7 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
                       isActive: _currentIndex == 1,
                       activeColor: AppTheme.primaryPurple,
                       isDark: isDark,
-                      onTap: () => setState(() => _currentIndex = 1),
+                      onTap: () => _navigateTo(1),
                     ),
                     PremiumNavItem(
                       icon: Icons.chat_bubble_outline,
@@ -92,7 +105,7 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
                       activeColor: AppTheme.primaryPurple,
                       isDark: isDark,
                       badgeCount: unreadCount,
-                      onTap: () => setState(() => _currentIndex = 2),
+                      onTap: () => _navigateTo(2),
                     ),
                     PremiumNavItem(
                       icon: Icons.person_outline,
@@ -101,7 +114,7 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
                       isActive: _currentIndex == 3,
                       activeColor: AppTheme.primaryPurple,
                       isDark: isDark,
-                      onTap: () => setState(() => _currentIndex = 3),
+                      onTap: () => _navigateTo(3),
                     ),
                   ],
                 ),

@@ -30,6 +30,19 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
     const ManagerProfileTab(),
   ];
 
+  void _navigateTo(int index) {
+    setState(() => _currentIndex = index);
+    // Refresh chats when navigating to chat tab
+    if (index == 1) {
+      _refreshChats();
+    }
+  }
+
+  void _refreshChats() {
+    final chatProvider = context.read<ChatProvider>();
+    chatProvider.refreshChats();
+  }
+
   void _showCreateTaskModal() {
     showModalBottomSheet(
       context: context,
@@ -100,7 +113,7 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
                       isActive: _currentIndex == 0,
                       activeColor: AppTheme.successGreen,
                       isDark: isDark,
-                      onTap: () => setState(() => _currentIndex = 0),
+                      onTap: () => _navigateTo(0),
                     ),
                     PremiumNavItem(
                       icon: Icons.chat_bubble_outline,
@@ -110,7 +123,7 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
                       activeColor: AppTheme.successGreen,
                       isDark: isDark,
                       badgeCount: unreadCount,
-                      onTap: () => setState(() => _currentIndex = 1),
+                      onTap: () => _navigateTo(1),
                     ),
                 PremiumNavItem(
                   icon: Icons.assignment_outlined,
@@ -119,7 +132,7 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
                   isActive: _currentIndex == 2,
                   activeColor: AppTheme.successGreen,
                   isDark: isDark,
-                  onTap: () => setState(() => _currentIndex = 2),
+                  onTap: () => _navigateTo(2),
                 ),
                 PremiumNavItem(
                   icon: Icons.people_outline,
@@ -128,7 +141,7 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
                   isActive: _currentIndex == 3,
                   activeColor: AppTheme.successGreen,
                   isDark: isDark,
-                  onTap: () => setState(() => _currentIndex = 3),
+                  onTap: () => _navigateTo(3),
                 ),
                 PremiumNavItem(
                   icon: Icons.person_outline,
@@ -137,7 +150,7 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
                   isActive: _currentIndex == 4,
                   activeColor: AppTheme.successGreen,
                   isDark: isDark,
-                  onTap: () => setState(() => _currentIndex = 4),
+                  onTap: () => _navigateTo(4),
                 ),
               ],
             ),

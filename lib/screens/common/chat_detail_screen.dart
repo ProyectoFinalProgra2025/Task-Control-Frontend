@@ -41,6 +41,34 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       duration: const Duration(milliseconds: 300),
     );
     _loadChatData();
+    _subscribeToNewMessages();
+  }
+
+  // Suscribirse a mensajes nuevos para marcarlos como leídos automáticamente
+  void _subscribeToNewMessages() {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    // Escuchar cambios en los mensajes del chat actual
+    chatProvider.addListener(_onMessagesChanged);
+  }
+
+  void _onMessagesChanged() {
+    if (!mounted) return;
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final messages = chatProvider.getMessages(widget.chatId);
+    
+    // Buscar mensajes no leídos de otros usuarios y marcarlos como leídos
+    bool hasUnreadFromOthers = false;
+    for (final msg in messages) {
+      if (msg.senderId != _currentUserId && !msg.isRead) {
+        hasUnreadFromOthers = true;
+        break;
+      }
+    }
+    
+    // Si hay mensajes no leídos de otros, marcar como leídos
+    if (hasUnreadFromOthers) {
+      chatProvider.markChatAsRead(widget.chatId);
+    }
   }
 
   Future<void> _loadChatData() async {
@@ -52,12 +80,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
       _currentUserId = userData?['id']?.toString();
     });
 
-    // Mark chat as read when opening
-    chatProvider.markChatAsRead(widget.chatId);
-
     // Load messages and join SignalR room
     await chatProvider.loadMessages(widget.chatId);
     await chatProvider.joinChatRoom(widget.chatId);
+
+    // Mark chat as read AFTER loading messages (calls API)
+    await chatProvider.markChatAsRead(widget.chatId);
 
     // Scroll to bottom after loading
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -802,6 +830,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   @override
   void dispose() {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    chatProvider.removeListener(_onMessagesChanged);
     chatProvider.leaveChatRoom(widget.chatId);
     _messageController.dispose();
     _scrollController.dispose();

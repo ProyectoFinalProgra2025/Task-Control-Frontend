@@ -7,6 +7,7 @@ import '../../models/enums/prioridad_tarea.dart';
 import '../../models/enums/departamento.dart';
 import '../../services/tarea_service.dart';
 import '../../config/theme_config.dart';
+import '../../widgets/task/task_widgets.dart';
 import 'admin_task_detail_screen.dart';
 import '../../providers/realtime_provider.dart';
 import '../../services/storage_service.dart';
@@ -471,214 +472,27 @@ class _AdminTasksTabState extends State<AdminTasksTab> with SingleTickerProvider
   }
 
   Widget _buildFilterChip(String label, VoidCallback onRemove) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Chip(
-        label: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
-        deleteIcon: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
-        onDeleted: onRemove,
-        backgroundColor: AppTheme.primaryBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      ),
-    );
+    return TaskFilterChip(label: label, onRemove: onRemove);
   }
 
   Widget _buildTaskCard(Tarea tarea, bool isDark) {
-    return GestureDetector(
-      onTap: () async {
-        final result = await Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => AdminTaskDetailScreen(tareaId: tarea.id)),
-        );
-        if (result == true) _loadTareas();
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      tarea.titulo,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: _getPrioridadColor(tarea.prioridad).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _getPrioridadColor(tarea.prioridad).withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      tarea.prioridad.label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: _getPrioridadColor(tarea.prioridad),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                tarea.descripcion,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  if (tarea.delegacionAceptada == false && tarea.motivoRechazoJefe != null) ...[
-                    Icon(Icons.block_rounded, size: 16, color: AppTheme.dangerRed),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Rechazada',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppTheme.dangerRed,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ] else if (tarea.asignadoANombre != null) ...[
-                    Icon(Icons.person_outline_rounded, size: 16, color: isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary),
-                    const SizedBox(width: 6),
-                    Text(
-                      tarea.asignadoANombre!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ] else ...[
-                    Icon(Icons.person_off_outlined, size: 16, color: isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Sin asignar',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(width: 16),
-                  Icon(Icons.calendar_today_rounded, size: 16, color: isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary),
-                  const SizedBox(width: 6),
-                  Text(
-                    tarea.dueDate != null
-                        ? '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}'
-                        : 'Sin fecha',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: _getEstadoColor(tarea.estado).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _getEstadoColor(tarea.estado).withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      tarea.estado.label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: _getEstadoColor(tarea.estado),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (tarea.delegacionAceptada == false && tarea.motivoRechazoJefe != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.dangerRed.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppTheme.dangerRed.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, size: 16, color: AppTheme.dangerRed),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Motivo: ${tarea.motivoRechazoJefe}',
-                          style: const TextStyle(fontSize: 12, color: AppTheme.dangerRed, fontWeight: FontWeight.w600),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+    return Padding(
+      padding: EdgeInsets.zero,
+      child: TaskCard(
+        tarea: tarea,
+        style: TaskCardStyle.premium,
+        showSkills: true,
+        showAssignee: true,
+        showDueDate: true,
+        showProgressIndicator: true,
+        onTap: () async {
+          final result = await Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => AdminTaskDetailScreen(tareaId: tarea.id)),
+          );
+          if (result == true) _loadTareas();
+        },
       ),
     );
-  }
-
-  Color _getEstadoColor(EstadoTarea estado) {
-    switch (estado) {
-      case EstadoTarea.pendiente:
-        return AppTheme.warningOrange;
-      case EstadoTarea.asignada:
-        return AppTheme.primaryBlue;
-      case EstadoTarea.aceptada:
-        return const Color(0xFF7C3AED);
-      case EstadoTarea.finalizada:
-        return AppTheme.successGreen;
-      case EstadoTarea.cancelada:
-        return AppTheme.dangerRed;
-    }
-  }
-
-  Color _getPrioridadColor(PrioridadTarea prioridad) {
-    switch (prioridad) {
-      case PrioridadTarea.low:
-        return AppTheme.successGreen;
-      case PrioridadTarea.medium:
-        return AppTheme.warningOrange;
-      case PrioridadTarea.high:
-        return AppTheme.dangerRed;
-    }
   }
 }
 

@@ -75,6 +75,14 @@ class ChatModel {
         created = DateTime.now();
       }
       
+      // Parse unread count from server
+      int unread = 0;
+      if (json['unreadCount'] != null) {
+        unread = json['unreadCount'] is int 
+            ? json['unreadCount'] 
+            : int.tryParse(json['unreadCount'].toString()) ?? 0;
+      }
+      
       return ChatModel(
         id: id,
         type: chatType,
@@ -82,6 +90,7 @@ class ChatModel {
         members: membersList,
         lastMessage: lastMsg,
         createdAt: created,
+        unreadCount: unread,
       );
     } catch (e) {
       print('Error in ChatModel.fromJson: $e');

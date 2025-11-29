@@ -25,11 +25,24 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
   void initState() {
     super.initState();
     _screens = [
-      AdminHomeTab(onNavigateToTasks: () => setState(() => _currentIndex = 2)),
+      AdminHomeTab(onNavigateToTasks: () => _navigateTo(2)),
       const ChatListScreen(),
       const AdminTasksTab(),
       const AdminProfileTab(),
     ];
+  }
+
+  void _navigateTo(int index) {
+    setState(() => _currentIndex = index);
+    // Refresh chats when navigating to chat tab
+    if (index == 1) {
+      _refreshChats();
+    }
+  }
+
+  void _refreshChats() {
+    final chatProvider = context.read<ChatProvider>();
+    chatProvider.refreshChats();
   }
 
   void _showCreateTaskModal() {
@@ -89,7 +102,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                       isActive: _currentIndex == 0,
                       activeColor: AppTheme.primaryBlue,
                       isDark: isDark,
-                      onTap: () => setState(() => _currentIndex = 0),
+                      onTap: () => _navigateTo(0),
                     ),
                     PremiumNavItem(
                       icon: Icons.chat_bubble_outline,
@@ -99,7 +112,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                       activeColor: AppTheme.primaryBlue,
                       isDark: isDark,
                       badgeCount: unreadCount,
-                      onTap: () => setState(() => _currentIndex = 1),
+                      onTap: () => _navigateTo(1),
                     ),
                 // Center FAB for creating tasks
                 _buildCenterFAB(),
@@ -110,7 +123,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                   isActive: _currentIndex == 2,
                   activeColor: AppTheme.primaryBlue,
                   isDark: isDark,
-                  onTap: () => setState(() => _currentIndex = 2),
+                  onTap: () => _navigateTo(2),
                 ),
                 PremiumNavItem(
                   icon: Icons.person_outline,
@@ -119,7 +132,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                   isActive: _currentIndex == 3,
                   activeColor: AppTheme.primaryBlue,
                   isDark: isDark,
-                  onTap: () => setState(() => _currentIndex = 3),
+                  onTap: () => _navigateTo(3),
                 ),
               ],
             ),

@@ -515,15 +515,27 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: PremiumButton(
-                  text: 'Finalizar',
-                  icon: Icons.check_circle_outline,
-                  onPressed: () => _showFinishTaskDialog(tarea),
-                  gradientColors: const [AppTheme.successGreen, AppTheme.successGreen],
+              // Show Aceptar if asignada, Finalizar if aceptada
+              if (tarea.estado == EstadoTarea.asignada)
+                Expanded(
+                  flex: 2,
+                  child: PremiumButton(
+                    text: 'Aceptar',
+                    icon: Icons.play_circle_outline,
+                    onPressed: () => _showAcceptTaskDialog(tarea),
+                    gradientColors: const [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
+                  ),
+                )
+              else if (tarea.estado == EstadoTarea.aceptada)
+                Expanded(
+                  flex: 2,
+                  child: PremiumButton(
+                    text: 'Finalizar',
+                    icon: Icons.check_circle_outline,
+                    onPressed: () => _showFinishTaskDialog(tarea),
+                    gradientColors: const [AppTheme.successGreen, AppTheme.successGreen],
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -662,6 +674,53 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
               backgroundColor: Colors.green,
             ),
             child: const Text('Finalizar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAcceptTaskDialog(Tarea tarea) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Aceptar Tarea'),
+        content: Text('¿Deseas aceptar la tarea "${tarea.titulo}"?\n\nAl aceptar, comenzarás a trabajar en esta tarea.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              
+              final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+              final success = await tareaProvider.aceptarTarea(tarea.id);
+
+              if (!mounted) return;
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('¡Tarea aceptada! Ahora puedes comenzar a trabajar.'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                await tareaProvider.cargarMisTareas();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(tareaProvider.error ?? 'Error al aceptar tarea'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+            ),
+            child: const Text('Aceptar'),
           ),
         ],
       ),

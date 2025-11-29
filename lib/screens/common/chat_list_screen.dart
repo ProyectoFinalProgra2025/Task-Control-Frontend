@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../providers/chat_provider.dart';
-import '../../providers/realtime_provider.dart';
 import '../../models/chat_model.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/premium_widgets.dart';
@@ -17,16 +16,43 @@ class ChatListScreen extends StatefulWidget {
   State<ChatListScreen> createState() => _ChatListScreenState();
 }
 
-class _ChatListScreenState extends State<ChatListScreen> {
+class _ChatListScreenState extends State<ChatListScreen> with WidgetsBindingObserver {
   final StorageService _storage = StorageService();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String? _currentUserId;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _init();
+    // Iniciar un timer periódico para refrescar los chats cada 15 segundos
+    _startPeriodicRefresh();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Cuando la app vuelve al primer plano, refrescar chats
+      _loadChats();
+    }
+  }
+
+  void _startPeriodicRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) {
+        _silentRefresh();
+      }
+    });
+  }
+
+  Future<void> _silentRefresh() async {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    await chatProvider.refreshChats();
   }
 
   Future<void> _init() async {
@@ -139,17 +165,37 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   // Search Bar
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: isDark 
+                          ? Colors.white.withOpacity(0.15)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(12),
+                      boxShadow: isDark ? null : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: TextField(
                       controller: _searchController,
                       onChanged: (value) => setState(() => _searchQuery = value),
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Search message',
-                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-                        prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.8)),
+                        hintStyle: TextStyle(
+                          color: isDark 
+                              ? Colors.white.withOpacity(0.7)
+                              : AppTheme.lightTextTertiary,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search, 
+                          color: isDark 
+                              ? Colors.white.withOpacity(0.8)
+                              : AppTheme.lightTextSecondary,
+                        ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
@@ -441,6 +487,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }

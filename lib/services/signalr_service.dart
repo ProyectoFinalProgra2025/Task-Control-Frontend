@@ -7,6 +7,8 @@ class SignalRService {
   HubConnection? _hubConnection;
   final StreamController<MessageModel> _messageController = StreamController<MessageModel>.broadcast();
   final StreamController<String> _newChatController = StreamController<String>.broadcast(); // Nuevo: para chats creados
+  final StreamController<Map<String, dynamic>> _messageReadController = StreamController<Map<String, dynamic>>.broadcast(); // Nuevo: para mensajes leídos
+  final StreamController<Map<String, dynamic>> _messagesReadController = StreamController<Map<String, dynamic>>.broadcast(); // Nuevo: para múltiples mensajes leídos
   final StreamController<Map<String, dynamic>> _tareaEventController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _empresaEventController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _usuarioEventController = StreamController<Map<String, dynamic>>.broadcast();
@@ -17,6 +19,8 @@ class SignalRService {
 
   Stream<MessageModel> get messageStream => _messageController.stream;
   Stream<String> get newChatStream => _newChatController.stream; // Stream de chats nuevos
+  Stream<Map<String, dynamic>> get messageReadStream => _messageReadController.stream; // Stream de mensaje leído
+  Stream<Map<String, dynamic>> get messagesReadStream => _messagesReadController.stream; // Stream de mensajes leídos
   Stream<Map<String, dynamic>> get tareaEventStream => _tareaEventController.stream;
   Stream<Map<String, dynamic>> get empresaEventStream => _empresaEventController.stream;
   Stream<Map<String, dynamic>> get usuarioEventStream => _usuarioEventController.stream;
@@ -92,6 +96,32 @@ class SignalRService {
           print('SignalR: Received chat:created event for chatId: $chatId');
         } catch (e) {
           print('SignalR: Error parsing chat:created event: $e');
+        }
+      }
+    });
+
+    // Evento para cuando un mensaje individual es leído
+    _hubConnection!.on('chat:message-read', (arguments) {
+      if (arguments != null && arguments.isNotEmpty) {
+        try {
+          final data = arguments[0] as Map<String, dynamic>;
+          _messageReadController.add(data);
+          print('SignalR: Received chat:message-read event');
+        } catch (e) {
+          print('SignalR: Error parsing chat:message-read event: $e');
+        }
+      }
+    });
+
+    // Evento para cuando múltiples mensajes son leídos
+    _hubConnection!.on('chat:messages-read', (arguments) {
+      if (arguments != null && arguments.isNotEmpty) {
+        try {
+          final data = arguments[0] as Map<String, dynamic>;
+          _messagesReadController.add(data);
+          print('SignalR: Received chat:messages-read event');
+        } catch (e) {
+          print('SignalR: Error parsing chat:messages-read event: $e');
         }
       }
     });
@@ -325,6 +355,8 @@ class SignalRService {
     disconnect();
     _messageController.close();
     _newChatController.close();
+    _messageReadController.close();
+    _messagesReadController.close();
     _tareaEventController.close();
     _empresaEventController.close();
     _usuarioEventController.close();

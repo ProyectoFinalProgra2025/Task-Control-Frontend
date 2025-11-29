@@ -8,7 +8,7 @@ import '../../models/enums/estado_tarea.dart';
 import '../../models/enums/prioridad_tarea.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/premium_widgets.dart';
-import '../../widgets/task_progress_indicator.dart';
+import '../../widgets/task/task_widgets.dart';
 import '../../services/storage_service.dart';
 import 'worker_task_detail_screen.dart';
 
@@ -188,216 +188,38 @@ class _WorkerTasksListScreenState extends State<WorkerTasksListScreen> {
   }
 
   Widget _buildTareaCard(Tarea tarea, bool isDark) {
-
-    Color getEstadoColor(EstadoTarea estado) {
-      switch (estado) {
-        case EstadoTarea.asignada:
-          return Colors.blue;
-        case EstadoTarea.aceptada:
-          return Colors.orange;
-        case EstadoTarea.finalizada:
-          return Colors.green;
-        case EstadoTarea.cancelada:
-          return Colors.red;
-        case EstadoTarea.pendiente:
-          return Colors.grey;
-      }
-    }
-
-
-    Color getPrioridadColor(PrioridadTarea prioridad) {
-      switch (prioridad) {
-        case PrioridadTarea.high:
-          return Colors.red;
-        case PrioridadTarea.medium:
-          return Colors.orange;
-        case PrioridadTarea.low:
-          return Colors.green;
-      }
-    }
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: PremiumCard(
-        isDark: isDark,
-        padding: const EdgeInsets.all(20),
-        onTap: () {
-          Navigator.push(
+      child: TaskCard(
+        tarea: tarea,
+        style: TaskCardStyle.worker,
+        showSkills: true,
+        showAssignee: false, // Worker no necesita ver su propio nombre
+        showDueDate: true,
+        showProgressIndicator: true,
+        onTap: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => WorkerTaskDetailScreen(tareaId: tarea.id),
             ),
           );
+          if (result == true) {
+            Provider.of<TareaProvider>(context, listen: false).cargarMisTareas(
+              estado: _filtroEstado,
+              prioridad: _filtroPrioridad,
+            );
+          }
         },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    tarea.titulo,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        getEstadoColor(tarea.estado),
-                        getEstadoColor(tarea.estado).withOpacity(0.7),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: getEstadoColor(tarea.estado).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    tarea.estado.label,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              tarea.descripcion,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TaskProgressIndicator(
-              estadoActual: tarea.estado,
-              primaryColor: AppTheme.primaryBlue,
-              showLabels: true,
-              height: 70,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: getPrioridadColor(tarea.prioridad).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: getPrioridadColor(tarea.prioridad).withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.flag_rounded,
-                        size: 14,
-                        color: getPrioridadColor(tarea.prioridad),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        tarea.prioridad.name.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: getPrioridadColor(tarea.prioridad),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                if (tarea.dueDate != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 14,
-                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${tarea.dueDate!.day}/${tarea.dueDate!.month}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            if (tarea.capacidadesRequeridas.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: tarea.capacidadesRequeridas
-                      .take(3)
-                      .map(
-                        (cap) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF135BEC).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            cap,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF135BEC),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ],
-            if (tarea.estado == EstadoTarea.asignada) ...[
-              const SizedBox(height: 16),
-              PremiumButton(
+        action: tarea.estado == EstadoTarea.asignada
+            ? PremiumButton(
                 text: 'Aceptar Tarea',
                 icon: Icons.check_circle_outline,
                 onPressed: () => _aceptarTarea(tarea.id),
                 gradientColors: const [AppTheme.successGreen, AppTheme.successGreen],
                 isFullWidth: true,
-              ),
-            ],
-          ],
-        ),
+              )
+            : null,
       ),
     );
   }
