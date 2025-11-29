@@ -5,7 +5,7 @@ import '../../providers/chat_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../config/theme_config.dart';
-import '../worker/worker_chat_detail_screen.dart';
+import '../common/chat_detail_screen.dart';
 
 class ManagerTaskDetailScreen extends StatefulWidget {
   final String tareaId;
@@ -630,10 +630,10 @@ class _ManagerTaskDetailScreenState extends State<ManagerTaskDetailScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => WorkerChatDetailScreen(
+          builder: (context) => ChatDetailScreen(
             chatId: chat.id,
-            chatName: userName.isNotEmpty ? userName : 'Usuario',
-            chatType: '1:1',
+            recipientName: userName.isNotEmpty ? userName : 'Usuario',
+            isGroup: false,
           ),
         ),
       );

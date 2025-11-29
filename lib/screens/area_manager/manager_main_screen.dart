@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'manager_home_tab.dart';
-import 'manager_chats_tab.dart';
+import '../common/chat_list_screen.dart';
 import 'manager_tasks_tab.dart';
 import 'manager_team_tab.dart';
 import 'manager_profile_tab.dart';
@@ -24,7 +24,7 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
 
   final List<Widget> _screens = [
     const ManagerHomeTab(),
-    const ManagerChatsTab(),
+    const ChatListScreen(),
     const ManagerTasksTab(),
     const ManagerTeamTab(),
     const ManagerProfileTab(),

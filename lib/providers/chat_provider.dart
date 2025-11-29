@@ -16,6 +16,7 @@ class ChatProvider with ChangeNotifier {
   String? _error;
   ChatModel? _currentChat;
   StreamSubscription? _messageSubscription;
+  StreamSubscription? _newChatSubscription;
 
   // Getters
   List<ChatModel> get chats => _chats;
@@ -53,6 +54,28 @@ class ChatProvider with ChangeNotifier {
         print('ChatProvider: Error in message stream: $error');
       },
     );
+
+    // Suscribirse a notificaciones de chats nuevos
+    _newChatSubscription = _signalRService.newChatStream.listen(
+      (chatId) {
+        _handleNewChat(chatId);
+      },
+      onError: (error) {
+        print('ChatProvider: Error in newChat stream: $error');
+      },
+    );
+  }
+
+  // Manejar notificación de chat nuevo
+  Future<void> _handleNewChat(String chatId) async {
+    print('ChatProvider: Received notification for new chat: $chatId');
+
+    // Verificar si ya tenemos este chat
+    final exists = _chats.any((c) => c.id == chatId);
+    if (!exists) {
+      // Recargar todos los chats para obtener el nuevo
+      await loadChats();
+    }
   }
 
   // Connect to SignalR
@@ -120,9 +143,18 @@ class ChatProvider with ChangeNotifier {
   // Send a message
   Future<void> sendMessage(String chatId, String text) async {
     try {
-      await _chatService.sendMessage(chatId, text);
-      // Don't add to local cache - wait for SignalR to broadcast it back
-      // This prevents duplicate messages
+      final message = await _chatService.sendMessage(chatId, text);
+
+      // Add message to local cache immediately for sender
+      if (_messagesByChat[chatId] != null) {
+        // Check if message already exists (to prevent duplicates)
+        final exists = _messagesByChat[chatId]!.any((m) => m.id == message.id);
+        if (!exists) {
+          _messagesByChat[chatId]!.add(message);
+          notifyListeners();
+        }
+      }
+
       _error = null;
     } catch (e) {
       _error = 'Failed to send message: $e';
@@ -136,14 +168,19 @@ class ChatProvider with ChangeNotifier {
   void addIncomingMessage(MessageModel message) async {
     final userData = await _storage.getUserData();
     final currentUserId = userData?['id']?.toString();
-    
-    // Add to messages cache
+
+    // Add to messages cache - SIEMPRE agregar aunque no exista la lista
     if (_messagesByChat[message.chatId] != null) {
       // Check if message already exists
       final exists = _messagesByChat[message.chatId]!.any((m) => m.id == message.id);
       if (!exists) {
         _messagesByChat[message.chatId]!.add(message);
+        print('ChatProvider: Added message to existing chat ${message.chatId}');
       }
+    } else {
+      // Si el chat no está en caché, crear la lista con este mensaje
+      _messagesByChat[message.chatId] = [message];
+      print('ChatProvider: Created new message list for chat ${message.chatId}');
     }
 
     // Update last message in chat list and increment unread if not from current user
@@ -152,12 +189,12 @@ class ChatProvider with ChangeNotifier {
       final oldChat = _chats[chatIndex];
       final isFromOtherUser = message.senderId != currentUserId;
       final isNotInCurrentChat = _currentChat?.id != message.chatId;
-      
+
       // Increment unread count if message is from another user and chat is not open
-      final newUnreadCount = (isFromOtherUser && isNotInCurrentChat) 
-          ? oldChat.unreadCount + 1 
+      final newUnreadCount = (isFromOtherUser && isNotInCurrentChat)
+          ? oldChat.unreadCount + 1
           : oldChat.unreadCount;
-      
+
       final updatedChat = ChatModel(
         id: oldChat.id,
         type: oldChat.type,
@@ -167,11 +204,15 @@ class ChatProvider with ChangeNotifier {
         createdAt: oldChat.createdAt,
         unreadCount: newUnreadCount,
       );
-      
+
       _chats.removeAt(chatIndex);
       _chats.insert(0, updatedChat);
+      print('ChatProvider: Updated chat list for chat ${message.chatId}');
+    } else {
+      print('ChatProvider: Warning - received message for unknown chat ${message.chatId}');
     }
 
+    // CRÍTICO: Siempre notificar cambios para actualizar la UI
     notifyListeners();
   }
   
@@ -295,6 +336,7 @@ class ChatProvider with ChangeNotifier {
   @override
   void dispose() {
     _messageSubscription?.cancel();
+    _newChatSubscription?.cancel();
     _signalRService.dispose();
     super.dispose();
   }

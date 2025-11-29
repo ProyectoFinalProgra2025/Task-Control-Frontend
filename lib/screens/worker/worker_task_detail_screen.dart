@@ -7,7 +7,7 @@ import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../services/storage_service.dart';
-import 'worker_chat_detail_screen.dart';
+import '../common/chat_detail_screen.dart';
 
 class WorkerTaskDetailScreen extends StatefulWidget {
   final String tareaId;
@@ -520,10 +520,10 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => WorkerChatDetailScreen(
+          builder: (context) => ChatDetailScreen(
             chatId: chat.id,
-            chatName: _tarea!.createdByUsuarioNombre,
-            chatType: '1:1',
+            recipientName: _tarea!.createdByUsuarioNombre,
+            isGroup: false,
           ),
         ),
       );

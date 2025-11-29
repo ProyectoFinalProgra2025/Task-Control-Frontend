@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'super_admin_home_tab.dart';
 import 'super_admin_companies_tab.dart';
-import 'super_admin_chats_tab.dart';
+import '../common/chat_list_screen.dart';
 import 'super_admin_profile_tab.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../config/theme_config.dart';
@@ -21,7 +21,7 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
   final List<Widget> _screens = [
     const SuperAdminHomeTab(),
     const SuperAdminCompaniesTab(),
-    const SuperAdminChatsTab(),
+    const ChatListScreen(),
     const SuperAdminProfileTab(),
   ];
 

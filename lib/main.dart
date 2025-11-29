@@ -89,12 +89,20 @@ class _InitialRouteHandlerState extends State<InitialRouteHandler> {
     // Verificar token almacenado
     final token = await _storage.getAccessToken();
     
-    // Si hay token, inicializar ChatProvider automáticamente
+    // Si hay token, inicializar SignalR y ChatProvider automáticamente
     if (token != null && token.isNotEmpty) {
-      // Usuario tiene sesión activa - conectar ChatProvider
       try {
+        final userData = await _storage.getUserData();
+        final empresaId = await _storage.getEmpresaId();
+        final userRole = userData?['rol'];
+        final isSuperAdmin = userRole == 1 || userRole == '1';
+
+        // Conectar ChatProvider con SignalR
         final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-        await chatProvider.connectSignalR();
+        await chatProvider.connectSignalR(
+          empresaId: empresaId,
+          isSuperAdmin: isSuperAdmin,
+        );
         await chatProvider.loadChats();
         debugPrint('✅ ChatProvider initialized automatically on app start');
       } catch (e) {

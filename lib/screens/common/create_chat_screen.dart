@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../models/chat_model.dart';
-import '../worker/worker_chat_detail_screen.dart';
+import '../common/chat_detail_screen.dart';
 
 class CreateChatScreen extends StatefulWidget {
   const CreateChatScreen({super.key});
@@ -71,10 +71,10 @@ class _CreateChatScreenState extends State<CreateChatScreen>
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => WorkerChatDetailScreen(
+            builder: (context) => ChatDetailScreen(
               chatId: chat.id,
-              chatName: chat.displayName,
-              chatType: '1:1',
+              recipientName: chat.displayName,
+              isGroup: false,
             ),
           ),
         );
@@ -114,10 +114,10 @@ class _CreateChatScreenState extends State<CreateChatScreen>
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => WorkerChatDetailScreen(
+            builder: (context) => ChatDetailScreen(
               chatId: chat.id,
-              chatName: chat.displayName,
-              chatType: 'group',
+              recipientName: chat.displayName,
+              isGroup: true,
             ),
           ),
         );

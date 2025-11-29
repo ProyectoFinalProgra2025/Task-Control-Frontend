@@ -6,6 +6,7 @@ import '../models/chat_model.dart';
 class SignalRService {
   HubConnection? _hubConnection;
   final StreamController<MessageModel> _messageController = StreamController<MessageModel>.broadcast();
+  final StreamController<String> _newChatController = StreamController<String>.broadcast(); // Nuevo: para chats creados
   final StreamController<Map<String, dynamic>> _tareaEventController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _empresaEventController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _usuarioEventController = StreamController<Map<String, dynamic>>.broadcast();
@@ -15,6 +16,7 @@ class SignalRService {
   bool get isConnected => _hubConnection?.state == HubConnectionState.Connected;
 
   Stream<MessageModel> get messageStream => _messageController.stream;
+  Stream<String> get newChatStream => _newChatController.stream; // Stream de chats nuevos
   Stream<Map<String, dynamic>> get tareaEventStream => _tareaEventController.stream;
   Stream<Map<String, dynamic>> get empresaEventStream => _empresaEventController.stream;
   Stream<Map<String, dynamic>> get usuarioEventStream => _usuarioEventController.stream;
@@ -67,15 +69,29 @@ class SignalRService {
             body: messageData['body'] as String,
             createdAt: DateTime.parse(messageData['createdAt'] as String),
             isRead: messageData['isRead'] ?? false,
-            readAt: messageData['readAt'] != null 
+            readAt: messageData['readAt'] != null
                 ? DateTime.parse(messageData['readAt'] as String)
                 : null,
           );
-          
+
           _messageController.add(message);
           print('SignalR: Received message in chat ${message.chatId}');
         } catch (e) {
           print('SignalR: Error parsing message: $e');
+        }
+      }
+    });
+
+    // Evento para notificar cuando se crea un chat nuevo
+    _hubConnection!.on('chat:created', (arguments) {
+      if (arguments != null && arguments.isNotEmpty) {
+        try {
+          final chatData = arguments[0] as Map<String, dynamic>;
+          final chatId = chatData['chatId'] as String;
+          _newChatController.add(chatId);
+          print('SignalR: Received chat:created event for chatId: $chatId');
+        } catch (e) {
+          print('SignalR: Error parsing chat:created event: $e');
         }
       }
     });
@@ -308,6 +324,7 @@ class SignalRService {
   void dispose() {
     disconnect();
     _messageController.close();
+    _newChatController.close();
     _tareaEventController.close();
     _empresaEventController.close();
     _usuarioEventController.close();

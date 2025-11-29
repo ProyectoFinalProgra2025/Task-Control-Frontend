@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'admin_home_tab.dart';
-import 'admin_chats_tab.dart';
+import '../common/chat_list_screen.dart';
 import 'admin_tasks_tab.dart';
 import 'admin_profile_tab.dart';
 import '../../widgets/create_task_modal.dart';
@@ -26,7 +26,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     super.initState();
     _screens = [
       AdminHomeTab(onNavigateToTasks: () => setState(() => _currentIndex = 2)),
-      const AdminChatsTab(),
+      const ChatListScreen(),
       const AdminTasksTab(),
       const AdminProfileTab(),
     ];

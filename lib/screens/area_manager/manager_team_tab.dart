@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/usuario.dart';
 import '../../services/usuario_service.dart';
 import '../../providers/chat_provider.dart';
-import '../worker/worker_chat_detail_screen.dart';
+import '../common/chat_detail_screen.dart';
 import '../../config/theme_config.dart';
 
 /// Team tab for Area Managers
@@ -452,10 +452,10 @@ class _ManagerTeamTabState extends State<ManagerTeamTab> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => WorkerChatDetailScreen(
+                              builder: (context) => ChatDetailScreen(
                                 chatId: chat.id,
-                                chatName: member.nombreCompleto,
-                                chatType: '1:1',
+                                recipientName: member.nombreCompleto,
+                                isGroup: false,
                               ),
                             ),
                           );

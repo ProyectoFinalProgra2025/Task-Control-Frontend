@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'worker_home_tab.dart';
-import 'worker_chats_tab.dart';
+import '../common/chat_list_screen.dart';
 import 'worker_profile_tab.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../config/theme_config.dart';
@@ -20,7 +20,7 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
 
   final List<Widget> _tabs = const [
     WorkerHomeTab(),
-    WorkerChatsTab(),
+    ChatListScreen(),
     WorkerProfileTab(),
   ];
 

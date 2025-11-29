@@ -213,4 +213,95 @@ class ChatService {
       throw Exception('Failed to search users: ${response.statusCode}');
     }
   }
+
+  // Marcar mensaje individual como leído
+  Future<void> markMessageAsRead(String messageId) async {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('No authentication token');
+
+    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatMarkMessageReadEndpoint(messageId)}');
+
+    final response = await http.put(
+      url,
+      headers: ApiConfig.headersWithAuth(token),
+    );
+
+    if (response.statusCode == 200) {
+      return; // Success
+    } else if (response.statusCode == 401) {
+      throw Exception('Unauthorized - please login again');
+    } else if (response.statusCode == 404) {
+      throw Exception('Message not found');
+    } else {
+      throw Exception('Failed to mark message as read: ${response.statusCode}');
+    }
+  }
+
+  // Marcar todos los mensajes de un chat como leídos
+  Future<void> markAllChatAsRead(String chatId) async {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('No authentication token');
+
+    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatMarkAllReadEndpoint(chatId)}');
+
+    final response = await http.put(
+      url,
+      headers: ApiConfig.headersWithAuth(token),
+    );
+
+    if (response.statusCode == 200) {
+      return; // Success
+    } else if (response.statusCode == 401) {
+      throw Exception('Unauthorized - please login again');
+    } else if (response.statusCode == 403) {
+      throw Exception('You are not a member of this chat');
+    } else {
+      throw Exception('Failed to mark all messages as read: ${response.statusCode}');
+    }
+  }
+
+  // Obtener contador total de mensajes no leídos
+  Future<int> getUnreadCount() async {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('No authentication token');
+
+    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatUnreadCountEndpoint}');
+
+    final response = await http.get(
+      url,
+      headers: ApiConfig.headersWithAuth(token),
+    );
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse['data']['unreadCount'] as int;
+    } else if (response.statusCode == 401) {
+      throw Exception('Unauthorized - please login again');
+    } else {
+      throw Exception('Failed to get unread count: ${response.statusCode}');
+    }
+  }
+
+  // Obtener mensajes no leídos por chat (para badges)
+  Future<Map<String, int>> getUnreadByChat() async {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('No authentication token');
+
+    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatUnreadByChatEndpoint}');
+
+    final response = await http.get(
+      url,
+      headers: ApiConfig.headersWithAuth(token),
+    );
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      final Map<String, dynamic> data = jsonResponse['data'];
+      return data.map((key, value) => MapEntry(key, value as int));
+    } else if (response.statusCode == 401) {
+      throw Exception('Unauthorized - please login again');
+    } else {
+      throw Exception('Failed to get unread by chat: ${response.statusCode}');
+    }
+  }
 }

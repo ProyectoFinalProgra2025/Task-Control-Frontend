@@ -13,7 +13,7 @@ import '../../models/enums/estado_tarea.dart';
 import '../../config/theme_config.dart';
 import '../../services/storage_service.dart';
 import 'worker_tasks_list_screen.dart';
-import 'worker_chat_detail_screen.dart';
+import '../common/chat_detail_screen.dart';
 
 class WorkerHomeTab extends StatefulWidget {
   const WorkerHomeTab({super.key});
@@ -566,10 +566,10 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => WorkerChatDetailScreen(
+          builder: (context) => ChatDetailScreen(
             chatId: chat.id,
-            chatName: tarea.createdByUsuarioNombre,
-            chatType: '1:1',
+            recipientName: tarea.createdByUsuarioNombre,
+            isGroup: false,
           ),
         ),
       );
