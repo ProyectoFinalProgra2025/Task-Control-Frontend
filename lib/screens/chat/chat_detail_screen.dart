@@ -45,10 +45,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   String get _displayName => widget.conversation.getDisplayName(widget.currentUserId);
   bool get _isGroup => widget.conversation.type == ConversationType.group;
+  
+  /// Comparar IDs case-insensitive (GUIDs pueden variar en mayúsculas/minúsculas)
+  bool _isMyMessage(String senderId) {
+    final result = senderId.toLowerCase() == widget.currentUserId.toLowerCase();
+    print('[ChatDetailScreen] _isMyMessage: senderId=$senderId, currentUserId=${widget.currentUserId}, result=$result');
+    return result;
+  }
 
   @override
   void initState() {
     super.initState();
+    print('[ChatDetailScreen] initState - currentUserId: ${widget.currentUserId}');
     _initializeChat();
   }
 
@@ -82,7 +90,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         _scrollToBottom();
         
         // Marcar como leído si no es mío
-        if (message.senderId != widget.currentUserId) {
+        if (!_isMyMessage(message.senderId)) {
           _chatService.markMessageRead(message.id);
         }
       }
@@ -120,7 +128,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (conversationId != widget.conversation.id) return;
       
       final senderId = data['senderId']?.toString();
-      if (senderId == widget.currentUserId) return; // Ignorar propios eventos
+      if (senderId != null && _isMyMessage(senderId)) return; // Ignorar propios eventos
       
       setState(() {
         _otherUserTyping = data['isTyping'] == true;
@@ -435,7 +443,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final message = _messages[index];
-        final isMe = message.senderId == widget.currentUserId;
+        final isMe = _isMyMessage(message.senderId);
         final showAvatar = !isMe && (index == _messages.length - 1 || 
             _messages[index + 1].senderId != message.senderId);
         
