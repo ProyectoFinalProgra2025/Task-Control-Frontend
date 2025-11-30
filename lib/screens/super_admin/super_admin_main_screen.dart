@@ -3,7 +3,7 @@ import 'super_admin_home_tab.dart';
 import 'super_admin_companies_tab.dart';
 import '../common/chat_list_screen.dart';
 import 'super_admin_profile_tab.dart';
-import '../../widgets/premium_widgets.dart';
+import '../../widgets/nav_item_widget.dart';
 import '../../config/theme_config.dart';
 
 class SuperAdminMainScreen extends StatefulWidget {
@@ -36,11 +36,13 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: Builder(
-        builder: (context) {
+      bottomNavigationBar: LayoutBuilder(
+        builder: (context, constraints) {
+          final isVerySmallScreen = constraints.maxWidth < 300;
+          final isSmallScreen = constraints.maxWidth < 350;
           // TODO: Implementar contador de mensajes no leídos con nuevo backend
           const unreadCount = 0;
-          
+
           return Container(
             decoration: BoxDecoration(
               color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
@@ -55,56 +57,68 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, -4),
+                  blurRadius: isSmallScreen ? 8 : 12,
+                  offset: Offset(0, isSmallScreen ? -2 : -4),
                 ),
               ],
             ),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.spaceRegular,
-                  vertical: AppTheme.spaceSmall,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isVerySmallScreen ? 4 : AppTheme.spaceRegular,
+                  vertical: isVerySmallScreen ? 4 : AppTheme.spaceSmall,
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    PremiumNavItem(
-                      icon: Icons.dashboard_outlined,
-                      activeIcon: Icons.dashboard_rounded,
-                      label: 'Home',
-                      isActive: _currentIndex == 0,
-                      activeColor: AppTheme.primaryPurple,
-                      isDark: isDark,
-                      onTap: () => _navigateTo(0),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.dashboard_outlined,
+                        activeIcon: Icons.dashboard_rounded,
+                        label: isVerySmallScreen ? '' : 'Home',
+                        isActive: _currentIndex == 0,
+                        activeColor: AppTheme.primaryPurple,
+                        isDark: isDark,
+                        isCompact: isVerySmallScreen,
+                        onTap: () => _navigateTo(0),
+                      ),
                     ),
-                    PremiumNavItem(
-                      icon: Icons.business_outlined,
-                      activeIcon: Icons.business_rounded,
-                      label: 'Empresas',
-                      isActive: _currentIndex == 1,
-                      activeColor: AppTheme.primaryPurple,
-                      isDark: isDark,
-                      onTap: () => _navigateTo(1),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.business_outlined,
+                        activeIcon: Icons.business_rounded,
+                        label: isVerySmallScreen ? '' : 'Empresas',
+                        isActive: _currentIndex == 1,
+                        activeColor: AppTheme.primaryPurple,
+                        isDark: isDark,
+                        isCompact: isVerySmallScreen,
+                        onTap: () => _navigateTo(1),
+                      ),
                     ),
-                    PremiumNavItem(
-                      icon: Icons.chat_bubble_outline,
-                      activeIcon: Icons.chat_bubble_rounded,
-                      label: 'Chats',
-                      isActive: _currentIndex == 2,
-                      activeColor: AppTheme.primaryPurple,
-                      isDark: isDark,
-                      badgeCount: unreadCount,
-                      onTap: () => _navigateTo(2),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.chat_bubble_outline,
+                        activeIcon: Icons.chat_bubble_rounded,
+                        label: isVerySmallScreen ? '' : 'Chats',
+                        isActive: _currentIndex == 2,
+                        activeColor: AppTheme.primaryPurple,
+                        isDark: isDark,
+                        isCompact: isVerySmallScreen,
+                        badgeCount: unreadCount,
+                        onTap: () => _navigateTo(2),
+                      ),
                     ),
-                    PremiumNavItem(
-                      icon: Icons.person_outline,
-                      activeIcon: Icons.person_rounded,
-                      label: 'Perfil',
-                      isActive: _currentIndex == 3,
-                      activeColor: AppTheme.primaryPurple,
-                      isDark: isDark,
-                      onTap: () => _navigateTo(3),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.person_outline,
+                        activeIcon: Icons.person_rounded,
+                        label: isVerySmallScreen ? '' : 'Perfil',
+                        isActive: _currentIndex == 3,
+                        activeColor: AppTheme.primaryPurple,
+                        isDark: isDark,
+                        isCompact: isVerySmallScreen,
+                        onTap: () => _navigateTo(3),
+                      ),
                     ),
                   ],
                 ),

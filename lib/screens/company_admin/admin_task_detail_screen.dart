@@ -48,9 +48,15 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
       ]);
 
       if (mounted) {
+        final allUsers = results[1] as List<Usuario>;
+        // Filtrar solo trabajadores activos (rol Usuario)
+        final workers = allUsers
+            .where((u) => u.rol == 'Usuario' && u.isActive)
+            .toList();
+        
         setState(() {
           _tarea = results[0] as Tarea?;
-          _trabajadores = results[1] as List<Usuario>;
+          _trabajadores = workers;
           _isLoading = false;
         });
       }
@@ -283,6 +289,12 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
       return capacidadesRequeridas.every(capacidadesUsuario.contains);
     }).toList();
 
+    // Si no hay compatibles pero hay trabajadores, mostrar todos
+    final trabajadoresAMostrar = trabajadoresCompatibles.isEmpty && _trabajadores.isNotEmpty
+        ? _trabajadores
+        : trabajadoresCompatibles;
+    final mostrandoTodos = trabajadoresCompatibles.isEmpty && _trabajadores.isNotEmpty;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -336,9 +348,13 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
                             ),
                           ),
                           Text(
-                            '${trabajadoresCompatibles.length} trabajadores compatibles',
+                            mostrandoTodos
+                                ? '${trabajadoresAMostrar.length} trabajadores (sin filtro de capacidades)'
+                                : '${trabajadoresAMostrar.length} trabajadores compatibles',
                             style: TextStyle(
-                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                              color: mostrandoTodos 
+                                  ? AppTheme.warningOrange 
+                                  : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                               fontSize: 14,
                             ),
                           ),
@@ -348,9 +364,36 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
                   ],
                 ),
               ),
+              if (mostrandoTodos)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningOrange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.warningOrange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: AppTheme.warningOrange, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'No hay trabajadores con las capacidades requeridas. Se muestran todos.',
+                          style: TextStyle(
+                            color: AppTheme.warningOrange,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 8),
               Divider(color: isDark ? Colors.white10 : Colors.black12),
               Expanded(
-                child: trabajadoresCompatibles.isEmpty
+                child: trabajadoresAMostrar.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -362,11 +405,19 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No hay trabajadores con las\ncapacidades requeridas',
+                              'No hay trabajadores disponibles\nen la empresa',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                                 fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Total cargados: ${_trabajadores.length}',
+                              style: TextStyle(
+                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -374,9 +425,9 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: trabajadoresCompatibles.length,
+                        itemCount: trabajadoresAMostrar.length,
                         itemBuilder: (context, index) {
-                          final trabajador = trabajadoresCompatibles[index];
+                          final trabajador = trabajadoresAMostrar[index];
                           return _WorkerListItem(
                             trabajador: trabajador,
                             capacidadesRequeridas: _tarea?.capacidadesRequeridas ?? [],

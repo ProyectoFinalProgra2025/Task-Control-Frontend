@@ -106,7 +106,7 @@ class TareaRealtimeService {
       _isConnected = true;
       _isConnecting = false;
       
-      print('[TareaRealtimeService] Connected successfully!');
+      print('[TareaRealtimeService] ✅ Connected successfully to $hubUrl');
       
       _emitEvent(TareaEvent(
         type: TareaEventType.connected,
@@ -132,6 +132,7 @@ class TareaRealtimeService {
     
     // tarea:created
     _hubConnection!.on('tarea:created', (arguments) {
+      print('[TareaRealtimeService] 📨 Received tarea:created event: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
         _emitEvent(TareaEvent(
           type: TareaEventType.tareaCreated,
@@ -142,6 +143,7 @@ class TareaRealtimeService {
     
     // tarea:assigned
     _hubConnection!.on('tarea:assigned', (arguments) {
+      print('[TareaRealtimeService] 📨 Received tarea:assigned event: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
         _emitEvent(TareaEvent(
           type: TareaEventType.tareaAssigned,
@@ -152,6 +154,7 @@ class TareaRealtimeService {
     
     // tarea:accepted
     _hubConnection!.on('tarea:accepted', (arguments) {
+      print('[TareaRealtimeService] 📨 Received tarea:accepted event: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
         _emitEvent(TareaEvent(
           type: TareaEventType.tareaAccepted,
@@ -162,6 +165,7 @@ class TareaRealtimeService {
     
     // tarea:completed
     _hubConnection!.on('tarea:completed', (arguments) {
+      print('[TareaRealtimeService] 📨 Received tarea:completed event: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
         _emitEvent(TareaEvent(
           type: TareaEventType.tareaCompleted,
@@ -172,9 +176,32 @@ class TareaRealtimeService {
     
     // tarea:reasignada
     _hubConnection!.on('tarea:reasignada', (arguments) {
+      print('[TareaRealtimeService] 📨 Received tarea:reasignada event: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
         _emitEvent(TareaEvent(
           type: TareaEventType.tareaReasignada,
+          data: _parseEventData(arguments[0]),
+        ));
+      }
+    });
+    
+    // tarea:updated - cuando se edita una tarea
+    _hubConnection!.on('tarea:updated', (arguments) {
+      print('[TareaRealtimeService] 📨 Received tarea:updated event: $arguments');
+      if (arguments != null && arguments.isNotEmpty) {
+        _emitEvent(TareaEvent(
+          type: TareaEventType.tareaUpdated,
+          data: _parseEventData(arguments[0]),
+        ));
+      }
+    });
+    
+    // tarea:cancelled - cuando se cancela una tarea
+    _hubConnection!.on('tarea:cancelled', (arguments) {
+      print('[TareaRealtimeService] 📨 Received tarea:cancelled event: $arguments');
+      if (arguments != null && arguments.isNotEmpty) {
+        _emitEvent(TareaEvent(
+          type: TareaEventType.tareaCancelled,
           data: _parseEventData(arguments[0]),
         ));
       }
@@ -250,6 +277,8 @@ enum TareaEventType {
   tareaAccepted,
   tareaCompleted,
   tareaReasignada,
+  tareaUpdated,
+  tareaCancelled,
 }
 
 /// Evento de tarea
@@ -285,7 +314,9 @@ class TareaEvent {
       type == TareaEventType.tareaAssigned ||
       type == TareaEventType.tareaAccepted ||
       type == TareaEventType.tareaCompleted ||
-      type == TareaEventType.tareaReasignada;
+      type == TareaEventType.tareaReasignada ||
+      type == TareaEventType.tareaUpdated ||
+      type == TareaEventType.tareaCancelled;
   
   @override
   String toString() => 'TareaEvent($type, data: $data, message: $message)';

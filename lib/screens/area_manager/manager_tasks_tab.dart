@@ -114,117 +114,131 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderSt
           ),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isSmall = constraints.maxWidth < 350;
+          final isMedium = constraints.maxWidth < 400;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppTheme.successGreen, Color(0xFF059669)],
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(isSmall ? 6 : 10),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [AppTheme.successGreen, Color(0xFF059669)],
+                                ),
+                                borderRadius: BorderRadius.circular(isSmall ? 8 : 12),
+                              ),
+                              child: Icon(Icons.task_alt_rounded, color: Colors.white, size: isSmall ? 18 : 24),
                             ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.task_alt_rounded, color: Colors.white, size: 24),
+                            SizedBox(width: isSmall ? 8 : 12),
+                            Flexible(
+                              child: Text(
+                                isSmall ? 'Tareas' : 'Gestión de Tareas',
+                                style: TextStyle(
+                                  fontSize: isSmall ? 18 : (isMedium ? 22 : 26),
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                  letterSpacing: -0.3,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            RealtimeConnectionIndicator(
+                              isConnected: isRealtimeConnected,
+                              onReconnect: reconnectRealtime,
+                              connectedColor: AppTheme.successGreen,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(height: 4),
                         Text(
-                          'Gestión de Tareas',
+                          isSmall ? 'Supervisa tu trabajo' : 'Supervisa tu trabajo y el de tu departamento',
                           style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                            letterSpacing: -0.3,
+                            fontSize: isSmall ? 12 : 14,
+                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            fontWeight: FontWeight.w500,
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        RealtimeConnectionIndicator(
-                          isConnected: isRealtimeConnected,
-                          onReconnect: reconnectRealtime,
-                          connectedColor: AppTheme.successGreen,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Supervisa tu trabajo y el de tu departamento',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  ),
+                  // Search Button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
                     ),
+                    child: IconButton(
+                      icon: Icon(Icons.search_rounded, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary, size: isSmall ? 20 : 24),
+                      onPressed: () => _showSearchDialog(isDark),
+                      padding: EdgeInsets.all(isSmall ? 6 : 8),
+                      constraints: BoxConstraints(minWidth: isSmall ? 32 : 40, minHeight: isSmall ? 32 : 40),
+                    ),
+                  ),
+                  SizedBox(width: isSmall ? 4 : 8),
+                  // Filter Button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                    ),
+                    child: IconButton(
+                      icon: Icon(Icons.filter_list_rounded, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary, size: isSmall ? 20 : 24),
+                      onPressed: () => _showFiltersSheet(isDark),
+                      padding: EdgeInsets.all(isSmall ? 6 : 8),
+                      constraints: BoxConstraints(minWidth: isSmall ? 32 : 40, minHeight: isSmall ? 32 : 40),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Main Tab Bar: Mis Tareas / Departamento
+              Container(
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.black : Colors.grey[100])?.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TabBar(
+                  controller: _mainTabController,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.successGreen, Color(0xFF059669)],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  dividerColor: Colors.transparent,
+                  tabs: const [
+                    Tab(text: '👤 Mis Tareas'),
+                    Tab(text: '👥 Departamento'),
                   ],
                 ),
               ),
-              // Search Button
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.search_rounded, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-                  onPressed: () => _showSearchDialog(isDark),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Filter Button
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.filter_list_rounded, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-                  onPressed: () => _showFiltersSheet(isDark),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Main Tab Bar: Mis Tareas / Departamento
-          Container(
-            decoration: BoxDecoration(
-              color: (isDark ? Colors.black : Colors.grey[100])?.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TabBar(
-              controller: _mainTabController,
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.successGreen, Color(0xFF059669)],
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              labelColor: Colors.white,
-              unselectedLabelColor: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-              dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(text: '👤 Mis Tareas'),
-                Tab(text: '👥 Departamento'),
+              // Active Filters Chips
+              if (_filtroPrioridad != null || _searchQuery != null) ...[
+                const SizedBox(height: 12),
+                _buildActiveFiltersChips(isDark),
               ],
-            ),
-          ),
-          // Active Filters Chips
-          if (_filtroPrioridad != null || _searchQuery != null) ...[
-            const SizedBox(height: 12),
-            _buildActiveFiltersChips(isDark),
-          ],
-        ],
+            ],
+          );
+        },
       ),
     );
   }

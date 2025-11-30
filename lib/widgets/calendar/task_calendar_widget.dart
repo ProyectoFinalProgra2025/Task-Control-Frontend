@@ -109,57 +109,67 @@ class _TaskCalendarWidgetState extends State<TaskCalendarWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+          // Header - responsive
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isSmall = constraints.maxWidth < 350;
+              return Padding(
+                padding: EdgeInsets.all(isSmall ? 12 : 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(isSmall ? 6 : 8),
+                          decoration: BoxDecoration(
+                            color: widget.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.calendar_month_rounded,
+                            color: widget.primaryColor,
+                            size: isSmall ? 16 : 20,
+                          ),
+                        ),
+                        SizedBox(width: isSmall ? 8 : 12),
+                        Expanded(
+                          child: Text(
+                            widget.title,
+                            style: TextStyle(
+                              fontSize: isSmall ? 14 : 18,
+                              fontWeight: FontWeight.w800,
+                              color: isDark
+                                  ? AppTheme.darkTextPrimary
+                                  : AppTheme.lightTextPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isSmall ? 8 : 12),
+                    // Format toggle
                     Container(
-                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: widget.primaryColor.withOpacity(0.1),
+                        color: isDark
+                            ? AppTheme.darkBackground
+                            : AppTheme.lightBackground,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
-                        Icons.calendar_month_rounded,
-                        color: widget.primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      widget.title,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.lightTextPrimary,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildFormatButton('Mes', CalendarFormat.month, isDark, isSmall),
+                          _buildFormatButton('2 Sem', CalendarFormat.twoWeeks, isDark, isSmall),
+                          _buildFormatButton('Sem', CalendarFormat.week, isDark, isSmall),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                // Format toggle
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppTheme.darkBackground
-                        : AppTheme.lightBackground,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildFormatButton('Mes', CalendarFormat.month, isDark),
-                      _buildFormatButton('2 Sem', CalendarFormat.twoWeeks, isDark),
-                      _buildFormatButton('Sem', CalendarFormat.week, isDark),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
 
           // Loading indicator
@@ -346,13 +356,13 @@ class _TaskCalendarWidgetState extends State<TaskCalendarWidget> {
     );
   }
 
-  Widget _buildFormatButton(String label, CalendarFormat format, bool isDark) {
+  Widget _buildFormatButton(String label, CalendarFormat format, bool isDark, [bool isSmall = false]) {
     final isSelected = _calendarFormat == format;
     return InkWell(
       onTap: () => setState(() => _calendarFormat = format),
       borderRadius: BorderRadius.circular(6),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 10, vertical: isSmall ? 4 : 6),
         decoration: BoxDecoration(
           color: isSelected ? widget.primaryColor : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
@@ -360,7 +370,7 @@ class _TaskCalendarWidgetState extends State<TaskCalendarWidget> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: isSmall ? 10 : 11,
             fontWeight: FontWeight.w600,
             color: isSelected
                 ? Colors.white

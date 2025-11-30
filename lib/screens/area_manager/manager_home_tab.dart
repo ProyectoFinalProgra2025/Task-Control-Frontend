@@ -422,26 +422,33 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> with TareaRealtimeMixin
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.spaceBetween,
                   children: [
                     if (tarea.createdByUsuarioNombre.isNotEmpty)
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.person_outline, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                           const SizedBox(width: 4),
-                          Text(
-                            'Creado por: ${tarea.createdByUsuarioNombre}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                              fontWeight: FontWeight.w500,
+                          Flexible(
+                            child: Text(
+                              'Creado por: ${tarea.createdByUsuarioNombre}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                     if (tarea.dueDate != null)
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.calendar_today, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                           const SizedBox(width: 4),

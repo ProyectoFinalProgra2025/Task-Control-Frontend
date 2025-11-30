@@ -106,46 +106,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 // Content
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        // Profile Avatar Section
-                        _buildProfileHeader(usuario, isDark, roleColor),
-                        const SizedBox(height: 24),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isVerySmallScreen = constraints.maxWidth < 300;
+                      final isSmallScreen = constraints.maxWidth < 350;
 
-                        // Task Stats Section - Solo para Worker/Manager
-                        if (widget.role == ProfileRole.worker || 
-                            widget.role == ProfileRole.manager) ...[
-                          _buildTaskStatsSection(usuarioProvider, isDark, roleColor),
-                          const SizedBox(height: 24),
-                        ],
+                      return Padding(
+                        padding: EdgeInsets.all(isVerySmallScreen ? 12 : (isSmallScreen ? 16 : 20)),
+                        child: Column(
+                          children: [
+                            // Profile Avatar Section responsivo
+                            _buildProfileHeader(usuario, isDark, roleColor, isVerySmallScreen, isSmallScreen),
+                            SizedBox(height: isSmallScreen ? 16 : 24),
 
-                        // Account Section
-                        _buildAccountSection(usuario, isDark, roleColor),
-                        const SizedBox(height: 24),
+                            // Task Stats Section - Solo para Worker/Manager
+                            if (widget.role == ProfileRole.worker || 
+                                widget.role == ProfileRole.manager) ...[
+                              _buildTaskStatsSection(usuarioProvider, isDark, roleColor),
+                              const SizedBox(height: 24),
+                            ],
 
-                        // Capacidades Section - Solo para Worker
-                        if (widget.role == ProfileRole.worker) ...[
-                          _buildCapacidadesSection(
-                            usuario,
-                            usuarioProvider,
-                            isDark,
-                            roleColor,
-                          ),
-                          const SizedBox(height: 24),
-                        ],
+                            // Account Section
+                            _buildAccountSection(usuario, isDark, roleColor),
+                            const SizedBox(height: 24),
 
-                        // Member Since Section
-                        _buildMemberSinceSection(usuario, isDark, roleColor),
-                        const SizedBox(height: 24),
+                            // Capacidades Section - Solo para Worker
+                            if (widget.role == ProfileRole.worker) ...[
+                              _buildCapacidadesSection(
+                                usuario,
+                                usuarioProvider,
+                                isDark,
+                                roleColor,
+                              ),
+                              const SizedBox(height: 24),
+                            ],
 
-                        // Logout Button
-                        _buildLogoutButton(isDark),
+                            // Member Since Section
+                            _buildMemberSinceSection(usuario, isDark, roleColor),
+                            const SizedBox(height: 24),
 
-                        const SizedBox(height: 100),
-                      ],
-                    ),
+                            // Logout Button
+                            _buildLogoutButton(isDark),
+
+                            const SizedBox(height: 100),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -156,15 +163,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileHeader(Usuario usuario, bool isDark, Color roleColor) {
+  Widget _buildProfileHeader(Usuario usuario, bool isDark, Color roleColor, bool isVerySmallScreen, bool isSmallScreen) {
+    final double avatarSize = isVerySmallScreen ? 80 : (isSmallScreen ? 100 : 120);
+    final double fontSizeName = isVerySmallScreen ? 18 : (isSmallScreen ? 20 : 24);
+    final double fontSizeEmail = isVerySmallScreen ? 12 : 14;
+    final double fontSizeBadge = isVerySmallScreen ? 9 : 10;
+
     return Column(
       children: [
-        // Avatar con role badge
+        // Avatar con role badge responsivo
         Stack(
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: avatarSize,
+              height: avatarSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
@@ -175,48 +187,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 boxShadow: [
                   BoxShadow(
                     color: roleColor.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+                    blurRadius: isSmallScreen ? 12 : 20,
+                    offset: Offset(0, isSmallScreen ? 4 : 8),
                   ),
                 ],
               ),
               child: Center(
                 child: Text(
                   _getInitials(usuario.nombreCompleto),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 48,
+                    fontSize: avatarSize * 0.4,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
-            // Role badge
+            // Role badge responsivo
             Positioned(
               bottom: 0,
               right: 0,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isVerySmallScreen ? 6 : 8,
+                  vertical: isVerySmallScreen ? 3 : 4,
+                ),
                 decoration: BoxDecoration(
                   color: roleColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(isVerySmallScreen ? 8 : 12),
                   border: Border.all(
                     color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-                    width: 3,
+                    width: isVerySmallScreen ? 2 : 3,
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: roleColor.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      blurRadius: isSmallScreen ? 6 : 10,
+                      offset: Offset(0, isSmallScreen ? 2 : 4),
                     ),
                   ],
                 ),
                 child: Text(
                   usuario.rolDisplayName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 10,
+                    fontSize: fontSizeBadge,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -224,37 +239,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        // Name
+        SizedBox(height: isSmallScreen ? 12 : 16),
+        // Name responsivo
         Text(
           usuario.nombreCompleto,
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: fontSizeName,
             fontWeight: FontWeight.bold,
             color: isDark
                 ? AppTheme.darkTextPrimary
                 : AppTheme.lightTextPrimary,
+            height: 1.2,
           ),
+          maxLines: isVerySmallScreen ? 2 : 1,
+          overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 4),
-        // Email
+        SizedBox(height: isSmallScreen ? 3 : 4),
+        // Email responsivo
         Text(
           usuario.email,
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: fontSizeEmail,
             color: isDark
                 ? AppTheme.darkTextSecondary
                 : AppTheme.lightTextSecondary,
           ),
+          maxLines: isVerySmallScreen ? 2 : 1,
+          overflow: TextOverflow.ellipsis,
         ),
-        // Department badge if exists
+        // Department badge responsivo
         if (usuario.departamento != null) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 6 : 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: EdgeInsets.symmetric(
+              horizontal: isVerySmallScreen ? 8 : 12,
+              vertical: isVerySmallScreen ? 4 : 6,
+            ),
             decoration: BoxDecoration(
               color: roleColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(isVerySmallScreen ? 12 : 20),
               border: Border.all(
                 color: roleColor.withOpacity(0.3),
               ),
@@ -262,14 +287,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.business_rounded, size: 14, color: roleColor),
-                const SizedBox(width: 6),
-                Text(
-                  usuario.departamentoDisplayName ?? usuario.departamento!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: roleColor,
+                Icon(
+                  Icons.business_rounded,
+                  size: isVerySmallScreen ? 12 : 14,
+                  color: roleColor,
+                ),
+                SizedBox(width: isVerySmallScreen ? 4 : 6),
+                Flexible(
+                  child: Text(
+                    usuario.departamentoDisplayName ?? usuario.departamento!,
+                    style: TextStyle(
+                      fontSize: isVerySmallScreen ? 10 : 12,
+                      fontWeight: FontWeight.w600,
+                      color: roleColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

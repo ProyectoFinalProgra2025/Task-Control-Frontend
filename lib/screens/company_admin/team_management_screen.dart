@@ -264,7 +264,9 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
             const SizedBox(height: 12),
             Divider(color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB)),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _buildInfoChip(
                   icon: Icons.badge,
@@ -272,7 +274,6 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                   color: textSecondary,
                   isDark: isDark,
                 ),
-                const SizedBox(width: 8),
                 _buildInfoChip(
                   icon: Icons.business_center,
                   label: usuario.departamento ?? 'Sin depto',

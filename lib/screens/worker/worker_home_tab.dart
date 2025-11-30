@@ -99,73 +99,79 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: const LinearGradient(
-                                        colors: [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppTheme.primaryBlue.withOpacity(0.3),
-                                          blurRadius: 12,
-                                          offset: const Offset(0, 4),
+                              Flexible(
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: const LinearGradient(
+                                          colors: [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
                                         ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        userInitials,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                          letterSpacing: -0.5,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Hola, $firstName',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w900,
-                                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                          letterSpacing: -0.5,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Row(
-                                        children: [
-                                          Text(
-                                            'Worker',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppTheme.primaryBlue,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          RealtimeConnectionIndicator(
-                                            isConnected: isRealtimeConnected,
-                                            onReconnect: reconnectRealtime,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppTheme.primaryBlue.withOpacity(0.3),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
                                           ),
                                         ],
                                       ),
-                                    ],
-                                  ),
-                                ],
+                                      child: Center(
+                                        child: Text(
+                                          userInitials,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Flexible(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Hola, $firstName',
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w900,
+                                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                              letterSpacing: -0.5,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'Worker',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppTheme.primaryBlue,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              RealtimeConnectionIndicator(
+                                                isConnected: isRealtimeConnected,
+                                                onReconnect: reconnectRealtime,
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               const ThemeToggleButton(),
                             ],
@@ -420,31 +426,41 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
           const SizedBox(height: 20),
 
           // Task Info
-          Row(
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
             children: [
-              Icon(Icons.tag, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-              const SizedBox(width: 6),
-              Text(
-                '#${tarea.id}',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                ),
-              ),
-              const SizedBox(width: 16),
-              if (tarea.dueDate != null) ...[
-                Icon(Icons.calendar_today, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                const SizedBox(width: 6),
-                Text(
-                  '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tag, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    '#${tarea.id}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    ),
                   ),
+                ],
+              ),
+              if (tarea.dueDate != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.calendar_today, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
             ],
           ),
 

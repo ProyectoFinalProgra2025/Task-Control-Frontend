@@ -235,13 +235,16 @@ class _AdminTasksTabState extends State<AdminTasksTab> with SingleTickerProvider
                           children: [
                             Row(
                               children: [
-                                Text(
-                                  'Gestión de Tareas',
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w900,
-                                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                    letterSpacing: -0.3,
+                                Flexible(
+                                  child: Text(
+                                    'Gestión de Tareas',
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w900,
+                                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                      letterSpacing: -0.3,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
