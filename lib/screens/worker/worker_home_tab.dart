@@ -8,6 +8,8 @@ import '../../providers/usuario_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../config/theme_config.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
 import 'worker_tasks_list_screen.dart';
 
 class WorkerHomeTab extends StatefulWidget {
@@ -17,10 +19,11 @@ class WorkerHomeTab extends StatefulWidget {
   State<WorkerHomeTab> createState() => _WorkerHomeTabState();
 }
 
-class _WorkerHomeTabState extends State<WorkerHomeTab> {
+class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
   @override
   void initState() {
     super.initState();
+    initRealtime(); // Conectar realtime
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
@@ -28,7 +31,17 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
   
   @override
   void dispose() {
+    disposeRealtime();
     super.dispose();
+  }
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+      tareaProvider.silentRefresh();
+    }
   }
 
   Future<void> _loadData() async {
@@ -132,14 +145,23 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                                         ),
                                       ),
                                       const SizedBox(height: 2),
-                                      Text(
-                                        'Worker',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.primaryBlue,
-                                          letterSpacing: 0.5,
-                                        ),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Worker',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.primaryBlue,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          RealtimeConnectionIndicator(
+                                            isConnected: isRealtimeConnected,
+                                            onReconnect: reconnectRealtime,
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),

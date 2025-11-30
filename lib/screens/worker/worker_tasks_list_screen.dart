@@ -7,6 +7,8 @@ import '../../models/enums/prioridad_tarea.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../widgets/task/task_widgets.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
 import 'worker_task_detail_screen.dart';
 
 class WorkerTasksListScreen extends StatefulWidget {
@@ -16,13 +18,14 @@ class WorkerTasksListScreen extends StatefulWidget {
   State<WorkerTasksListScreen> createState() => _WorkerTasksListScreenState();
 }
 
-class _WorkerTasksListScreenState extends State<WorkerTasksListScreen> {
+class _WorkerTasksListScreenState extends State<WorkerTasksListScreen> with TareaRealtimeMixin {
   EstadoTarea? _filtroEstado;
   PrioridadTarea? _filtroPrioridad;
 
   @override
   void initState() {
     super.initState();
+    initRealtime(); // Conectar realtime
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<TareaProvider>(context, listen: false).cargarMisTareas();
     });
@@ -30,7 +33,17 @@ class _WorkerTasksListScreenState extends State<WorkerTasksListScreen> {
   
   @override
   void dispose() {
+    disposeRealtime();
     super.dispose();
+  }
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+      tareaProvider.silentRefresh();
+    }
   }
 
   Future<void> _aplicarFiltros() async {
@@ -48,13 +61,23 @@ class _WorkerTasksListScreenState extends State<WorkerTasksListScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text(
-          'Mis Tareas',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
-            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Mis Tareas',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            RealtimeConnectionIndicator(
+              isConnected: isRealtimeConnected,
+              onReconnect: reconnectRealtime,
+            ),
+          ],
         ),
         backgroundColor: isDark ? AppTheme.darkCard : AppTheme.lightCard,
         elevation: 0,

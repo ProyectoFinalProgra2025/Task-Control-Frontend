@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../services/auth_service.dart';
 import '../../providers/usuario_provider.dart';
 import '../../models/capacidad_nivel_item.dart';
@@ -12,9 +13,9 @@ enum ProfileRole { worker, manager, adminEmpresa, superAdmin }
 
 /// Profile Screen unificado para todos los roles
 /// Features específicas por rol:
-/// - Worker: Gestión de capacidades
-/// - Manager: Sin features específicas adicionales
-/// - AdminEmpresa: Sin features específicas adicionales
+/// - Worker: Gestión de capacidades + estadísticas de tareas
+/// - Manager: Estadísticas de equipo
+/// - AdminEmpresa: Estadísticas de empresa
 /// - SuperAdmin: Sin features específicas adicionales
 class ProfileScreen extends StatefulWidget {
   final ProfileRole role;
@@ -32,7 +33,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UsuarioProvider>(context, listen: false).cargarPerfil();
+      // Cargar perfil completo con estadísticas
+      Provider.of<UsuarioProvider>(context, listen: false).cargarPerfilCompleto();
     });
   }
 
@@ -69,70 +71,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return _buildErrorState(isDark, roleColor);
           }
 
-          return CustomScrollView(
-            slivers: [
-              // Header con AppBar simple
-              SliverAppBar(
-                pinned: true,
-                backgroundColor: isDark
-                    ? AppTheme.darkCard
-                    : AppTheme.lightCard,
-                leading: IconButton(
-                  icon: Icon(
-                    Icons.arrow_back_ios_rounded,
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
+          return RefreshIndicator(
+            color: roleColor,
+            onRefresh: () => usuarioProvider.cargarPerfilCompleto(),
+            child: CustomScrollView(
+              slivers: [
+                // Header con AppBar simple
+                SliverAppBar(
+                  pinned: true,
+                  backgroundColor: isDark
+                      ? AppTheme.darkCard
+                      : AppTheme.lightCard,
+                  leading: IconButton(
+                    icon: Icon(
+                      Icons.arrow_back_ios_rounded,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                    ),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                title: Text(
-                  'Profile',
-                  style: TextStyle(
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
-                    fontWeight: FontWeight.w600,
+                  title: Text(
+                    'Profile',
+                    style: TextStyle(
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
+                  centerTitle: true,
+                  elevation: 0,
                 ),
-                centerTitle: true,
-                elevation: 0,
-              ),
 
-              // Content
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      // Profile Avatar Section
-                      _buildProfileHeader(usuario, isDark, roleColor),
-                      const SizedBox(height: 32),
-
-                      // Account Section
-                      _buildAccountSection(usuario, isDark, roleColor),
-                      const SizedBox(height: 24),
-
-                      // Capacidades Section - Solo para Worker
-                      if (widget.role == ProfileRole.worker) ...[
-                        _buildCapacidadesSection(
-                          usuario,
-                          usuarioProvider,
-                          isDark,
-                          roleColor,
-                        ),
+                // Content
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        // Profile Avatar Section
+                        _buildProfileHeader(usuario, isDark, roleColor),
                         const SizedBox(height: 24),
+
+                        // Task Stats Section - Solo para Worker/Manager
+                        if (widget.role == ProfileRole.worker || 
+                            widget.role == ProfileRole.manager) ...[
+                          _buildTaskStatsSection(usuarioProvider, isDark, roleColor),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Account Section
+                        _buildAccountSection(usuario, isDark, roleColor),
+                        const SizedBox(height: 24),
+
+                        // Capacidades Section - Solo para Worker
+                        if (widget.role == ProfileRole.worker) ...[
+                          _buildCapacidadesSection(
+                            usuario,
+                            usuarioProvider,
+                            isDark,
+                            roleColor,
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Member Since Section
+                        _buildMemberSinceSection(usuario, isDark, roleColor),
+                        const SizedBox(height: 24),
+
+                        // Logout Button
+                        _buildLogoutButton(isDark),
+
+                        const SizedBox(height: 100),
                       ],
-
-                      // Logout Button
-                      _buildLogoutButton(isDark),
-
-                      const SizedBox(height: 100),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -142,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildProfileHeader(Usuario usuario, bool isDark, Color roleColor) {
     return Column(
       children: [
-        // Avatar con botón editar
+        // Avatar con role badge
         Stack(
           children: [
             Container(
@@ -174,43 +191,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            // Edit button (pencil icon)
+            // Role badge
             Positioned(
               bottom: 0,
               right: 0,
-              child: GestureDetector(
-                onTap: () {
-                  // TODO: Implementar funcionalidad de editar/subir imagen de perfil
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Edit profile picture - Coming soon'),
-                      backgroundColor: roleColor,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: roleColor,
-                    border: Border.all(
-                      color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-                      width: 3,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: roleColor.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: roleColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                    width: 3,
                   ),
-                  child: const Icon(
-                    Icons.edit_rounded,
+                  boxShadow: [
+                    BoxShadow(
+                      color: roleColor.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  usuario.rolDisplayName,
+                  style: const TextStyle(
                     color: Colors.white,
-                    size: 20,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -240,7 +247,249 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 : AppTheme.lightTextSecondary,
           ),
         ),
+        // Department badge if exists
+        if (usuario.departamento != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: roleColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: roleColor.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.business_rounded, size: 14, color: roleColor),
+                const SizedBox(width: 6),
+                Text(
+                  usuario.departamentoDisplayName ?? usuario.departamento!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: roleColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildTaskStatsSection(UsuarioProvider provider, bool isDark, Color roleColor) {
+    final stats = provider.dashboardStats;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? AppTheme.darkBorder.withOpacity(0.3)
+              : AppTheme.lightBorder,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: roleColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.analytics_outlined, color: roleColor, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'My Task Stats',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (provider.isLoadingStats)
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (stats != null) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      icon: Icons.task_alt_rounded,
+                      label: 'Total',
+                      value: stats.total.toString(),
+                      color: AppTheme.primaryBlue,
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      icon: Icons.check_circle_rounded,
+                      label: 'Completed',
+                      value: stats.finalizadas.toString(),
+                      color: AppTheme.successGreen,
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      icon: Icons.pending_actions_rounded,
+                      label: 'In Progress',
+                      value: stats.enProgreso.toString(),
+                      color: AppTheme.warningOrange,
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      icon: Icons.priority_high_rounded,
+                      label: 'Urgent',
+                      value: stats.urgentes.toString(),
+                      color: AppTheme.dangerRed,
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Progress bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Completion Rate',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                      Text(
+                        '${stats.porcentajeCompletado.toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: roleColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: stats.porcentajeCompletado / 100,
+                      backgroundColor: isDark
+                          ? AppTheme.darkBorder
+                          : AppTheme.lightBorder,
+                      valueColor: AlwaysStoppedAnimation<Color>(roleColor),
+                      minHeight: 8,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ] else
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Center(
+                child: Text(
+                  'No stats available',
+                  style: TextStyle(
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -266,15 +515,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(20),
-            child: Text(
-              'Account',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: isDark
-                    ? AppTheme.darkTextPrimary
-                    : AppTheme.lightTextPrimary,
-              ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: roleColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.person_outline_rounded, color: roleColor, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Account Information',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
           _buildAccountItem(
@@ -290,12 +552,161 @@ class _ProfileScreenState extends State<ProfileScreen> {
             value: usuario.email,
             isDark: isDark,
           ),
+          if (usuario.telefono != null && usuario.telefono!.isNotEmpty) ...[
+            _buildDivider(isDark),
+            _buildAccountItem(
+              icon: Icons.phone_outlined,
+              title: 'Phone',
+              value: usuario.telefono!,
+              isDark: isDark,
+            ),
+          ],
           _buildDivider(isDark),
           _buildAccountItem(
-            icon: Icons.info_outline_rounded,
-            title: 'Account Type',
-            value: _getRoleDisplayName(),
+            icon: Icons.badge_outlined,
+            title: 'Role',
+            value: usuario.rolDisplayName,
             isDark: isDark,
+            valueColor: roleColor,
+          ),
+          if (usuario.departamento != null) ...[
+            _buildDivider(isDark),
+            _buildAccountItem(
+              icon: Icons.business_outlined,
+              title: 'Department',
+              value: usuario.departamentoDisplayName ?? usuario.departamento!,
+              isDark: isDark,
+            ),
+          ],
+          if (usuario.nivelHabilidad != null) ...[
+            _buildDivider(isDark),
+            _buildAccountItem(
+              icon: Icons.trending_up_rounded,
+              title: 'Skill Level',
+              value: _getSkillLevelText(usuario.nivelHabilidad!),
+              isDark: isDark,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(
+                  5,
+                  (index) => Icon(
+                    index < usuario.nivelHabilidad!
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 16,
+                    color: const Color(0xFFF59E0B),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          _buildDivider(isDark),
+          _buildAccountItem(
+            icon: Icons.verified_outlined,
+            title: 'Status',
+            value: usuario.isActive ? 'Active' : 'Inactive',
+            isDark: isDark,
+            valueColor: usuario.isActive ? AppTheme.successGreen : AppTheme.dangerRed,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  String _getSkillLevelText(int level) {
+    switch (level) {
+      case 1:
+        return 'Beginner';
+      case 2:
+        return 'Basic';
+      case 3:
+        return 'Intermediate';
+      case 4:
+        return 'Advanced';
+      case 5:
+        return 'Expert';
+      default:
+        return 'Level $level';
+    }
+  }
+
+  Widget _buildMemberSinceSection(Usuario usuario, bool isDark, Color roleColor) {
+    final createdAt = usuario.createdAt;
+    final memberSinceText = createdAt != null
+        ? DateFormat('MMMM d, yyyy').format(createdAt)
+        : 'Unknown';
+    
+    final daysSinceJoining = createdAt != null
+        ? DateTime.now().difference(createdAt).inDays
+        : 0;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? AppTheme.darkBorder.withOpacity(0.3)
+              : AppTheme.lightBorder,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: roleColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.calendar_today_rounded, color: roleColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Member Since',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  memberSinceText,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
+                if (createdAt != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    '$daysSinceJoining days ago',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: roleColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
@@ -307,6 +718,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String title,
     required String value,
     required bool isDark,
+    Color? valueColor,
+    Widget? trailing,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -351,14 +764,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: isDark
+                    color: valueColor ?? (isDark
                         ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
+                        : AppTheme.lightTextPrimary),
                   ),
                 ),
               ],
             ),
           ),
+          if (trailing != null) trailing,
         ],
       ),
     );
@@ -427,7 +841,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Provider.of<UsuarioProvider>(
                 context,
                 listen: false,
-              ).cargarPerfil();
+              ).cargarPerfilCompleto();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: roleColor,
@@ -451,6 +865,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ) {
     return _buildSettingsSection(
       title: 'My Skills',
+      icon: Icons.psychology_outlined,
       isDark: isDark,
       roleColor: roleColor,
       trailing: IconButton(
@@ -581,6 +996,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildSettingsSection({
     required String title,
+    required IconData icon,
     required bool isDark,
     required Color roleColor,
     Widget? trailing,
@@ -609,16 +1025,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: roleColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: roleColor, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                    ),
                   ),
                 ),
                 if (trailing != null) trailing,

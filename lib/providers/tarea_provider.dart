@@ -151,4 +151,15 @@ class TareaProvider extends ChangeNotifier {
   Future<void> refresh() async {
     await cargarMisTareas();
   }
+
+  /// Refresh silencioso (sin mostrar loading) para actualizaciones realtime
+  Future<void> silentRefresh() async {
+    try {
+      _misTareas = await _tareaService.getMisTareas();
+      _error = null;
+      notifyListeners();
+    } catch (e) {
+      // Silencioso: no actualizamos error para no interrumpir al usuario
+    }
+  }
 }

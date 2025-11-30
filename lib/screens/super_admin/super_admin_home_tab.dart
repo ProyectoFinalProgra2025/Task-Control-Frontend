@@ -3,6 +3,8 @@ import '../../services/empresa_service.dart';
 import '../../models/empresa_model.dart';
 import '../../widgets/theme_toggle_button.dart';
 import '../../config/theme_config.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
 
 class SuperAdminHomeTab extends StatefulWidget {
   const SuperAdminHomeTab({super.key});
@@ -11,7 +13,7 @@ class SuperAdminHomeTab extends StatefulWidget {
   State<SuperAdminHomeTab> createState() => _SuperAdminHomeTabState();
 }
 
-class _SuperAdminHomeTabState extends State<SuperAdminHomeTab> with SingleTickerProviderStateMixin {
+class _SuperAdminHomeTabState extends State<SuperAdminHomeTab> with SingleTickerProviderStateMixin, TareaRealtimeMixin {
   final EmpresaService _empresaService = EmpresaService();
   SystemStatsModel? _stats;
   bool _isLoading = true;
@@ -28,13 +30,36 @@ class _SuperAdminHomeTabState extends State<SuperAdminHomeTab> with SingleTicker
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
+    initRealtime(); // Conectar realtime
     _loadStats();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    disposeRealtime();
     super.dispose();
+  }
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      _silentRefresh();
+    }
+  }
+
+  Future<void> _silentRefresh() async {
+    try {
+      final stats = await _empresaService.obtenerEstadisticasGenerales();
+      if (mounted) {
+        setState(() {
+          _stats = stats;
+        });
+      }
+    } catch (_) {
+      // Silencioso
+    }
   }
 
   Future<void> _loadStats() async {
@@ -167,20 +192,30 @@ class _SuperAdminHomeTabState extends State<SuperAdminHomeTab> with SingleTicker
                       ),
                       const SizedBox(height: AppTheme.spaceXLarge),
                       // Título con gradiente
-                      ShaderMask(
-                        shaderCallback: (bounds) => const LinearGradient(
-                          colors: AppTheme.gradientPurple,
-                        ).createShader(bounds),
-                        child: Text(
-                          'Dashboard Admin',
-                          style: TextStyle(
-                            fontSize: AppTheme.fontSizeHuge,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            height: 1.1,
-                            letterSpacing: -0.5,
+                      Row(
+                        children: [
+                          ShaderMask(
+                            shaderCallback: (bounds) => const LinearGradient(
+                              colors: AppTheme.gradientPurple,
+                            ).createShader(bounds),
+                            child: Text(
+                              'Dashboard Admin',
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSizeHuge,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                height: 1.1,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          RealtimeConnectionIndicator(
+                            isConnected: isRealtimeConnected,
+                            onReconnect: reconnectRealtime,
+                            connectedColor: AppTheme.primaryPurple,
+                          ),
+                        ],
                       ),
                       const SizedBox(height: AppTheme.spaceXSmall),
                       Text(

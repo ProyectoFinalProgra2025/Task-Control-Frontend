@@ -7,6 +7,8 @@ import '../../models/enums/estado_tarea.dart';
 import '../../models/enums/prioridad_tarea.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/task/task_widgets.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
 import 'manager_task_detail_screen.dart';
 
 /// ManagerTasksTab - Pantalla híbrida de tareas para Area Manager
@@ -20,7 +22,7 @@ class ManagerTasksTab extends StatefulWidget {
   State<ManagerTasksTab> createState() => _ManagerTasksTabState();
 }
 
-class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderStateMixin {
+class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderStateMixin, TareaRealtimeMixin {
   // Main tabs: Mis Tareas / Departamento
   late TabController _mainTabController;
   
@@ -39,6 +41,8 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderSt
     _mainTabController = TabController(length: 2, vsync: this);
     _deptTabController = TabController(length: 4, vsync: this);
     
+    initRealtime(); // Conectar realtime
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAllData();
     });
@@ -48,7 +52,19 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderSt
   void dispose() {
     _mainTabController.dispose();
     _deptTabController.dispose();
+    disposeRealtime();
     super.dispose();
+  }
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+      final adminProvider = Provider.of<AdminTareaProvider>(context, listen: false);
+      tareaProvider.silentRefresh();
+      adminProvider.silentRefresh();
+    }
   }
   
   Future<void> _loadAllData() async {
@@ -128,6 +144,12 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderSt
                             color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                             letterSpacing: -0.3,
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        RealtimeConnectionIndicator(
+                          isConnected: isRealtimeConnected,
+                          onReconnect: reconnectRealtime,
+                          connectedColor: AppTheme.successGreen,
                         ),
                       ],
                     ),

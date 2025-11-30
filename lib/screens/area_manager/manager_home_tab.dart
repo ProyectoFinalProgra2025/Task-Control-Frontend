@@ -10,6 +10,8 @@ import '../../models/enums/estado_tarea.dart';
 import '../../services/usuario_service.dart';
 import '../../services/tarea_service.dart';
 import '../../config/theme_config.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
 import 'manager_task_detail_screen.dart';
 
 class ManagerHomeTab extends StatefulWidget {
@@ -19,13 +21,31 @@ class ManagerHomeTab extends StatefulWidget {
   State<ManagerHomeTab> createState() => _ManagerHomeTabState();
 }
 
-class _ManagerHomeTabState extends State<ManagerHomeTab> {
+class _ManagerHomeTabState extends State<ManagerHomeTab> with TareaRealtimeMixin {
   @override
   void initState() {
     super.initState();
+    initRealtime(); // Conectar realtime
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
+  }
+
+  @override
+  void dispose() {
+    disposeRealtime();
+    super.dispose();
+  }
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+      final adminTareaProvider = Provider.of<AdminTareaProvider>(context, listen: false);
+      tareaProvider.silentRefresh();
+      adminTareaProvider.silentRefresh();
+    }
   }
 
   Future<void> _loadData() async {
@@ -131,28 +151,38 @@ class _ManagerHomeTabState extends State<ManagerHomeTab> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: AppTheme.successGreen.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppTheme.successGreen.withOpacity(0.3)),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.supervisor_account_rounded, size: 14, color: AppTheme.successGreen),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Area Manager',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.successGreen,
-                                  ),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.successGreen.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppTheme.successGreen.withOpacity(0.3)),
                                 ),
-                              ],
-                            ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.supervisor_account_rounded, size: 14, color: AppTheme.successGreen),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Area Manager',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.successGreen,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              RealtimeConnectionIndicator(
+                                isConnected: isRealtimeConnected,
+                                onReconnect: reconnectRealtime,
+                                connectedColor: AppTheme.successGreen,
+                              ),
+                            ],
                           ),
                         ],
                       ),

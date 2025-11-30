@@ -94,4 +94,15 @@ class AdminTareaProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  /// Refresh silencioso (sin mostrar loading) para actualizaciones realtime
+  Future<void> silentRefresh() async {
+    try {
+      _todasLasTareas = await _tareaService.getTareas();
+      _error = null;
+      notifyListeners();
+    } catch (e) {
+      // Silencioso: no actualizamos error para no interrumpir al usuario
+    }
+  }
 }

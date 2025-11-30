@@ -9,6 +9,8 @@ import '../../services/storage_service.dart';
 import '../../models/usuario.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
 import 'team_management_screen.dart';
 import 'admin_task_detail_screen.dart';
 import '../../config/theme_config.dart';
@@ -22,7 +24,7 @@ class AdminHomeTab extends StatefulWidget {
   State<AdminHomeTab> createState() => _AdminHomeTabState();
 }
 
-class _AdminHomeTabState extends State<AdminHomeTab> {
+class _AdminHomeTabState extends State<AdminHomeTab> with TareaRealtimeMixin {
   final UsuarioService _usuarioService = UsuarioService();
   final EmpresaService _empresaService = EmpresaService();
   final TareaService _tareaService = TareaService();
@@ -38,7 +40,46 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   @override
   void initState() {
     super.initState();
+    initRealtime(); // Conectar realtime
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    disposeRealtime();
+    super.dispose();
+  }
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      _silentRefresh();
+    }
+  }
+
+  Future<void> _silentRefresh() async {
+    try {
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        final stats = await _empresaService.obtenerEstadisticas(empresaId);
+        final todasTareas = await _tareaService.getTareas();
+        final tareasOngoing = todasTareas
+            .where((t) => t.estado == EstadoTarea.asignada || t.estado == EstadoTarea.aceptada)
+            .take(5)
+            .toList();
+
+        if (mounted) {
+          setState(() {
+            _estadisticas = stats;
+            _todasLasTareas = todasTareas;
+            _tareasRecientes = tareasOngoing;
+          });
+        }
+      }
+    } catch (_) {
+      // Silencioso
+    }
   }
 
   Future<void> _loadData() async {
@@ -227,6 +268,11 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                                   ),
                                 ],
                               ),
+                            ),
+                            const SizedBox(width: 8),
+                            RealtimeConnectionIndicator(
+                              isConnected: isRealtimeConnected,
+                              onReconnect: reconnectRealtime,
                             ),
                           ],
                         ),

@@ -7,11 +7,15 @@ class UsuarioProvider extends ChangeNotifier {
   final UsuarioService _usuarioService = UsuarioService();
 
   Usuario? _usuario;
+  UsuarioDashboardStats? _dashboardStats;
   bool _isLoading = false;
+  bool _isLoadingStats = false;
   String? _error;
 
   Usuario? get usuario => _usuario;
+  UsuarioDashboardStats? get dashboardStats => _dashboardStats;
   bool get isLoading => _isLoading;
+  bool get isLoadingStats => _isLoadingStats;
   String? get error => _error;
 
   List<CapacidadUsuario> get capacidades => _usuario?.capacidades ?? [];
@@ -24,6 +28,50 @@ class UsuarioProvider extends ChangeNotifier {
 
     try {
       _usuario = await _usuarioService.getMe();
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      _usuario = null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Cargar estadísticas de dashboard
+  Future<void> cargarDashboardStats() async {
+    _isLoadingStats = true;
+    notifyListeners();
+
+    try {
+      _dashboardStats = await _usuarioService.getMiDashboard();
+    } catch (e) {
+      // No mostramos error aquí, simplemente no tenemos stats
+      _dashboardStats = null;
+    } finally {
+      _isLoadingStats = false;
+      notifyListeners();
+    }
+  }
+
+  /// Cargar perfil y estadísticas juntos
+  Future<void> cargarPerfilCompleto() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // Cargar perfil y stats en paralelo
+      final results = await Future.wait([
+        _usuarioService.getMe(),
+        _usuarioService.getMiDashboard().catchError((_) => UsuarioDashboardStats(
+          total: 0, pendientes: 0, asignadas: 0, aceptadas: 0, 
+          finalizadas: 0, hoy: 0, urgentes: 0,
+        )),
+      ]);
+      
+      _usuario = results[0] as Usuario;
+      _dashboardStats = results[1] as UsuarioDashboardStats;
       _error = null;
     } catch (e) {
       _error = e.toString();
@@ -62,9 +110,12 @@ class UsuarioProvider extends ChangeNotifier {
           telefono: _usuario!.telefono,
           rol: _usuario!.rol,
           empresaId: _usuario!.empresaId,
+          empresaNombre: _usuario!.empresaNombre,
           departamento: _usuario!.departamento,
           nivelHabilidad: _usuario!.nivelHabilidad,
           isActive: _usuario!.isActive,
+          createdAt: _usuario!.createdAt,
+          updatedAt: _usuario!.updatedAt,
           capacidades: _usuario!.capacidades
               .where((c) => c.capacidadId != capacidadId)
               .toList(),

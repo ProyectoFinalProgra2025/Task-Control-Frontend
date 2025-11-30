@@ -101,6 +101,29 @@ class UsuarioService {
     }
   }
 
+  /// Obtener estadísticas personales de tareas (dashboard)
+  Future<UsuarioDashboardStats> getMiDashboard() async {
+    try {
+      final response = await _http.get('/api/usuarios/me/dashboard');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return UsuarioDashboardStats.fromJson(data['data']);
+        } else {
+          throw Exception(data['message'] ?? 'Error al obtener dashboard');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al obtener dashboard');
+      }
+    } catch (e) {
+      throw Exception('Error al obtener dashboard: $e');
+    }
+  }
+
   /// Actualizar capacidades de un usuario (AdminEmpresa)
   Future<void> updateCapacidadesUsuario(String usuarioId, List<CapacidadNivelItem> capacidades) async {
     try {
