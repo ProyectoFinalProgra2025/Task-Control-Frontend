@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'manager_home_tab.dart';
 import '../common/chat_list_screen.dart';
 import 'manager_tasks_tab.dart';
@@ -8,7 +7,6 @@ import 'manager_profile_tab.dart';
 import '../../widgets/create_task_modal.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../config/theme_config.dart';
-import '../../providers/chat_provider.dart';
 
 /// Main screen for Area Managers (ManagerDepartamento)
 /// Combines functionality from both AdminEmpresa and Usuario (Worker)
@@ -32,15 +30,6 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
 
   void _navigateTo(int index) {
     setState(() => _currentIndex = index);
-    // Refresh chats when navigating to chat tab
-    if (index == 1) {
-      _refreshChats();
-    }
-  }
-
-  void _refreshChats() {
-    final chatProvider = context.read<ChatProvider>();
-    chatProvider.refreshChats();
   }
 
   void _showCreateTaskModal() {
@@ -74,9 +63,10 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: Consumer<ChatProvider>(
-        builder: (context, chatProvider, child) {
-          final unreadCount = chatProvider.totalUnreadCount;
+      bottomNavigationBar: Builder(
+        builder: (context) {
+          // TODO: Implementar contador de mensajes no leídos con nuevo backend
+          const unreadCount = 0;
           
           return Container(
             decoration: BoxDecoration(

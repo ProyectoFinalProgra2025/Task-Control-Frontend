@@ -1,7 +1,7 @@
 class ApiConfig {
   // URL base del API - Cambiar para producción
-  static const String baseUrl = 'https://api.taskcontrol.work'; // Producción
-  // static const String baseUrl = 'http://localhost:5080'; // Desarrollo
+  // static const String baseUrl = 'https://api.taskcontrol.work'; // Producción
+  static const String baseUrl = 'http://localhost:5080'; 
   
   // Endpoints de autenticación
   static const String loginEndpoint = '/api/Auth/login';
@@ -18,20 +18,9 @@ class ApiConfig {
   // Endpoints de usuarios
   static const String usuariosEndpoint = '/api/Usuarios';
   
-  // Endpoints de chat
-  static const String usersSearchEndpoint = '/api/users/search';
-  static const String chatsEndpoint = '/api/chats';
-  static String chatMessagesEndpoint(String chatId) => '/api/chats/$chatId/messages';
-  static String chatMembersEndpoint(String chatId) => '/api/chats/$chatId/members';
-
-  // Endpoints de lectura de mensajes
-  static String chatMarkMessageReadEndpoint(String messageId) => '/api/chats/messages/$messageId/mark-read';
-  static String chatMarkAllReadEndpoint(String chatId) => '/api/chats/$chatId/mark-all-read';
-  static const String chatUnreadCountEndpoint = '/api/chats/unread-count';
-  static const String chatUnreadByChatEndpoint = '/api/chats/unread-by-chat';
-  
-  // SignalR Hub
-  static String get signalRHubUrl => '$baseUrl/apphub';
+  // TODO: Endpoints de chat - Pendiente implementación con nuevo backend
+  // static const String usersSearchEndpoint = '/api/users/search';
+  // static const String chatsEndpoint = '/api/chats';
   
   // Headers comunes
   static Map<String, String> get headers => {

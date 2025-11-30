@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
 import '../../providers/tarea_provider.dart';
 import '../../providers/admin_tarea_provider.dart';
-import '../../providers/chat_provider.dart';
-import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/usuario.dart';
 import '../../config/theme_config.dart';
@@ -12,7 +9,6 @@ import '../../services/tarea_service.dart';
 import '../../services/usuario_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/task/task_widgets.dart';
-import '../common/chat_detail_screen.dart';
 
 class ManagerTaskDetailScreen extends StatefulWidget {
   final String tareaId;
@@ -37,48 +33,12 @@ class _ManagerTaskDetailScreenState extends State<ManagerTaskDetailScreen> {
   bool _isLoading = true;
   bool _isProcessing = false;
   bool _hasChanges = false; // Track if any changes were made
-  String? _loadingChatUserId;
   String? _currentUserId; // ID del manager actual
-  StreamSubscription? _tareaEventSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _connectRealtime();
-      _subscribeToRealtimeEvents();
-    });
-  }
-
-  @override
-  void dispose() {
-    _tareaEventSubscription?.cancel();
-    super.dispose();
-  }
-  
-  Future<void> _connectRealtime() async {
-    try {
-      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-      final empresaId = await _storage.getEmpresaId();
-      if (empresaId != null) {
-        await realtimeProvider.connect(empresaId: empresaId);
-      }
-    } catch (e) {
-      debugPrint('Error connecting to realtime: $e');
-    }
-  }
-  
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
-      final eventTareaId = event['tareaId']?.toString();
-      if (eventTareaId == widget.tareaId) {
-        debugPrint('📝 Manager Task Detail: Task event for this task - reloading');
-        _loadData();
-      }
-    });
   }
 
   Future<void> _loadData() async {
@@ -872,38 +832,15 @@ class _ManagerTaskDetailScreenState extends State<ManagerTaskDetailScreen> {
   }
 
   Future<void> _chatWithUser(String recipientId, String recipientName) async {
-    if (recipientId.isEmpty) return;
-
-    setState(() => _loadingChatUserId = recipientId);
-
-    try {
-      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-      final chat = await chatProvider.createOneToOneChat(recipientId);
-
-      if (!mounted) return;
-
-      setState(() => _loadingChatUserId = null);
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ChatDetailScreen(
-            chatId: chat.id,
-            recipientName: recipientName.isNotEmpty ? recipientName : 'Usuario',
-            isGroup: false,
-          ),
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        setState(() => _loadingChatUserId = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al abrir chat: $e'),
-            backgroundColor: AppTheme.dangerRed,
-          ),
-        );
-      }
-    }
+    // TODO: Implementar chat con nuevo backend
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('El sistema de chat estará disponible pronto'),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _mostrarDialogoAsignar() {
@@ -1040,7 +977,7 @@ class _ManagerTaskDetailScreenState extends State<ManagerTaskDetailScreen> {
         name: _tarea!.createdByUsuarioNombre,
         role: 'Creó esta tarea',
         color: AppTheme.primaryBlue,
-        isLoading: _loadingChatUserId == _tarea!.createdByUsuarioId,
+        isLoading: false,
         onTap: () => _chatWithUser(
           _tarea!.createdByUsuarioId,
           _tarea!.createdByUsuarioNombre,
@@ -1054,7 +991,7 @@ class _ManagerTaskDetailScreenState extends State<ManagerTaskDetailScreen> {
         name: _tarea!.asignadoANombre!,
         role: 'Trabajador asignado',
         color: Colors.teal,
-        isLoading: _loadingChatUserId == _tarea!.asignadoAUsuarioId,
+        isLoading: false,
         onTap: () => _chatWithUser(
           _tarea!.asignadoAUsuarioId!,
           _tarea!.asignadoANombre!,

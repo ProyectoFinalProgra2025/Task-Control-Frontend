@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'worker_home_tab.dart';
 import '../common/chat_list_screen.dart';
 import 'worker_profile_tab.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../config/theme_config.dart';
-import '../../providers/chat_provider.dart';
 
 class WorkerMainScreen extends StatefulWidget {
   const WorkerMainScreen({super.key});
@@ -40,10 +38,6 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
     setState(() {
       _currentIndex = index;
     });
-    // Refresh chats when navigating to chat tab
-    if (index == 1) {
-      _refreshChats();
-    }
   }
 
   void _onNavItemTapped(int index) {
@@ -52,15 +46,6 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
-    // Refresh chats when tapping on chat tab
-    if (index == 1) {
-      _refreshChats();
-    }
-  }
-
-  void _refreshChats() {
-    final chatProvider = context.read<ChatProvider>();
-    chatProvider.refreshChats();
   }
 
   @override
@@ -74,9 +59,10 @@ class _WorkerMainScreenState extends State<WorkerMainScreen> with SingleTickerPr
         physics: const BouncingScrollPhysics(),
         children: _tabs,
       ),
-      bottomNavigationBar: Consumer<ChatProvider>(
-        builder: (context, chatProvider, child) {
-          final unreadCount = chatProvider.totalUnreadCount;
+      bottomNavigationBar: Builder(
+        builder: (context) {
+          // TODO: Implementar contador de mensajes no leídos con nuevo backend
+          const unreadCount = 0;
           
           return Container(
             decoration: BoxDecoration(

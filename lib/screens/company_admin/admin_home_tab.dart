@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'dart:async';
 import '../../widgets/create_task_modal.dart';
 import '../../widgets/theme_toggle_button.dart';
 import '../../widgets/calendar/task_calendar_widget.dart';
@@ -14,7 +12,6 @@ import '../../models/enums/estado_tarea.dart';
 import 'team_management_screen.dart';
 import 'admin_task_detail_screen.dart';
 import '../../config/theme_config.dart';
-import '../../providers/realtime_provider.dart';
 
 class AdminHomeTab extends StatefulWidget {
   final VoidCallback? onNavigateToTasks;
@@ -37,78 +34,11 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   List<Tarea> _todasLasTareas = []; // Para el calendario
   bool _isLoading = true;
   String? _error;
-  
-  StreamSubscription? _tareaEventSubscription;
-  StreamSubscription? _usuarioEventSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _connectRealtime();
-      _subscribeToRealtimeEvents();
-    });
-  }
-  
-  @override
-  void dispose() {
-    _tareaEventSubscription?.cancel();
-    _usuarioEventSubscription?.cancel();
-    super.dispose();
-  }
-  
-  Future<void> _connectRealtime() async {
-    try {
-      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-      final empresaId = await _storage.getEmpresaId();
-      if (empresaId != null) {
-        await realtimeProvider.connect(empresaId: empresaId);
-      }
-    } catch (e) {
-      debugPrint('Error connecting to realtime: $e');
-    }
-  }
-  
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    // Subscribe to tarea events
-    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
-      debugPrint('📊 Admin Home: Tarea event received: ${event['action']}');
-      _loadData(); // Reload stats and recent tasks
-      
-      // Show notification
-      if (mounted) {
-        final action = event['action'] ?? '';
-        String message = '';
-        if (action == 'tarea:created') {
-          message = 'Nueva tarea creada';
-        } else if (action == 'tarea:assigned') {
-          message = 'Tarea asignada';
-        } else if (action == 'tarea:accepted') {
-          message = 'Tarea aceptada';
-        } else if (action == 'tarea:completed') {
-          message = 'Tarea completada';
-        }
-        
-        if (message.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    });
-    
-    // Subscribe to usuario events
-    _usuarioEventSubscription = realtimeProvider.usuarioEventStream.listen((event) {
-      debugPrint('📊 Admin Home: Usuario event received: ${event['action']}');
-      _loadData(); // Reload stats when team members change
-    });
   }
 
   Future<void> _loadData() async {

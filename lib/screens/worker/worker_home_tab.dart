@@ -1,19 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
 import '../../widgets/theme_toggle_button.dart';
 import '../../widgets/task_progress_indicator.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/usuario_provider.dart';
-import '../../providers/chat_provider.dart';
-import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../config/theme_config.dart';
-import '../../services/storage_service.dart';
 import 'worker_tasks_list_screen.dart';
-import '../common/chat_detail_screen.dart';
 
 class WorkerHomeTab extends StatefulWidget {
   const WorkerHomeTab({super.key});
@@ -23,66 +18,17 @@ class WorkerHomeTab extends StatefulWidget {
 }
 
 class _WorkerHomeTabState extends State<WorkerHomeTab> {
-  final StorageService _storage = StorageService();
-  StreamSubscription? _tareaEventSubscription;
-  
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
-      _connectRealtime();
-      _subscribeToRealtimeEvents();
     });
   }
   
   @override
   void dispose() {
-    _tareaEventSubscription?.cancel();
     super.dispose();
-  }
-  
-  Future<void> _connectRealtime() async {
-    try {
-      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-      final empresaId = await _storage.getEmpresaId();
-      if (empresaId != null) {
-        await realtimeProvider.connect(empresaId: empresaId);
-      }
-    } catch (e) {
-      debugPrint('Error connecting to realtime: $e');
-    }
-  }
-  
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
-      debugPrint('💼 Worker Home: Tarea event received: ${event['action']}');
-      _loadData();
-      
-      if (mounted) {
-        final action = event['action'] ?? '';
-        String message = '';
-        if (action == 'tarea:assigned') {
-          message = 'Nueva tarea asignada';
-        } else if (action == 'tarea:accepted') {
-          message = 'Tarea aceptada';
-        } else if (action == 'tarea:completed') {
-          message = 'Tarea completada';
-        }
-        
-        if (message.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    });
   }
 
   Future<void> _loadData() async {
@@ -544,60 +490,25 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
   }
 
   Future<void> _openChatWithCreator(Tarea tarea) async {
-    if (tarea.createdByUsuarioId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Esta tarea no tiene un creador asignado'),
-          backgroundColor: Colors.orange,
+    // TODO: Implementar chat con nuevo backend
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('El sistema de chat estará disponible pronto'),
+            ),
+          ],
         ),
-      );
-      return;
-    }
-
-    try {
-      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-      
-      // Show loading
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(
-          child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+        backgroundColor: AppTheme.primaryPurple,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
-      );
-
-      // Create or get existing chat with creator
-      final chat = await chatProvider.createOneToOneChat(tarea.createdByUsuarioId);
-
-      if (!mounted) return;
-
-      // Close loading dialog
-      Navigator.of(context).pop();
-
-      // Navigate to chat
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ChatDetailScreen(
-            chatId: chat.id,
-            recipientName: tarea.createdByUsuarioNombre,
-            isGroup: false,
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      
-      // Close loading if still showing
-      Navigator.of(context, rootNavigator: true).pop();
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al abrir chat: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+      ),
+    );
   }
 
   Widget _buildPremiumEmptyState({required bool isDark}) {

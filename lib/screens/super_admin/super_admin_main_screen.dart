@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'super_admin_home_tab.dart';
 import 'super_admin_companies_tab.dart';
 import '../common/chat_list_screen.dart';
 import 'super_admin_profile_tab.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../config/theme_config.dart';
-import '../../providers/chat_provider.dart';
 
 class SuperAdminMainScreen extends StatefulWidget {
   const SuperAdminMainScreen({super.key});
@@ -27,15 +25,6 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
 
   void _navigateTo(int index) {
     setState(() => _currentIndex = index);
-    // Refresh chats when navigating to chat tab
-    if (index == 2) {
-      _refreshChats();
-    }
-  }
-
-  void _refreshChats() {
-    final chatProvider = context.read<ChatProvider>();
-    chatProvider.refreshChats();
   }
 
   @override
@@ -47,9 +36,10 @@ class _SuperAdminMainScreenState extends State<SuperAdminMainScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: Consumer<ChatProvider>(
-        builder: (context, chatProvider, child) {
-          final unreadCount = chatProvider.totalUnreadCount;
+      bottomNavigationBar: Builder(
+        builder: (context) {
+          // TODO: Implementar contador de mensajes no leídos con nuevo backend
+          const unreadCount = 0;
           
           return Container(
             decoration: BoxDecoration(

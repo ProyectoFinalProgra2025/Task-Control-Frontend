@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../models/usuario.dart';
 import '../../services/usuario_service.dart';
-import '../../providers/chat_provider.dart';
-import '../common/chat_detail_screen.dart';
 import '../../config/theme_config.dart';
 
 /// Team tab for Area Managers
@@ -443,33 +440,15 @@ class _ManagerTeamTabState extends State<ManagerTeamTab> {
                   child: IconButton(
                     icon: const Icon(Icons.message_rounded),
                     color: AppTheme.successGreen,
-                    onPressed: () async {
-                      try {
-                        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-                        await chatProvider.connectSignalR();
-                        final chat = await chatProvider.createOneToOneChat(member.id);
-                        if (mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatDetailScreen(
-                                chatId: chat.id,
-                                recipientName: member.nombreCompleto,
-                                isGroup: false,
-                              ),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: AppTheme.dangerRed,
-                            ),
-                          );
-                        }
-                      }
+                    onPressed: () {
+                      // TODO: Implementar chat con nuevo backend
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('El sistema de chat estará disponible pronto'),
+                          backgroundColor: Colors.orange,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     },
                   ),
                 ),

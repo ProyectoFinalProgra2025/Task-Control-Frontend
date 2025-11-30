@@ -1,11 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../services/empresa_service.dart';
 import '../../models/empresa_model.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/premium_widgets.dart';
-import '../../providers/realtime_provider.dart';
 
 class SuperAdminCompaniesTab extends StatefulWidget {
   const SuperAdminCompaniesTab({super.key});
@@ -21,7 +18,6 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
   List<EmpresaModel> _empresas = [];
   bool _isLoading = true;
   late AnimationController _animationController;
-  StreamSubscription? _empresaEventSubscription;
 
   @override
   void initState() {
@@ -31,66 +27,12 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
       duration: const Duration(milliseconds: 300),
     );
     _loadEmpresas();
-    _connectRealtime();
-    _subscribeToRealtimeEvents();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _empresaEventSubscription?.cancel();
     super.dispose();
-  }
-
-  Future<void> _connectRealtime() async {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    if (!realtimeProvider.isConnected) {
-      try {
-        await realtimeProvider.connect(isSuperAdmin: true);
-        print('SuperAdminCompaniesTab: ✅ Real-time enabled');
-      } catch (e) {
-        print('SuperAdminCompaniesTab: ⚠️ Real-time not available: $e');
-        // Continue without real-time
-      }
-    }
-  }
-
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    _empresaEventSubscription = realtimeProvider.empresaEventStream.listen((event) {
-      print('SuperAdminCompaniesTab: 🏢 Empresa ${event['eventType']}');
-      _loadEmpresas();
-      
-      if (mounted) {
-        final eventType = event['eventType'] as String;
-        final nombre = event['nombre'] as String? ?? 'Empresa';
-        String message = '';
-        
-        switch (eventType) {
-          case 'created':
-            message = '🆕 Nueva empresa: $nombre';
-            break;
-          case 'approved':
-            message = '✅ Empresa aprobada: $nombre';
-            break;
-          case 'rejected':
-            message = '❌ Empresa rechazada: $nombre';
-            break;
-        }
-        
-        if (message.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: AppTheme.primaryPurple,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-    });
   }
 
   Future<void> _loadEmpresas() async {
