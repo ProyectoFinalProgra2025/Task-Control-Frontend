@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import '../../config/theme_config.dart';
 import '../../models/chat/chat_models.dart';
 import '../../services/chat_service.dart';
-import '../../services/chat_realtime_service.dart';
+import '../../services/chat_hub_service.dart';
 import 'user_profile_screen.dart';
 
 /// Pantalla de detalle de chat - Conversación individual
+/// Usa ChatProvider y ChatHubService para tiempo real
 class ChatDetailScreen extends StatefulWidget {
   final Conversation conversation;
   final String currentUserId;
@@ -23,7 +24,7 @@ class ChatDetailScreen extends StatefulWidget {
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ChatService _chatService = ChatService();
-  final ChatRealtimeService _realtimeService = ChatRealtimeService.instance;
+  final ChatHubService _hubService = ChatHubService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
@@ -33,11 +34,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _isSending = false;
   bool _otherUserTyping = false;
   String? _typingUserName;
-  StreamSubscription<ChatRealtimeEvent>? _realtimeSubscription;
+  
+  // Subscriptions
+  StreamSubscription<Map<String, dynamic>>? _messageSubscription;
+  StreamSubscription<Map<String, dynamic>>? _deliveredSubscription;
+  StreamSubscription<Map<String, dynamic>>? _readSubscription;
+  StreamSubscription<Map<String, dynamic>>? _typingSubscription;
+  
   Timer? _typingTimer;
 
   String get _displayName => widget.conversation.getDisplayName(widget.currentUserId);
-  String? get _otherUserId => widget.conversation.getOtherUserId(widget.currentUserId);
   bool get _isGroup => widget.conversation.type == ConversationType.group;
 
   @override
@@ -47,11 +53,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Future<void> _initializeChat() async {
-    // Unirse a la conversación para recibir eventos
-    await _realtimeService.joinConversation(widget.conversation.id);
+    // Unirse a la conversación para recibir eventos de grupo
+    await _hubService.joinConversation(widget.conversation.id);
     
-    // Suscribirse a eventos
-    _realtimeSubscription = _realtimeService.eventStream.listen(_handleRealtimeEvent);
+    // Suscribirse a eventos de SignalR
+    _setupSignalRListeners();
     
     // Cargar mensajes
     await _loadMessages();
@@ -60,75 +66,78 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _chatService.markAllMessagesRead(widget.conversation.id);
   }
 
-  void _handleRealtimeEvent(ChatRealtimeEvent event) {
-    // Para mensajes nuevos, verificar conversationId
-    if (event.type == ChatEventType.newMessage) {
-      if (event.conversationId != widget.conversation.id) return;
+  void _setupSignalRListeners() {
+    // Escuchar nuevos mensajes
+    _messageSubscription = _hubService.onMessage.listen((data) {
+      final conversationId = data['conversationId']?.toString();
+      if (conversationId != widget.conversation.id) return;
       
-      // Agregar nuevo mensaje
-      if (event.data != null) {
-        final message = ChatMessage.fromJson(event.data!);
+      print('[ChatDetailScreen] 📨 Nuevo mensaje recibido: $data');
+      
+      final message = ChatMessage.fromJson(data);
+      if (!_messages.any((m) => m.id == message.id)) {
         setState(() {
-          // Evitar duplicados (el mensaje puede ya estar si lo envié yo)
-          if (!_messages.any((m) => m.id == message.id)) {
-            _messages.insert(0, message);
-            _scrollToBottom();
-          }
+          _messages.insert(0, message);
         });
+        _scrollToBottom();
+        
         // Marcar como leído si no es mío
         if (message.senderId != widget.currentUserId) {
           _chatService.markMessageRead(message.id);
         }
       }
-      return;
-    }
+    });
     
-    // Otros eventos requieren que sea de esta conversación
-    if (event.conversationId != widget.conversation.id) return;
-
-    switch (event.type) {
-      case ChatEventType.newMessage:
-        // Ya manejado arriba
-        break;
-      case ChatEventType.messageDelivered:
-      case ChatEventType.messageRead:
-        // Actualizar estado del mensaje
-        _updateMessageStatus(event);
-        break;
-      case ChatEventType.typing:
-        if (event.senderId != widget.currentUserId) {
-          setState(() {
-            _otherUserTyping = event.isTyping;
-            _typingUserName = event.senderName;
-          });
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  void _updateMessageStatus(ChatRealtimeEvent event) {
-    final messageId = event.messageId;
-    if (messageId == null) return;
-
-    final index = _messages.indexWhere((m) => m.id == messageId);
-    if (index != -1) {
-      // Actualizar el estado del mensaje localmente
+    // Escuchar mensajes entregados
+    _deliveredSubscription = _hubService.onMessageDelivered.listen((data) {
+      final messageId = data['messageId']?.toString();
+      if (messageId == null) return;
+      
+      final index = _messages.indexWhere((m) => m.id == messageId);
+      if (index != -1) {
+        setState(() {
+          _messages[index] = _messages[index].copyWithStatus(MessageStatus.delivered);
+        });
+      }
+    });
+    
+    // Escuchar mensajes leídos
+    _readSubscription = _hubService.onMessageRead.listen((data) {
+      final messageId = data['messageId']?.toString();
+      if (messageId == null) return;
+      
+      final index = _messages.indexWhere((m) => m.id == messageId);
+      if (index != -1) {
+        setState(() {
+          _messages[index] = _messages[index].copyWithStatus(MessageStatus.read);
+        });
+      }
+    });
+    
+    // Escuchar indicadores de escritura
+    _typingSubscription = _hubService.onTyping.listen((data) {
+      final conversationId = data['conversationId']?.toString();
+      if (conversationId != widget.conversation.id) return;
+      
+      final senderId = data['senderId']?.toString();
+      if (senderId == widget.currentUserId) return; // Ignorar propios eventos
+      
       setState(() {
-        final oldMessage = _messages[index];
-        MessageStatus newStatus = oldMessage.status;
-        
-        if (event.type == ChatEventType.messageDelivered) {
-          newStatus = MessageStatus.delivered;
-        } else if (event.type == ChatEventType.messageRead) {
-          newStatus = MessageStatus.read;
-        }
-        
-        // Usar copyWithStatus para crear mensaje actualizado
-        _messages[index] = oldMessage.copyWithStatus(newStatus);
+        _otherUserTyping = data['isTyping'] == true;
+        _typingUserName = data['senderName']?.toString() ?? 'Alguien';
       });
-    }
+      
+      // Auto-limpiar después de 5 segundos
+      if (_otherUserTyping) {
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted) {
+            setState(() {
+              _otherUserTyping = false;
+            });
+          }
+        });
+      }
+    });
   }
 
   Future<void> _loadMessages() async {
@@ -163,8 +172,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     setState(() => _isSending = true);
     _messageController.clear();
 
-    // Enviar indicador de "dejó de escribir"
-    _sendStoppedTyping();
+    // Cancelar indicador de escritura
+    _typingTimer?.cancel();
 
     final message = await _chatService.sendMessage(
       widget.conversation.id,
@@ -175,12 +184,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       setState(() => _isSending = false);
       if (message != null) {
         // Agregar mensaje inmediatamente a la UI (evita esperar realtime)
-        setState(() {
-          // Evitar duplicados
-          if (!_messages.any((m) => m.id == message.id)) {
+        if (!_messages.any((m) => m.id == message.id)) {
+          setState(() {
             _messages.insert(0, message);
-          }
-        });
+          });
+        }
         _scrollToBottom();
       }
     }
@@ -191,43 +199,41 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _typingTimer?.cancel();
     
     // Enviar indicador de "escribiendo"
-    if (_otherUserId != null) {
-      _realtimeService.sendTypingIndicator(
-        widget.conversation.id,
-        _isGroup 
-            ? widget.conversation.members
-                .where((m) => m.userId != widget.currentUserId)
-                .map((m) => m.userId)
-                .toList()
-            : [_otherUserId!],
-      );
-    }
+    _hubService.sendTypingIndicator(widget.conversation.id);
     
-    // Configurar timer para dejar de escribir
+    // Configurar timer para dejar de enviar indicadores
     _typingTimer = Timer(const Duration(seconds: 3), () {
-      _sendStoppedTyping();
+      _typingTimer?.cancel();
     });
   }
 
-  void _sendStoppedTyping() {
-    if (_otherUserId != null) {
-      _realtimeService.sendStoppedTypingIndicator(
-        widget.conversation.id,
-        _isGroup 
-            ? widget.conversation.members
-                .where((m) => m.userId != widget.currentUserId)
-                .map((m) => m.userId)
-                .toList()
-            : [_otherUserId!],
+  void _showUserProfile() {
+    if (_isGroup) {
+      // TODO: Mostrar info del grupo
+      return;
+    }
+    
+    final otherUserId = widget.conversation.getOtherUserId(widget.currentUserId);
+    if (otherUserId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => UserProfileScreen(
+            userId: otherUserId,
+            userName: _displayName,
+          ),
+        ),
       );
     }
-    _typingTimer?.cancel();
   }
 
   @override
   void dispose() {
-    _realtimeSubscription?.cancel();
-    _realtimeService.leaveConversation(widget.conversation.id);
+    _messageSubscription?.cancel();
+    _deliveredSubscription?.cancel();
+    _readSubscription?.cancel();
+    _typingSubscription?.cancel();
+    _hubService.leaveConversation(widget.conversation.id);
     _messageController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -333,14 +339,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         height: 8,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _realtimeService.isConnected 
+                          color: _hubService.isConnected 
                               ? Colors.green 
                               : Colors.grey,
                         ),
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        _realtimeService.isConnected ? 'En línea' : 'Desconectado',
+                        _hubService.isConnected ? 'En línea' : 'Desconectado',
                         style: TextStyle(
                           fontSize: 13,
                           color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
@@ -352,7 +358,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
           ),
-          // TODO: Menú de opciones
+          // Menú de opciones
           IconButton(
             icon: const Icon(Icons.more_vert_rounded),
             onPressed: () {
@@ -526,13 +532,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           color: isMe 
-                              ? Colors.white.withOpacity(0.7)
+                              ? Colors.white.withOpacity(0.7) 
                               : (isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary),
                         ),
                       ),
                       if (isMe) ...[
                         const SizedBox(width: 4),
-                        _buildStatusIcon(message.status, isMe),
+                        _buildMessageStatusIcon(message.status, isMe),
                       ],
                     ],
                   ),
@@ -545,31 +551,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  Widget _buildStatusIcon(MessageStatus status, bool isMe) {
-    IconData icon;
-    Color color;
-
+  Widget _buildMessageStatusIcon(MessageStatus status, bool isMe) {
+    final color = isMe ? Colors.white.withOpacity(0.7) : Colors.grey;
+    
     switch (status) {
       case MessageStatus.sent:
-        icon = Icons.check;
-        color = Colors.white.withOpacity(0.7);
-        break;
+        return Icon(Icons.check, size: 14, color: color);
       case MessageStatus.delivered:
-        icon = Icons.done_all;
-        color = Colors.white.withOpacity(0.7);
-        break;
+        return Icon(Icons.done_all, size: 14, color: color);
       case MessageStatus.read:
-        icon = Icons.done_all;
-        color = Colors.lightBlueAccent;
-        break;
+        return Icon(Icons.done_all, size: 14, color: Colors.blue.shade300);
     }
-
-    return Icon(icon, size: 16, color: color);
   }
 
   Widget _buildMessageInput(bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkCard : Colors.white,
         boxShadow: [
@@ -580,58 +577,65 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            // Campo de texto
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkBackground : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: TextField(
-                  controller: _messageController,
-                  focusNode: _focusNode,
-                  onChanged: (_) => _onTyping(),
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLines: 4,
-                  minLines: 1,
-                  style: TextStyle(
-                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+      child: Row(
+        children: [
+          // Botón de adjuntar
+          IconButton(
+            icon: Icon(
+              Icons.add_rounded,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+            ),
+            onPressed: () {
+              // TODO: Implementar adjuntar archivos
+            },
+          ),
+          
+          // Campo de texto
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark 
+                    ? Colors.white.withOpacity(0.1) 
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: TextField(
+                controller: _messageController,
+                focusNode: _focusNode,
+                onChanged: (_) => _onTyping(),
+                decoration: InputDecoration(
+                  hintText: 'Escribe un mensaje...',
+                  hintStyle: TextStyle(
+                    color: isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary,
                   ),
-                  decoration: InputDecoration(
-                    hintText: 'Escribe un mensaje...',
-                    hintStyle: TextStyle(
-                      color: isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
+                maxLines: 4,
+                minLines: 1,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendMessage(),
               ),
             ),
-            const SizedBox(width: 12),
-            // Botón enviar
-            GestureDetector(
-              onTap: _sendMessage,
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppTheme.primaryPurple, AppTheme.primaryPurple.withOpacity(0.8)],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryPurple.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
+          ),
+          
+          const SizedBox(width: 8),
+          
+          // Botón de enviar
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.primaryPurple, AppTheme.primaryPurple.withOpacity(0.8)],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _isSending ? null : _sendMessage,
+                borderRadius: BorderRadius.circular(22),
                 child: Center(
                   child: _isSending
                       ? const SizedBox(
@@ -642,39 +646,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                      : const Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
-  }
-
-  void _showUserProfile() {
-    if (_isGroup) {
-      // TODO: Mostrar info del grupo
-      return;
-    }
-    
-    // Encontrar el otro usuario
-    final otherMember = widget.conversation.members.firstWhere(
-      (m) => m.userId != widget.currentUserId,
-      orElse: () => ConversationMember.empty(),
-    );
-    
-    if (otherMember.userId.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => UserProfileScreen(
-            userId: otherMember.userId,
-            userName: otherMember.userName,
-          ),
-        ),
-      );
-    }
   }
 
   String _formatMessageTime(DateTime dateTime) {
@@ -684,13 +667,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 }
 
-/// Animación de puntos para "escribiendo..."
+/// Animación de puntos para indicador de escritura
 class _TypingDotsAnimation extends StatefulWidget {
   @override
   State<_TypingDotsAnimation> createState() => _TypingDotsAnimationState();
 }
 
-class _TypingDotsAnimationState extends State<_TypingDotsAnimation>
+class _TypingDotsAnimationState extends State<_TypingDotsAnimation> 
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
@@ -698,8 +681,8 @@ class _TypingDotsAnimationState extends State<_TypingDotsAnimation>
   void initState() {
     super.initState();
     _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
     )..repeat();
   }
 
@@ -717,10 +700,9 @@ class _TypingDotsAnimationState extends State<_TypingDotsAnimation>
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(3, (index) {
-            final delay = index * 0.33;
-            final value = _controller.value;
-            final animValue = ((value + delay) % 1.0);
-            final scale = 0.5 + (0.5 * (1 - (animValue * 2 - 1).abs()));
+            final delay = index * 0.2;
+            final value = (_controller.value - delay).clamp(0.0, 1.0);
+            final opacity = (value < 0.5 ? value * 2 : 2 - value * 2).clamp(0.3, 1.0);
             
             return Container(
               width: 6,
@@ -728,7 +710,7 @@ class _TypingDotsAnimationState extends State<_TypingDotsAnimation>
               margin: const EdgeInsets.symmetric(horizontal: 1),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.primaryPurple.withOpacity(scale),
+                color: Colors.grey.withOpacity(opacity),
               ),
             );
           }),

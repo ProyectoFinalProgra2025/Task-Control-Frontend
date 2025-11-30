@@ -51,12 +51,14 @@ class _NewChatScreenState extends State<NewChatScreen> {
   Future<void> _startConversation(ChatUserSearchResult user) async {
     setState(() => _isCreating = true);
 
-    final conversation = await _chatService.getOrCreateDirectConversation(user.id);
+    // getOrCreateDirectConversation ahora devuelve un String (conversationId)
+    final conversationId = await _chatService.getOrCreateDirectConversation(user.id);
     
     if (mounted) {
       setState(() => _isCreating = false);
-      if (conversation != null) {
-        Navigator.pop(context, conversation);
+      if (conversationId != null) {
+        // Devolver el ID de la conversación creada
+        Navigator.pop(context, conversationId);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -286,20 +288,18 @@ class _NewChatScreenState extends State<NewChatScreen> {
                               ),
                             ),
                           ),
-                          if (user.departamento != null) ...[
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                user.departamento!,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              user.email,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
+                          ),
                         ],
                       ),
                     ],

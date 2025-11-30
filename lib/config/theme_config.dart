@@ -12,6 +12,14 @@ class AppTheme {
   static const Color primaryPurple = Color(0xFF7C3AED);    // Super Admin
   static const Color primaryPink = Color(0xFFEC4899);      // Acento
   static const Color primaryOrange = Color(0xFFF59E0B);    // Warnings
+  
+  // Alias para compatibilidad
+  static const Color primaryColor = primaryBlue;
+  static const Color darkScaffold = darkBackground;
+  static const Color lightScaffold = lightBackground;
+  static const Color darkText = darkTextPrimary;
+  static const Color lightText = lightTextPrimary;
+  static const double textSizeSmall = fontSizeSmall;
 
   // Colores de ESTADO
   static const Color successGreen = Color(0xFF10B981);

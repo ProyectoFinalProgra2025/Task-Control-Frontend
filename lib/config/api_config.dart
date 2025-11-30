@@ -18,9 +18,15 @@ class ApiConfig {
   // Endpoints de usuarios
   static const String usuariosEndpoint = '/api/Usuarios';
   
-  // TODO: Endpoints de chat - Pendiente implementación con nuevo backend
-  // static const String usersSearchEndpoint = '/api/users/search';
-  // static const String chatsEndpoint = '/api/chats';
+  // Endpoints de chat - COMPLETAMENTE IMPLEMENTADOS
+  static const String chatUsersSearchEndpoint = '/api/chat/users/search';
+  static const String chatConversationsEndpoint = '/api/chat/conversations';
+  static const String chatMessagesEndpoint = '/api/chat/conversations/{id}/messages';
+  static const String chatFilesEndpoint = '/api/chat/conversations/{id}/files';
+  static const String chatMessageDeliveredEndpoint = '/api/chat/messages/{id}/delivered';
+  static const String chatMessageReadEndpoint = '/api/chat/messages/{id}/read';
+  static const String chatMessagesReadAllEndpoint = '/api/chat/conversations/{id}/read-all';
+  static const String chatUnreadCountEndpoint = '/api/chat/conversations/{id}/unread-count';
   
   // Headers comunes
   static Map<String, String> get headers => {

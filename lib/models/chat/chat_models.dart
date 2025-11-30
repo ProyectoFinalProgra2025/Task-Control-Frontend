@@ -1,4 +1,5 @@
 /// Modelos para el sistema de chat
+/// Sincronizados con los DTOs del backend (ChatController.cs)
 
 /// Tipo de conversación
 enum ConversationType { direct, group }
@@ -10,6 +11,7 @@ enum MessageStatus { sent, delivered, read }
 enum MessageContentType { text, image, document, audio, video }
 
 /// Modelo de conversación
+/// Sincronizado con la respuesta de GET /api/chat/conversations
 class Conversation {
   final String id;
   final ConversationType type;
@@ -18,6 +20,7 @@ class Conversation {
   final String createdById;
   final DateTime createdAt;
   final DateTime lastActivityAt;
+  final bool isActive;
   final List<ConversationMember> members;
   final ChatMessage? lastMessage;
   final int unreadCount;
@@ -30,12 +33,20 @@ class Conversation {
     required this.createdById,
     required this.createdAt,
     required this.lastActivityAt,
+    this.isActive = true,
     this.members = const [],
     this.lastMessage,
     this.unreadCount = 0,
   });
 
   factory Conversation.fromJson(Map<String, dynamic> json) {
+    final members = (json['members'] as List?)
+        ?.map((m) => ConversationMember.fromJson(m))
+        .toList() ?? [];
+    
+    // Debug: imprimir los miembros para diagnosticar
+    print('[Conversation.fromJson] id=${json['id']}, members=${members.map((m) => 'userId=${m.userId}, userName=${m.userName}').toList()}');
+    
     return Conversation(
       id: json['id']?.toString() ?? '',
       type: json['type'] == 'Group' ? ConversationType.group : ConversationType.direct,
@@ -44,9 +55,8 @@ class Conversation {
       createdById: json['createdById']?.toString() ?? '',
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       lastActivityAt: DateTime.tryParse(json['lastActivityAt'] ?? '') ?? DateTime.now(),
-      members: (json['members'] as List?)
-          ?.map((m) => ConversationMember.fromJson(m))
-          .toList() ?? [],
+      isActive: json['isActive'] ?? true,
+      members: members,
       lastMessage: json['lastMessage'] != null 
           ? ChatMessage.fromJson(json['lastMessage']) 
           : null,
@@ -56,22 +66,33 @@ class Conversation {
 
   /// Obtener el nombre a mostrar (para chats directos, el nombre del otro usuario)
   String getDisplayName(String currentUserId) {
+    print('[Conversation.getDisplayName] currentUserId=$currentUserId, type=$type, membersCount=${members.length}');
+    
     if (type == ConversationType.group) {
       return name ?? 'Grupo sin nombre';
     }
+    
+    // Debug: imprimir todos los miembros
+    for (var m in members) {
+      print('[Conversation.getDisplayName] member: userId=${m.userId}, userName=${m.userName}, match=${m.userId.toLowerCase() != currentUserId.toLowerCase()}');
+    }
+    
     // Para chat directo, mostrar el nombre del otro miembro
+    // Comparación case-insensitive para GUIDs
     final otherMember = members.firstWhere(
-      (m) => m.userId != currentUserId,
+      (m) => m.userId.toLowerCase() != currentUserId.toLowerCase(),
       orElse: () => members.isNotEmpty ? members.first : ConversationMember.empty(),
     );
+    print('[Conversation.getDisplayName] otherMember found: userId=${otherMember.userId}, userName=${otherMember.userName}');
     return otherMember.userName;
   }
 
   /// Obtener el ID del otro usuario en un chat directo
   String? getOtherUserId(String currentUserId) {
     if (type != ConversationType.direct) return null;
+    // Comparación case-insensitive para GUIDs
     final otherMember = members.firstWhere(
-      (m) => m.userId != currentUserId,
+      (m) => m.userId.toLowerCase() != currentUserId.toLowerCase(),
       orElse: () => ConversationMember.empty(),
     );
     return otherMember.userId.isNotEmpty ? otherMember.userId : null;
@@ -79,6 +100,7 @@ class Conversation {
 }
 
 /// Miembro de una conversación
+/// Sincronizado con la respuesta del backend
 class ConversationMember {
   final String userId;
   final String userName;
@@ -86,6 +108,7 @@ class ConversationMember {
   final DateTime joinedAt;
   final bool isMuted;
   final DateTime? lastReadAt;
+  final bool isActive;
 
   ConversationMember({
     required this.userId,
@@ -94,6 +117,7 @@ class ConversationMember {
     required this.joinedAt,
     this.isMuted = false,
     this.lastReadAt,
+    this.isActive = true,
   });
 
   factory ConversationMember.fromJson(Map<String, dynamic> json) {
@@ -106,6 +130,7 @@ class ConversationMember {
       lastReadAt: json['lastReadAt'] != null 
           ? DateTime.tryParse(json['lastReadAt']) 
           : null,
+      isActive: json['isActive'] ?? true,
     );
   }
 
@@ -120,6 +145,7 @@ class ConversationMember {
 }
 
 /// Mensaje de chat
+/// Sincronizado con la respuesta de GET /api/chat/conversations/{id}/messages
 class ChatMessage {
   final String id;
   final String conversationId;
@@ -137,6 +163,7 @@ class ChatMessage {
   final MessageStatus status;
   final bool isEdited;
   final DateTime? editedAt;
+  final bool isDeleted;
   final String? replyToMessageId;
   final ChatMessage? replyToMessage;
   final List<MessageReadReceipt> readReceipts;
@@ -159,6 +186,7 @@ class ChatMessage {
     required this.status,
     this.isEdited = false,
     this.editedAt,
+    this.isDeleted = false,
     this.replyToMessageId,
     this.replyToMessage,
     this.readReceipts = const [],
@@ -189,6 +217,7 @@ class ChatMessage {
       editedAt: json['editedAt'] != null 
           ? DateTime.tryParse(json['editedAt']) 
           : null,
+      isDeleted: json['isDeleted'] ?? false,
       replyToMessageId: json['replyToMessageId']?.toString(),
       replyToMessage: json['replyToMessage'] != null 
           ? ChatMessage.fromJson(json['replyToMessage']) 
@@ -242,6 +271,7 @@ class ChatMessage {
       status: newStatus,
       isEdited: isEdited,
       editedAt: editedAt,
+      isDeleted: isDeleted,
       replyToMessageId: replyToMessageId,
       replyToMessage: replyToMessage,
       readReceipts: readReceipts,
@@ -293,34 +323,30 @@ class MessageDeliveryReceipt {
 }
 
 /// Usuario para búsqueda de chat
+/// Sincronizado con respuesta de GET /api/chat/users/search
 class ChatUserSearchResult {
   final String id;
-  final String nombre;
+  final String nombreCompleto;
   final String email;
   final String rol;
-  final String? departamento;
   final String? empresaId;
-  final String? empresaNombre;
 
   ChatUserSearchResult({
     required this.id,
-    required this.nombre,
+    required this.nombreCompleto,
     required this.email,
     required this.rol,
-    this.departamento,
     this.empresaId,
-    this.empresaNombre,
   });
 
   factory ChatUserSearchResult.fromJson(Map<String, dynamic> json) {
     return ChatUserSearchResult(
       id: json['id']?.toString() ?? '',
-      nombre: json['nombre'] ?? '',
+      // El backend envía 'nombreCompleto' no 'nombre'
+      nombreCompleto: json['nombreCompleto'] ?? json['nombre'] ?? '',
       email: json['email'] ?? '',
       rol: json['rol'] ?? '',
-      departamento: json['departamento'],
       empresaId: json['empresaId']?.toString(),
-      empresaNombre: json['empresaNombre'],
     );
   }
 
@@ -334,4 +360,7 @@ class ChatUserSearchResult {
       default: return rol;
     }
   }
+  
+  /// Getter para compatibilidad con código existente
+  String get nombre => nombreCompleto;
 }

@@ -1,15 +1,13 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme_config.dart';
 import '../../models/chat/chat_models.dart';
 import '../../providers/usuario_provider.dart';
-import '../../services/chat_service.dart';
-import '../../services/chat_realtime_service.dart';
+import '../../providers/chat_provider.dart';
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
 
-/// Pantalla de lista de chats - Diseño moderno con realtime
+/// Pantalla de lista de chats - Usa ChatProvider para estado y realtime
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
 
@@ -18,80 +16,46 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  final ChatService _chatService = ChatService();
-  final ChatRealtimeService _realtimeService = ChatRealtimeService.instance;
-  
-  List<Conversation> _conversations = [];
-  bool _isLoading = true;
-  bool _isConnected = false;
-  StreamSubscription<ChatRealtimeEvent>? _realtimeSubscription;
-  
   String? _currentUserId;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeChat();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeChat();
+    });
   }
 
   Future<void> _initializeChat() async {
+    if (_initialized) return;
+    
     // Obtener ID del usuario actual
     final usuarioProvider = context.read<UsuarioProvider>();
+    
+    // Si el usuario no está cargado, cargarlo primero
+    if (usuarioProvider.usuario == null) {
+      await usuarioProvider.cargarPerfil();
+    }
+    
     _currentUserId = usuarioProvider.usuario?.id;
     
-    // Conectar al realtime
-    await _connectRealtime();
+    print('[ChatListScreen] _currentUserId = $_currentUserId');
+    print('[ChatListScreen] usuario = ${usuarioProvider.usuario?.nombreCompleto}, rol = ${usuarioProvider.usuario?.rol}');
     
-    // Cargar conversaciones
-    await _loadConversations();
-  }
-
-  Future<void> _connectRealtime() async {
-    final connected = await _realtimeService.connect();
-    if (mounted) {
-      setState(() => _isConnected = connected);
-    }
+    // Inicializar el ChatProvider (conecta SignalR y carga conversaciones)
+    final chatProvider = context.read<ChatProvider>();
+    await chatProvider.initialize();
     
-    // Suscribirse a eventos
-    _realtimeSubscription = _realtimeService.eventStream.listen(_handleRealtimeEvent);
-  }
-
-  void _handleRealtimeEvent(ChatRealtimeEvent event) {
-    switch (event.type) {
-      case ChatEventType.connected:
-        setState(() => _isConnected = true);
-        break;
-      case ChatEventType.connectionLost:
-        setState(() => _isConnected = false);
-        break;
-      case ChatEventType.newMessage:
-        // Recargar conversaciones para actualizar último mensaje y orden
-        _loadConversations();
-        break;
-      case ChatEventType.messageRead:
-      case ChatEventType.messageDelivered:
-        // Actualizar estado si es necesario
-        _loadConversations();
-        break;
-      default:
-        break;
-    }
-  }
-
-  Future<void> _loadConversations() async {
-    final conversations = await _chatService.getConversations();
+    _initialized = true;
     if (mounted) {
-      setState(() {
-        _conversations = conversations;
-        _isLoading = false;
-      });
+      setState(() {});
     }
   }
 
-  @override
-  void dispose() {
-    _realtimeSubscription?.cancel();
-    super.dispose();
+  Future<void> _refreshConversations() async {
+    final chatProvider = context.read<ChatProvider>();
+    await chatProvider.loadConversations();
   }
 
   @override
@@ -102,27 +66,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(isDark),
-            _buildConnectionIndicator(),
-            const SizedBox(height: 8),
-            _buildMessagesLabel(isDark),
-            Expanded(
-              child: _isLoading
-                  ? _buildLoadingState()
-                  : _conversations.isEmpty
-                      ? _buildEmptyState(isDark)
-                      : _buildChatList(isDark),
-            ),
-          ],
+        child: Consumer<ChatProvider>(
+          builder: (context, chatProvider, _) {
+            final conversations = chatProvider.conversations;
+            final isLoading = chatProvider.loading;
+            final isConnected = chatProvider.connected;
+
+            return Column(
+              children: [
+                _buildHeader(isDark, isConnected),
+                _buildConnectionIndicator(isConnected),
+                const SizedBox(height: 8),
+                _buildMessagesLabel(isDark, conversations.length),
+                Expanded(
+                  child: isLoading && conversations.isEmpty
+                      ? _buildLoadingState()
+                      : conversations.isEmpty
+                          ? _buildEmptyState(isDark)
+                          : _buildChatList(isDark, conversations),
+                ),
+              ],
+            );
+          },
         ),
       ),
       floatingActionButton: _buildNewChatFAB(),
     );
   }
 
-  Widget _buildHeader(bool isDark) {
+  Widget _buildHeader(bool isDark, bool isConnected) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -158,10 +130,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _isConnected ? Colors.greenAccent : Colors.redAccent,
+                      color: isConnected ? Colors.greenAccent : Colors.redAccent,
                       boxShadow: [
                         BoxShadow(
-                          color: (_isConnected ? Colors.greenAccent : Colors.redAccent)
+                          color: (isConnected ? Colors.greenAccent : Colors.redAccent)
                               .withOpacity(0.5),
                           blurRadius: 6,
                           spreadRadius: 1,
@@ -222,8 +194,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildConnectionIndicator() {
-    if (_isConnected) return const SizedBox.shrink();
+  Widget _buildConnectionIndicator(bool isConnected) {
+    if (isConnected) return const SizedBox.shrink();
     
     return Container(
       width: double.infinity,
@@ -253,7 +225,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildMessagesLabel(bool isDark) {
+  Widget _buildMessagesLabel(bool isDark, int count) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
@@ -267,9 +239,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
               color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
             ),
           ),
-          if (_conversations.isNotEmpty)
+          if (count > 0)
             Text(
-              '${_conversations.length} chat${_conversations.length == 1 ? '' : 's'}',
+              '$count chat${count == 1 ? '' : 's'}',
               style: TextStyle(
                 fontSize: 14,
                 color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
@@ -365,14 +337,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildChatList(bool isDark) {
+  Widget _buildChatList(bool isDark, List<Conversation> conversations) {
     return RefreshIndicator(
-      onRefresh: _loadConversations,
+      onRefresh: _refreshConversations,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _conversations.length,
+        itemCount: conversations.length,
         itemBuilder: (context, index) {
-          return _buildChatTile(_conversations[index], isDark);
+          return _buildChatTile(conversations[index], isDark);
         },
       ),
     );
@@ -572,24 +544,36 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
     ).then((_) {
       // Recargar conversaciones al volver
-      _loadConversations();
+      _refreshConversations();
     });
   }
 
-  void _navigateToNewChat() {
-    Navigator.push(
+  void _navigateToNewChat() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => NewChatScreen(
           currentUserId: _currentUserId ?? '',
         ),
       ),
-    ).then((result) {
-      if (result != null && result is Conversation) {
-        _navigateToChatDetail(result);
+    );
+    
+    // Recargar conversaciones primero
+    await _refreshConversations();
+    
+    // Si se creó/seleccionó una conversación, navegar a ella
+    if (result != null && result is String) {
+      final chatProvider = context.read<ChatProvider>();
+      final conversations = chatProvider.conversations;
+      
+      // result es el conversationId
+      try {
+        final conversation = conversations.firstWhere((c) => c.id == result);
+        _navigateToChatDetail(conversation);
+      } catch (_) {
+        // No se encontró la conversación
       }
-      _loadConversations();
-    });
+    }
   }
 
   String _formatTime(DateTime dateTime) {

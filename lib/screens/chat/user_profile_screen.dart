@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/theme_config.dart';
 import '../../models/usuario.dart';
-import '../../services/usuario_service.dart';
 
 /// Pantalla para ver el perfil público de otro usuario
 /// Se accede desde el chat al hacer tap en el nombre/avatar
@@ -20,11 +19,8 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  final UsuarioService _usuarioService = UsuarioService();
-  
   Usuario? _user;
   bool _isLoading = true;
-  String? _error;
 
   @override
   void initState() {
@@ -41,9 +37,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = e.toString();
         _isLoading = false;
       });
+      debugPrint('Error loading user profile: $e');
     }
   }
 

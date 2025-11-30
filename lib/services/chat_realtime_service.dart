@@ -4,18 +4,22 @@ import 'storage_service.dart';
 import '../config/api_config.dart';
 
 /// Servicio de SignalR para chat en tiempo real.
+/// Sincronizado con ChatHub del backend
 /// 
-/// Se conecta al ChatHub del backend para:
-/// - Recibir mensajes nuevos
-/// - Notificaciones de entrega/lectura
-/// - Indicador de "escribiendo..."
-/// 
-/// Eventos del backend:
-/// - chat:message - Nuevo mensaje
-/// - chat:message_delivered - Mensaje entregado (✓)
-/// - chat:message_read - Mensaje leído (✓✓)
-/// - chat:typing - Usuario escribiendo
-/// - chat:conversation_updated - Conversación actualizada
+/// CONEXIÓN:
+/// - URL: wss://api.taskcontrol.work/chathub?access_token={jwt}
+/// - Requiere JWT válido en query string
+///
+/// EVENTOS QUE EL CLIENTE PUEDE ESCUCHAR (del backend):
+/// - "ReceiveMessage" -> Nuevo mensaje en cualquier chat
+/// - "MessageDelivered" -> Confirmación de entrega (✓)
+/// - "MessageRead" -> Confirmación de lectura (✓✓)
+/// - "UserTyping" -> Usuario está escribiendo
+///
+/// MÉTODOS QUE EL CLIENTE PUEDE INVOCAR:
+/// - JoinConversation(conversationId) -> Unirse a un chat específico
+/// - LeaveConversation(conversationId) -> Salir de un chat específico
+/// - SendTyping(conversationId) -> Indicar que está escribiendo
 class ChatRealtimeService {
   static ChatRealtimeService? _instance;
   
@@ -97,7 +101,7 @@ class ChatRealtimeService {
       _isConnected = true;
       _isConnecting = false;
       
-      print('[ChatRealtimeService] Connected successfully!');
+      print('[ChatRealtimeService] ✅ Connected successfully!');
       
       _emitEvent(ChatRealtimeEvent(
         type: ChatEventType.connected,
@@ -108,17 +112,19 @@ class ChatRealtimeService {
     } catch (e) {
       _isConnecting = false;
       _isConnected = false;
-      print('[ChatRealtimeService] Connection error: $e');
+      print('[ChatRealtimeService] ❌ Connection error: $e');
       return false;
     }
   }
   
   /// Registrar handlers para eventos de chat
+  /// Nombres sincronizados con ChatHub.cs del backend
   void _registerEventHandlers() {
     if (_hubConnection == null) return;
     
-    // Nuevo mensaje
-    _hubConnection!.on('chat:message', (arguments) {
+    // Nuevo mensaje - Backend: "ReceiveMessage"
+    _hubConnection!.on('ReceiveMessage', (arguments) {
+      print('[ChatRealtimeService] 📨 ReceiveMessage: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
         _emitEvent(ChatRealtimeEvent(
           type: ChatEventType.newMessage,
@@ -127,8 +133,9 @@ class ChatRealtimeService {
       }
     });
     
-    // Mensaje entregado
-    _hubConnection!.on('chat:message_delivered', (arguments) {
+    // Mensaje entregado - Backend: "MessageDelivered"
+    _hubConnection!.on('MessageDelivered', (arguments) {
+      print('[ChatRealtimeService] ✓ MessageDelivered: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
         _emitEvent(ChatRealtimeEvent(
           type: ChatEventType.messageDelivered,
@@ -137,8 +144,9 @@ class ChatRealtimeService {
       }
     });
     
-    // Mensaje leído
-    _hubConnection!.on('chat:message_read', (arguments) {
+    // Mensaje leído - Backend: "MessageRead"
+    _hubConnection!.on('MessageRead', (arguments) {
+      print('[ChatRealtimeService] ✓✓ MessageRead: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
         _emitEvent(ChatRealtimeEvent(
           type: ChatEventType.messageRead,
@@ -147,8 +155,9 @@ class ChatRealtimeService {
       }
     });
     
-    // Usuario escribiendo
-    _hubConnection!.on('chat:typing', (arguments) {
+    // Usuario escribiendo - Backend: "UserTyping"
+    _hubConnection!.on('UserTyping', (arguments) {
+      print('[ChatRealtimeService] ⌨️ UserTyping: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
         _emitEvent(ChatRealtimeEvent(
           type: ChatEventType.typing,
@@ -156,24 +165,15 @@ class ChatRealtimeService {
         ));
       }
     });
-    
-    // Conversación actualizada
-    _hubConnection!.on('chat:conversation_updated', (arguments) {
-      if (arguments != null && arguments.isNotEmpty) {
-        _emitEvent(ChatRealtimeEvent(
-          type: ChatEventType.conversationUpdated,
-          data: _parseEventData(arguments[0]),
-        ));
-      }
-    });
   }
   
   /// Unirse a una conversación (para recibir eventos de grupo)
+  /// Método del backend: JoinConversation(string conversationId)
   Future<void> joinConversation(String conversationId) async {
     if (_hubConnection != null && _isConnected) {
       try {
         await _hubConnection!.invoke('JoinConversation', args: [conversationId]);
-        print('[ChatRealtimeService] Joined conversation: $conversationId');
+        print('[ChatRealtimeService] 💬 Joined conversation: $conversationId');
       } catch (e) {
         print('[ChatRealtimeService] Error joining conversation: $e');
       }
@@ -181,11 +181,12 @@ class ChatRealtimeService {
   }
   
   /// Salir de una conversación
+  /// Método del backend: LeaveConversation(string conversationId)
   Future<void> leaveConversation(String conversationId) async {
     if (_hubConnection != null && _isConnected) {
       try {
         await _hubConnection!.invoke('LeaveConversation', args: [conversationId]);
-        print('[ChatRealtimeService] Left conversation: $conversationId');
+        print('[ChatRealtimeService] 🚪 Left conversation: $conversationId');
       } catch (e) {
         print('[ChatRealtimeService] Error leaving conversation: $e');
       }
@@ -193,29 +194,13 @@ class ChatRealtimeService {
   }
   
   /// Enviar indicador de "escribiendo..."
-  Future<void> sendTypingIndicator(String conversationId, List<String> recipientUserIds) async {
+  /// Método del backend: SendTyping(string conversationId)
+  Future<void> sendTypingIndicator(String conversationId) async {
     if (_hubConnection != null && _isConnected) {
       try {
-        await _hubConnection!.invoke(
-          'SendTypingIndicator', 
-          args: [conversationId, recipientUserIds.join(',')],
-        );
+        await _hubConnection!.invoke('SendTyping', args: [conversationId]);
       } catch (e) {
         print('[ChatRealtimeService] Error sending typing indicator: $e');
-      }
-    }
-  }
-  
-  /// Enviar indicador de "dejó de escribir"
-  Future<void> sendStoppedTypingIndicator(String conversationId, List<String> recipientUserIds) async {
-    if (_hubConnection != null && _isConnected) {
-      try {
-        await _hubConnection!.invoke(
-          'SendStoppedTypingIndicator', 
-          args: [conversationId, recipientUserIds.join(',')],
-        );
-      } catch (e) {
-        print('[ChatRealtimeService] Error sending stopped typing indicator: $e');
       }
     }
   }
@@ -238,6 +223,7 @@ class ChatRealtimeService {
     if (_hubConnection != null) {
       try {
         await _hubConnection!.stop();
+        print('[ChatRealtimeService] 👋 Disconnected');
       } catch (_) {}
       _hubConnection = null;
     }
@@ -285,7 +271,7 @@ class ChatRealtimeEvent {
   
   // Helpers para acceder a datos comunes
   String? get conversationId => data?['conversationId']?.toString();
-  String? get messageId => data?['messageId']?.toString();
+  String? get messageId => data?['messageId']?.toString() ?? data?['id']?.toString();
   String? get senderId => data?['senderId']?.toString();
   String? get senderName => data?['senderName']?.toString();
   String? get content => data?['content']?.toString();

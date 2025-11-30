@@ -801,6 +801,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ignore: unused_element - Reservado para uso futuro
   String _getRoleDisplayName() {
     switch (widget.role) {
       case ProfileRole.worker:
