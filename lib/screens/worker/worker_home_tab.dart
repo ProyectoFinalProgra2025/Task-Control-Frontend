@@ -10,6 +10,8 @@ import '../../models/enums/estado_tarea.dart';
 import '../../config/theme_config.dart';
 import '../../mixins/tarea_realtime_mixin.dart';
 import '../../services/tarea_realtime_service.dart';
+import '../../services/chat_service.dart';
+import '../chat/chat_detail_screen.dart';
 import 'worker_tasks_list_screen.dart';
 
 class WorkerHomeTab extends StatefulWidget {
@@ -528,25 +530,122 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
   }
 
   Future<void> _openChatWithCreator(Tarea tarea) async {
-    // TODO: Implementar chat con nuevo backend
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.info_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text('El sistema de chat estará disponible pronto'),
-            ),
-          ],
+    if (tarea.createdByUsuarioId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No se puede identificar al creador de la tarea'),
+          backgroundColor: AppTheme.warningOrange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        backgroundColor: AppTheme.primaryPurple,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+      );
+      return;
+    }
+
+    // Obtener el ID del usuario actual
+    final usuarioProvider = Provider.of<UsuarioProvider>(context, listen: false);
+    final currentUserId = usuarioProvider.usuario?.id;
+    
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Error: No se pudo obtener tu información de usuario'),
+          backgroundColor: AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Mostrar loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppTheme.primaryBlue),
+              const SizedBox(height: 16),
+              Text(
+                'Abriendo chat con ${tarea.createdByUsuarioNombre}...',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+
+    try {
+      final chatService = ChatService();
+      
+      // Crear o obtener conversación directa
+      final conversationId = await chatService.getOrCreateDirectConversation(tarea.createdByUsuarioId);
+      
+      if (conversationId == null) {
+        Navigator.pop(context); // Cerrar loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No se pudo iniciar el chat'),
+            backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+
+      // Obtener la conversación completa
+      final conversation = await chatService.getConversation(conversationId);
+      
+      Navigator.pop(context); // Cerrar loading
+      
+      if (conversation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No se pudo cargar la conversación'),
+            backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+
+      // Navegar al chat
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatDetailScreen(
+            conversation: conversation,
+            currentUserId: currentUserId,
+          ),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // Cerrar loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al abrir chat: $e'),
+          backgroundColor: AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   Widget _buildPremiumEmptyState({required bool isDark}) {
