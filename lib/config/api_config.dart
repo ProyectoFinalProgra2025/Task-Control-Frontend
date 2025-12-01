@@ -1,7 +1,7 @@
 class ApiConfig {
   // URL base del API - Cambiar para producción
   // static const String baseUrl = 'https://api.taskcontrol.work'; // Producción
-  static const String baseUrl = 'http://localhost:5080'; 
+  static const String baseUrl = 'https://api.taskcontrol.work'; 
   
   // Endpoints de autenticación
   static const String loginEndpoint = '/api/Auth/login';
