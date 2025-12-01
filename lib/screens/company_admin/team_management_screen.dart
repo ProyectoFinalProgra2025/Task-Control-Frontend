@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/usuario_service.dart';
 import '../../models/usuario.dart';
 import '../../widgets/create_user_modal.dart';
+import '../../widgets/cambiar_password_dialog.dart';
 import 'importar_usuarios_csv_screen.dart';
 
 class TeamManagementScreen extends StatefulWidget {
@@ -45,6 +46,19 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
         });
       }
     }
+  }
+
+  Future<void> _showCambiarPasswordDialog(Usuario usuario) async {
+    await showDialog(
+      context: context,
+      builder: (context) => CambiarPasswordDialog(
+        nombreUsuario: usuario.nombreCompleto,
+        emailUsuario: usuario.email,
+        onConfirm: (nuevaPassword) async {
+          await _usuarioService.cambiarPasswordUsuario(usuario.id, nuevaPassword);
+        },
+      ),
+    );
   }
 
   Future<void> _deleteUsuario(String id, String nombre) async {
@@ -447,11 +461,36 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     color: cardColor,
                     onSelected: (value) {
-                      if (value == 'delete') {
+                      if (value == 'change_password') {
+                        _showCambiarPasswordDialog(usuario);
+                      } else if (value == 'delete') {
                         _deleteUsuario(usuario.id, usuario.nombreCompleto);
                       }
                     },
                     itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'change_password',
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.lock_reset, color: Color(0xFFF59E0B), size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Cambiar Contraseña',
+                              style: TextStyle(
+                                color: Color(0xFFF59E0B),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       PopupMenuItem(
                         value: 'delete',
                         child: Row(

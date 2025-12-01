@@ -329,4 +329,94 @@ class UsuarioService {
       return null;
     }
   }
+
+  // ==================== CAMBIO DE CONTRASEÑA POR ADMINISTRADORES ====================
+
+  /// Obtener AdminEmpresa de una empresa específica (solo AdminGeneral)
+  /// [empresaId] - ID de la empresa
+  Future<Map<String, dynamic>?> getAdminEmpresaByEmpresaId(String empresaId) async {
+    try {
+      final response = await _http.get('/api/usuarios/adminempresa-por-empresaid?empresaId=$empresaId');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return data['data'];
+        } else {
+          throw Exception(data['message'] ?? 'Error al obtener AdminEmpresa');
+        }
+      } else if (response.statusCode == 404) {
+        return null;
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        throw Exception('No autorizado. Solo AdminGeneral puede realizar esta acción.');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al obtener AdminEmpresa');
+      }
+    } catch (e) {
+      throw Exception('Error al obtener AdminEmpresa: $e');
+    }
+  }
+
+  /// Cambiar contraseña de un usuario (AdminEmpresa cambia contraseña de Usuario/Manager)
+  /// [usuarioId] - ID del usuario al que se le cambiará la contraseña
+  /// [nuevaPassword] - Nueva contraseña para el usuario
+  Future<void> cambiarPasswordUsuario(String usuarioId, String nuevaPassword) async {
+    try {
+      final response = await _http.put(
+        '/api/usuarios/cambiar-password-usuario',
+        body: {
+          'usuarioId': usuarioId,
+          'nuevaPassword': nuevaPassword,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Error al cambiar contraseña');
+        }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        throw Exception('No autorizado. Solo AdminEmpresa puede cambiar contraseñas de usuarios.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Usuario no encontrado o inactivo');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al cambiar contraseña');
+      }
+    } catch (e) {
+      throw Exception('Error al cambiar contraseña: $e');
+    }
+  }
+
+  /// Cambiar contraseña de un AdminEmpresa (AdminGeneral cambia contraseña de AdminEmpresa)
+  /// [usuarioId] - ID del AdminEmpresa al que se le cambiará la contraseña
+  /// [nuevaPassword] - Nueva contraseña para el AdminEmpresa
+  Future<void> cambiarPasswordAdminEmpresa(String usuarioId, String nuevaPassword) async {
+    try {
+      final response = await _http.put(
+        '/api/usuarios/cambiar-password-adminempresa',
+        body: {
+          'usuarioId': usuarioId,
+          'nuevaPassword': nuevaPassword,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Error al cambiar contraseña');
+        }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        throw Exception('No autorizado. Solo AdminGeneral puede cambiar contraseñas de AdminEmpresa.');
+      } else if (response.statusCode == 404) {
+        throw Exception('AdminEmpresa no encontrado o inactivo');
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al cambiar contraseña');
+      }
+    } catch (e) {
+      throw Exception('Error al cambiar contraseña: $e');
+    }
+  }
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../services/empresa_service.dart';
+import '../../services/usuario_service.dart';
 import '../../models/empresa_model.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/premium_widgets.dart';
+import '../../widgets/cambiar_password_dialog.dart';
 
 class SuperAdminCompaniesTab extends StatefulWidget {
   const SuperAdminCompaniesTab({super.key});
@@ -14,6 +16,7 @@ class SuperAdminCompaniesTab extends StatefulWidget {
 class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
     with SingleTickerProviderStateMixin {
   final EmpresaService _empresaService = EmpresaService();
+  final UsuarioService _usuarioService = UsuarioService();
   String _selectedTab = 'Pending';
   List<EmpresaModel> _empresas = [];
   bool _isLoading = true;
@@ -258,6 +261,62 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
             ),
           );
         }
+      }
+    }
+  }
+
+  Future<void> _cambiarPasswordAdminEmpresa(EmpresaModel empresa) async {
+    try {
+      // Primero obtener el AdminEmpresa de esta empresa
+      final adminEmpresaData = await _usuarioService.getAdminEmpresaByEmpresaId(empresa.id);
+      
+      if (adminEmpresaData == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white),
+                  const SizedBox(width: AppTheme.spaceMedium),
+                  const Expanded(
+                    child: Text('No se encontró un AdminEmpresa activo para esta empresa'),
+                  ),
+                ],
+              ),
+              backgroundColor: AppTheme.dangerRed,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Mostrar diálogo de cambio de contraseña
+      await showDialog(
+        context: context,
+        builder: (context) => CambiarPasswordDialog(
+          nombreUsuario: adminEmpresaData['nombreCompleto'] ?? 'AdminEmpresa',
+          emailUsuario: adminEmpresaData['email'] ?? '',
+          onConfirm: (nuevaPassword) async {
+            await _usuarioService.cambiarPasswordAdminEmpresa(
+              adminEmpresaData['usuarioId'],
+              nuevaPassword,
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -762,6 +821,29 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
                     icon: Icons.close_rounded,
                     gradient: const [Color(0xFFEB3349), Color(0xFFF45C43)],
                     onPressed: () => _rechazarEmpresa(empresa.id, empresa.nombre),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (_selectedTab == 'Approved') ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionButton(
+                    label: 'Cambiar Password',
+                    icon: Icons.lock_reset,
+                    gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                    onPressed: () => _cambiarPasswordAdminEmpresa(empresa),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildActionButton(
+                    label: 'Eliminar',
+                    icon: Icons.delete_rounded,
+                    gradient: const [Color(0xFFEB3349), Color(0xFFF45C43)],
+                    onPressed: () => _eliminarEmpresa(empresa.id, empresa.nombre),
                   ),
                 ),
               ],
