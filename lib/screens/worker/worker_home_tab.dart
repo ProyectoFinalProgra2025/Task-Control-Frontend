@@ -5,6 +5,7 @@ import '../../widgets/task_progress_indicator.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../widgets/finish_task_dialog.dart';
 import '../../widgets/task_evidencias_widget.dart';
+import '../../widgets/calendar/task_calendar_widget.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/usuario_provider.dart';
 import '../../models/tarea.dart';
@@ -82,6 +83,8 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
           final nombreUsuario = usuarioProvider.usuario?.nombreCompleto ?? 'Worker';
           final firstName = nombreUsuario.split(' ').first;
           final userInitials = _getInitials(nombreUsuario);
+          // Todas las tareas del worker para el calendario
+          final misTareas = tareaProvider.misTareas;
 
           return SafeArea(
             child: RefreshIndicator(
@@ -252,6 +255,27 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
                           ? _buildTaskCard(tarea: tareaActiva, isDark: isDark)
                           : _buildPremiumEmptyState(isDark: isDark),
                     ),
+
+                    // Mi Calendario de Tareas
+                    const SizedBox(height: 28),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: TaskCalendarWidget(
+                        tareas: misTareas,
+                        title: 'Mi Calendario',
+                        primaryColor: AppTheme.primaryBlue,
+                        isLoading: tareaProvider.isLoading,
+                        onTaskTap: (tarea) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => WorkerTaskDetailScreen(tareaId: tarea.id),
+                            ),
+                          ).then((_) => _loadData());
+                        },
+                      ),
+                    ),
+
                     const SizedBox(height: 24),
                   ],
                 ),
