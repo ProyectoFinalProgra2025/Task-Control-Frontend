@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/usuario_service.dart';
 import '../../models/importar_usuarios_resultado.dart';
 
@@ -89,38 +91,29 @@ class _ImportarUsuariosCsvScreenState extends State<ImportarUsuariosCsvScreen> {
   }
 
   Future<void> _descargarPlantilla() async {
+    const plantillaUrl = 'https://taskcontrolstorage.blob.core.windows.net/test/Libro1.csv';
+    
     try {
-      final bytes = await _usuarioService.descargarPlantillaCsv();
-      if (bytes == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error al descargar plantilla')),
-          );
-        }
-        return;
-      }
-
       if (kIsWeb) {
-        // En web, usar html para descargar
+        // En web, abrir la URL directamente para descargar
         // ignore: avoid_web_libraries_in_flutter
-        // import 'dart:html' as html;
-        // html.AnchorElement(href: 'data:text/csv;base64,${base64Encode(bytes)}')
-        //   ..download = 'plantilla_usuarios.csv'
-        //   ..click();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Descarga de plantilla no disponible en web')),
-        );
+        await launchUrl(Uri.parse(plantillaUrl), mode: LaunchMode.externalApplication);
       } else {
-        // En móvil/desktop, guardar en directorio de descargas
-        final directory = await getApplicationDocumentsDirectory();
-        final file = File('${directory.path}/plantilla_usuarios.csv');
-        await file.writeAsBytes(bytes);
+        // En móvil/desktop, descargar el archivo desde la URL
+        final response = await http.get(Uri.parse(plantillaUrl));
+        
+        if (response.statusCode == 200) {
+          final directory = await getApplicationDocumentsDirectory();
+          final file = File('${directory.path}/plantilla_usuarios.csv');
+          await file.writeAsBytes(response.bodyBytes);
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Plantilla guardada en: ${file.path}')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Plantilla guardada en: ${file.path}')),
+            );
+          }
+        } else {
+          throw Exception('Error al descargar: ${response.statusCode}');
         }
       }
     } catch (e) {
@@ -449,6 +442,10 @@ class _ImportarUsuariosCsvScreenState extends State<ImportarUsuariosCsvScreen> {
             TextField(
               controller: _passwordController,
               obscureText: true,
+              onChanged: (value) {
+                // Trigger rebuild to update button state
+                setState(() {});
+              },
               decoration: InputDecoration(
                 labelText: 'Contraseña por defecto',
                 hintText: 'Mínimo 8 caracteres',
@@ -460,8 +457,25 @@ class _ImportarUsuariosCsvScreenState extends State<ImportarUsuariosCsvScreen> {
                 fillColor: isDark
                     ? const Color(0xFF324467).withOpacity(0.3)
                     : Colors.grey.shade50,
+                suffixIcon: _passwordController.text.length >= 8
+                    ? const Icon(Icons.check_circle, color: Color(0xFF10B981))
+                    : null,
               ),
               style: TextStyle(color: textPrimary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _passwordController.text.isEmpty
+                  ? 'Ingresa una contraseña de al menos 8 caracteres'
+                  : _passwordController.text.length < 8
+                      ? 'Faltan ${8 - _passwordController.text.length} caracteres'
+                      : '✓ Contraseña válida',
+              style: TextStyle(
+                fontSize: 12,
+                color: _passwordController.text.length >= 8
+                    ? const Color(0xFF10B981)
+                    : textSecondary,
+              ),
             ),
           ],
         ],
