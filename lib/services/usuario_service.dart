@@ -1,7 +1,12 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
 import 'api_http_service.dart';
+import '../config/api_config.dart';
 import '../models/usuario.dart';
 import '../models/capacidad_nivel_item.dart';
+import '../models/importar_usuarios_resultado.dart';
+import 'storage_service.dart';
 
 class UsuarioService {
   final ApiHttpService _http = ApiHttpService();
@@ -221,6 +226,107 @@ class UsuarioService {
       }
     } catch (e) {
       throw Exception('Error al crear usuario: $e');
+    }
+  }
+
+  // ==================== IMPORTACIÓN MASIVA CSV ====================
+
+  final StorageService _storage = StorageService();
+
+  /// Importa usuarios desde un archivo CSV (solo AdminEmpresa)
+  /// [file] - Archivo CSV con las columnas: Email,NombreCompleto,Telefono,Rol,Departamento,NivelHabilidad
+  /// [passwordPorDefecto] - Si se especifica, todos los usuarios usarán esta contraseña
+  Future<ImportarUsuariosResultado> importarUsuariosCsv(
+    PlatformFile file, {
+    String? passwordPorDefecto,
+  }) async {
+    try {
+      final token = await _storage.getAccessToken();
+      if (token == null) throw Exception('No hay token de autenticación');
+
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/usuarios/importar-csv');
+      final request = http.MultipartRequest('POST', uri);
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Agregar archivo CSV
+      if (file.bytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'ArchivoCSV',
+            file.bytes!,
+            filename: file.name,
+          ),
+        );
+      } else if (file.path != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'ArchivoCSV',
+            file.path!,
+            filename: file.name,
+          ),
+        );
+      } else {
+        throw Exception('No se puede leer el archivo');
+      }
+
+      // Agregar contraseña por defecto si existe
+      if (passwordPorDefecto != null && passwordPorDefecto.isNotEmpty) {
+        request.fields['PasswordPorDefecto'] = passwordPorDefecto;
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('Import CSV status: ${response.statusCode}');
+      print('Import CSV body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
+          return ImportarUsuariosResultado.fromJson(jsonResponse['data']);
+        } else {
+          throw Exception(jsonResponse['message'] ?? 'Error en la importación');
+        }
+      } else if (response.statusCode == 400) {
+        final jsonResponse = jsonDecode(response.body);
+        throw Exception(jsonResponse['message'] ?? 'Archivo CSV inválido');
+      } else if (response.statusCode == 401) {
+        throw Exception('Sesión expirada. Por favor, inicia sesión nuevamente.');
+      } else if (response.statusCode == 403) {
+        throw Exception('No tienes permisos para importar usuarios');
+      } else {
+        try {
+          final jsonResponse = jsonDecode(response.body);
+          throw Exception(jsonResponse['message'] ?? 'Error (${response.statusCode})');
+        } catch (e) {
+          throw Exception('Error del servidor (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      print('Error importing CSV: $e');
+      rethrow;
+    }
+  }
+
+  /// Descarga la plantilla CSV de ejemplo
+  /// Retorna los bytes del archivo o null si falla
+  Future<List<int>?> descargarPlantillaCsv() async {
+    try {
+      final token = await _storage.getAccessToken();
+      if (token == null) throw Exception('No hay token de autenticación');
+
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/usuarios/importar-csv/plantilla');
+      final response = await http.get(uri, headers: {
+        'Authorization': 'Bearer $token',
+      });
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+      return null;
+    } catch (e) {
+      print('Error downloading template: $e');
+      return null;
     }
   }
 }

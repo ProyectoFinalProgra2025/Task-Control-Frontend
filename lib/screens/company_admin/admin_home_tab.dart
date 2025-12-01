@@ -13,6 +13,7 @@ import '../../mixins/tarea_realtime_mixin.dart';
 import '../../services/tarea_realtime_service.dart';
 import 'team_management_screen.dart';
 import 'admin_task_detail_screen.dart';
+import 'importar_usuarios_csv_screen.dart';
 import '../../config/theme_config.dart';
 
 class AdminHomeTab extends StatefulWidget {
@@ -328,6 +329,19 @@ class _AdminHomeTabState extends State<AdminHomeTab> with TareaRealtimeMixin {
                         ),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Segunda fila de acciones rápidas
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildActionCard(
+                    icon: Icons.upload_file_rounded,
+                    title: 'Importar Usuarios',
+                    subtitle: 'Carga masiva desde CSV',
+                    color: const Color(0xFF10B981),
+                    onTap: _navigateToImportCsv,
+                    isDark: isDark,
                   ),
                 ),
 
@@ -669,5 +683,17 @@ class _AdminHomeTabState extends State<AdminHomeTab> with TareaRealtimeMixin {
       context,
       MaterialPageRoute(builder: (context) => const TeamManagementScreen()),
     );
+  }
+
+  void _navigateToImportCsv() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ImportarUsuariosCsvScreen()),
+    );
+    
+    // Si se importaron usuarios, refrescar datos
+    if (result == true || result == null) {
+      _loadData();
+    }
   }
 }

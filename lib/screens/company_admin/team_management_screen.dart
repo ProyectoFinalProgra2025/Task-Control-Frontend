@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/usuario_service.dart';
 import '../../models/usuario.dart';
 import '../../widgets/create_user_modal.dart';
+import 'importar_usuarios_csv_screen.dart';
 
 class TeamManagementScreen extends StatefulWidget {
   const TeamManagementScreen({super.key});
@@ -85,6 +86,20 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
     }
   }
 
+  void _navigateToImportCsv() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ImportarUsuariosCsvScreen(),
+      ),
+    );
+
+    // Si se importaron usuarios, recargar la lista
+    if (result == true || result == null) {
+      _loadUsuarios();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -103,6 +118,14 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
           style: TextStyle(color: textPrimary, fontWeight: FontWeight.bold),
         ),
         iconTheme: IconThemeData(color: textPrimary),
+        actions: [
+          // Botón de importación masiva CSV
+          IconButton(
+            onPressed: _navigateToImportCsv,
+            icon: Icon(Icons.upload_file, color: textPrimary),
+            tooltip: 'Importar desde CSV',
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
