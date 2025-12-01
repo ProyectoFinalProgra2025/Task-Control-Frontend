@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:file_picker/file_picker.dart';
 import '../../widgets/theme_toggle_button.dart';
 import '../../widgets/task_progress_indicator.dart';
 import '../../widgets/premium_widgets.dart';

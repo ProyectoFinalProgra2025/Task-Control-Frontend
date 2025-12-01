@@ -4,6 +4,7 @@ import '../../config/theme_config.dart';
 import '../../models/chat/chat_models.dart';
 import '../../services/chat_service.dart';
 import '../../services/chat_hub_service.dart';
+import '../../widgets/profile_photo_widget.dart';
 import 'user_profile_screen.dart';
 
 /// Pantalla de detalle de chat - Conversación individual
@@ -222,6 +223,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
     
     final otherUserId = widget.conversation.getOtherUserId(widget.currentUserId);
+    final otherUserPhoto = widget.conversation.getOtherUserPhoto(widget.currentUserId);
     if (otherUserId != null) {
       Navigator.push(
         context,
@@ -229,6 +231,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           builder: (_) => UserProfileScreen(
             userId: otherUserId,
             userName: _displayName,
+            fotoUrl: otherUserPhoto,
           ),
         ),
       );
@@ -274,6 +277,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Widget _buildHeader(bool isDark) {
+    final otherUserPhoto = _isGroup ? null : widget.conversation.getOtherUserPhoto(widget.currentUserId);
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
@@ -296,30 +301,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           // Avatar - Clickeable para ver perfil
           GestureDetector(
             onTap: () => _showUserProfile(),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: _isGroup
-                      ? [Colors.blue.shade400, Colors.blue.shade600]
-                      : [AppTheme.primaryPurple, AppTheme.primaryPurple.withOpacity(0.8)],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: _isGroup
-                    ? const Icon(Icons.group_rounded, color: Colors.white, size: 22)
-                    : Text(
-                        _displayName.isNotEmpty ? _displayName[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+            child: _isGroup
+                ? Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.blue.shade400, Colors.blue.shade600],
                       ),
-              ),
-            ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.group_rounded, color: Colors.white, size: 22),
+                    ),
+                  )
+                : UserAvatarWidget(
+                    fotoUrl: otherUserPhoto,
+                    nombreCompleto: _displayName,
+                    size: 44,
+                    backgroundColor: AppTheme.primaryPurple,
+                  ),
           ),
           const SizedBox(width: 12),
           // Nombre y estado - Clickeable para ver perfil

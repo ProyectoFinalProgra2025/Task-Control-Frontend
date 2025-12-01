@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../config/theme_config.dart';
 import '../../models/chat/chat_models.dart';
 import '../../services/chat_service.dart';
+import '../../widgets/profile_photo_widget.dart';
 
 /// Pantalla para iniciar una nueva conversación
 class NewChatScreen extends StatefulWidget {
@@ -233,28 +234,11 @@ class _NewChatScreenState extends State<NewChatScreen> {
             child: Row(
               children: [
                 // Avatar
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primaryPurple,
-                        AppTheme.primaryPurple.withOpacity(0.8),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      user.nombre.isNotEmpty ? user.nombre[0].toUpperCase() : '?',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                UserAvatarWidget(
+                  fotoUrl: user.fotoPerfilUrl,
+                  nombreCompleto: user.nombre,
+                  size: 50,
+                  backgroundColor: AppTheme.primaryPurple,
                 ),
                 const SizedBox(width: 12),
                 // Info

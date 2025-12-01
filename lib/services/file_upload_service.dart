@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
 import '../config/api_config.dart';
@@ -395,5 +396,95 @@ class FileUploadService {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  // ==================== FOTO DE PERFIL ====================
+
+  /// Obtiene el MIME type de un archivo basándose en su extensión
+  String _getMimeType(String fileName) {
+    final extension = fileName.toLowerCase().split('.').last;
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
+  /// Sube una foto de perfil para el usuario autenticado
+  /// Retorna la URL de la foto si es exitoso, null si falla
+  Future<String?> uploadFotoPerfil(PlatformFile file) async {
+    try {
+      final token = await _storage.getAccessToken();
+      if (token == null) throw Exception('No hay token de autenticación');
+
+      if (file.bytes == null) {
+        throw Exception('No se pueden leer los bytes del archivo');
+      }
+
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/usuarios/me/foto-perfil');
+      
+      final request = http.MultipartRequest('POST', uri);
+      request.headers['Authorization'] = 'Bearer $token';
+      
+      // Determinar el content-type correcto
+      final mimeType = _getMimeType(file.name);
+      print('[FileUploadService] Uploading file: ${file.name}, mimeType: $mimeType, size: ${file.size}');
+      
+      // Agregar el archivo con el content-type correcto
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          file.bytes!,
+          filename: file.name,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('[FileUploadService] Response status: ${response.statusCode}');
+      print('[FileUploadService] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        return jsonResponse['data']?['fotoUrl'];
+      } else {
+        print('Error subiendo foto: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error uploading profile photo: $e');
+      return null;
+    }
+  }
+
+  /// Elimina la foto de perfil del usuario autenticado
+  /// Nota: Esto requiere un endpoint en el backend para eliminar la foto
+  Future<bool> deleteFotoPerfil() async {
+    try {
+      final token = await _storage.getAccessToken();
+      if (token == null) throw Exception('No hay token de autenticación');
+
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/usuarios/me/foto-perfil');
+      
+      final response = await http.delete(
+        uri,
+        headers: ApiConfig.headersWithAuth(token),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error deleting profile photo: $e');
+      return false;
+    }
   }
 }

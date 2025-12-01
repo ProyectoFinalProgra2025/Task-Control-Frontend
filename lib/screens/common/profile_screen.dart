@@ -7,6 +7,7 @@ import '../../models/capacidad_nivel_item.dart';
 import '../../config/capacidades.dart';
 import '../../config/theme_config.dart';
 import '../../models/usuario.dart';
+import '../../widgets/profile_photo_widget.dart';
 
 /// Tipos de rol para el profile screen
 enum ProfileRole { worker, manager, adminEmpresa, superAdmin }
@@ -171,42 +172,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Column(
       children: [
-        // Avatar con role badge responsivo
+        // Avatar con foto de perfil editable
         Stack(
           children: [
-            Container(
-              width: avatarSize,
-              height: avatarSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [roleColor, roleColor.withOpacity(0.7)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: roleColor.withOpacity(0.3),
-                    blurRadius: isSmallScreen ? 12 : 20,
-                    offset: Offset(0, isSmallScreen ? 4 : 8),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  _getInitials(usuario.nombreCompleto),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: avatarSize * 0.4,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+            ProfilePhotoWidget(
+              fotoUrl: usuario.fotoPerfilUrl,
+              nombreCompleto: usuario.nombreCompleto,
+              size: avatarSize,
+              roleColor: roleColor,
+              editable: true,
+              onPhotoChanged: () {
+                // Recargar perfil cuando cambia la foto
+                Provider.of<UsuarioProvider>(context, listen: false).cargarPerfilCompleto();
+              },
             ),
             // Role badge responsivo
             Positioned(
               bottom: 0,
-              right: 0,
+              left: 0,
               child: Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: isVerySmallScreen ? 6 : 8,
@@ -1262,13 +1245,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }
     }
-  }
-
-  String _getInitials(String name) {
-    final parts = name.trim().split(' ');
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts[0][0].toUpperCase();
-    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 }
 
