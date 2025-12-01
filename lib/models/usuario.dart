@@ -8,6 +8,7 @@ class Usuario {
   final String? empresaNombre;
   final String? departamento;
   final int? nivelHabilidad;
+  final String? fotoPerfilUrl;
   final bool isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -23,6 +24,7 @@ class Usuario {
     this.empresaNombre,
     this.departamento,
     this.nivelHabilidad,
+    this.fotoPerfilUrl,
     required this.isActive,
     this.createdAt,
     this.updatedAt,
@@ -40,6 +42,7 @@ class Usuario {
       empresaNombre: json['empresaNombre'],
       departamento: json['departamento'],
       nivelHabilidad: json['nivelHabilidad'],
+      fotoPerfilUrl: json['fotoPerfilUrl'],
       isActive: json['isActive'] ?? true,
       createdAt: json['createdAt'] != null 
           ? DateTime.tryParse(json['createdAt']) 
@@ -52,6 +55,26 @@ class Usuario {
               .map((c) => CapacidadUsuario.fromJson(c))
               .toList()
           : [],
+    );
+  }
+  
+  /// Crea una copia del usuario con la foto actualizada
+  Usuario copyWith({String? fotoPerfilUrl}) {
+    return Usuario(
+      id: id,
+      email: email,
+      nombreCompleto: nombreCompleto,
+      telefono: telefono,
+      rol: rol,
+      empresaId: empresaId,
+      empresaNombre: empresaNombre,
+      departamento: departamento,
+      nivelHabilidad: nivelHabilidad,
+      fotoPerfilUrl: fotoPerfilUrl ?? this.fotoPerfilUrl,
+      isActive: isActive,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      capacidades: capacidades,
     );
   }
   

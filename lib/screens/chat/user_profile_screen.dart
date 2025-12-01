@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../config/theme_config.dart';
 import '../../models/usuario.dart';
+import '../../widgets/profile_photo_widget.dart';
 
 /// Pantalla para ver el perfil público de otro usuario
 /// Se accede desde el chat al hacer tap en el nombre/avatar
 class UserProfileScreen extends StatefulWidget {
   final String userId;
   final String userName;
+  final String? fotoUrl;
 
   const UserProfileScreen({
     super.key,
     required this.userId,
     required this.userName,
+    this.fotoUrl,
   });
 
   @override
@@ -79,33 +82,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     children: [
                       const SizedBox(height: 40),
                       // Avatar grande
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          // TODO: Usar imagen de perfil cuando esté disponible
-                          child: Text(
-                            widget.userName.isNotEmpty 
-                                ? widget.userName[0].toUpperCase() 
-                                : '?',
-                            style: TextStyle(
-                              fontSize: 42,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryPurple,
-                            ),
-                          ),
-                        ),
+                      UserAvatarWidget(
+                        fotoUrl: widget.fotoUrl,
+                        nombreCompleto: widget.userName,
+                        size: 100,
+                        backgroundColor: Colors.white,
                       ),
                       const SizedBox(height: 16),
                       // Nombre

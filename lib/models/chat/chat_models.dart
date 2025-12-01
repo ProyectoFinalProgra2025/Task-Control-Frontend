@@ -97,6 +97,31 @@ class Conversation {
     );
     return otherMember.userId.isNotEmpty ? otherMember.userId : null;
   }
+
+  /// Obtener la foto del otro usuario en un chat directo
+  String? getOtherUserPhoto(String currentUserId) {
+    if (type == ConversationType.group) {
+      return imageUrl;
+    }
+    // Para chat directo, obtener la foto del otro miembro
+    final otherMember = members.firstWhere(
+      (m) => m.userId.toLowerCase() != currentUserId.toLowerCase(),
+      orElse: () => ConversationMember.empty(),
+    );
+    return otherMember.fotoPerfilUrl;
+  }
+
+  /// Obtener el otro miembro en un chat directo
+  ConversationMember? getOtherMember(String currentUserId) {
+    if (type != ConversationType.direct) return null;
+    try {
+      return members.firstWhere(
+        (m) => m.userId.toLowerCase() != currentUserId.toLowerCase(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 /// Miembro de una conversación
@@ -104,6 +129,7 @@ class Conversation {
 class ConversationMember {
   final String userId;
   final String userName;
+  final String? fotoPerfilUrl;
   final String role; // "Member" o "Admin"
   final DateTime joinedAt;
   final bool isMuted;
@@ -113,6 +139,7 @@ class ConversationMember {
   ConversationMember({
     required this.userId,
     required this.userName,
+    this.fotoPerfilUrl,
     required this.role,
     required this.joinedAt,
     this.isMuted = false,
@@ -124,6 +151,7 @@ class ConversationMember {
     return ConversationMember(
       userId: json['userId']?.toString() ?? '',
       userName: json['userName'] ?? '',
+      fotoPerfilUrl: json['fotoPerfilUrl'],
       role: json['role'] ?? 'Member',
       joinedAt: DateTime.tryParse(json['joinedAt'] ?? '') ?? DateTime.now(),
       isMuted: json['isMuted'] ?? false,
@@ -330,6 +358,7 @@ class ChatUserSearchResult {
   final String email;
   final String rol;
   final String? empresaId;
+  final String? fotoPerfilUrl;
 
   ChatUserSearchResult({
     required this.id,
@@ -337,6 +366,7 @@ class ChatUserSearchResult {
     required this.email,
     required this.rol,
     this.empresaId,
+    this.fotoPerfilUrl,
   });
 
   factory ChatUserSearchResult.fromJson(Map<String, dynamic> json) {
@@ -347,6 +377,7 @@ class ChatUserSearchResult {
       email: json['email'] ?? '',
       rol: json['rol'] ?? '',
       empresaId: json['empresaId']?.toString(),
+      fotoPerfilUrl: json['fotoPerfilUrl'],
     );
   }
 

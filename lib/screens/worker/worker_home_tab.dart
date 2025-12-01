@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../widgets/theme_toggle_button.dart';
 import '../../widgets/task_progress_indicator.dart';
 import '../../widgets/premium_widgets.dart';
+import '../../widgets/finish_task_dialog.dart';
+import '../../widgets/task_evidencias_widget.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/usuario_provider.dart';
 import '../../models/tarea.dart';
@@ -11,8 +13,10 @@ import '../../config/theme_config.dart';
 import '../../mixins/tarea_realtime_mixin.dart';
 import '../../services/tarea_realtime_service.dart';
 import '../../services/chat_service.dart';
+import '../../services/file_upload_service.dart';
 import '../chat/chat_detail_screen.dart';
 import 'worker_tasks_list_screen.dart';
+import 'worker_task_detail_screen.dart';
 
 class WorkerHomeTab extends StatefulWidget {
   const WorkerHomeTab({super.key});
@@ -266,8 +270,6 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-
-
   Widget _buildViewAllTasksCard({required bool isDark}) {
     return InkWell(
       onTap: () {
@@ -347,114 +349,107 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
       }
     }
 
-    return PremiumCard(
-      isDark: isDark,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Task Header
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  tarea.titulo,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                    letterSpacing: -0.5,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WorkerTaskDetailScreen(tareaId: tarea.id),
+          ),
+        );
+      },
+      child: PremiumCard(
+        isDark: isDark,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Task Header
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    tarea.titulo,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                      letterSpacing: -0.5,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      getEstadoColor(tarea.estado),
-                      getEstadoColor(tarea.estado).withOpacity(0.7),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        getEstadoColor(tarea.estado),
+                        getEstadoColor(tarea.estado).withOpacity(0.7),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: getEstadoColor(tarea.estado).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: getEstadoColor(tarea.estado).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                  child: Text(
+                    tarea.estado.label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.3,
                     ),
-                  ],
-                ),
-                child: Text(
-                  tarea.estado.label,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 0.3,
                   ),
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Description
-          Text(
-            tarea.descripcion,
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-              height: 1.5,
+              ],
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
 
-          const SizedBox(height: 20),
+            const SizedBox(height: 12),
 
-          // Task Progress Indicator
-          TaskProgressIndicator(
-            estadoActual: tarea.estado,
-            primaryColor: AppTheme.primaryBlue,
-            showLabels: true,
-            height: 70,
-          ),
-
-          const SizedBox(height: 20),
-
-          // Task Info
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.tag, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                  const SizedBox(width: 6),
-                  Text(
-                    '#${tarea.id}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                ],
+            // Description
+            Text(
+              tarea.descripcion,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                height: 1.5,
               ),
-              if (tarea.dueDate != null)
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            const SizedBox(height: 20),
+
+            // Task Progress Indicator
+            TaskProgressIndicator(
+              estadoActual: tarea.estado,
+              primaryColor: AppTheme.primaryBlue,
+              showLabels: true,
+              height: 70,
+            ),
+
+            const SizedBox(height: 20),
+
+            // Task Info
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              children: [
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.calendar_today, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                    Icon(Icons.tag, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                     const SizedBox(width: 6),
                     Text(
-                      '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
+                      '#${tarea.id}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -463,68 +458,93 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
                     ),
                   ],
                 ),
-            ],
-          ),
+                if (tarea.dueDate != null)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.calendar_today, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
 
-          if (tarea.createdByUsuarioNombre.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            if (tarea.createdByUsuarioNombre.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.person_outline, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Creado por: ${tarea.createdByUsuarioNombre}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            // Sección de evidencias (solo si la tarea está aceptada o finalizada)
+            if (tarea.estado == EstadoTarea.aceptada || tarea.estado == EstadoTarea.finalizada)
+              TaskEvidenciasWidget(
+                tareaId: tarea.id,
+                showTitle: true,
+                canDelete: tarea.estado == EstadoTarea.aceptada, // Solo puede eliminar si no está finalizada
+              ),
+
+            const SizedBox(height: 20),
+
+            // Action Buttons
             Row(
               children: [
-                Icon(Icons.person_outline, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    'Creado por: ${tarea.createdByUsuarioNombre}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  child: PremiumButton(
+                    text: 'Chat',
+                    icon: Icons.chat_bubble_outline,
+                    onPressed: () => _openChatWithCreator(tarea),
+                    isOutlined: true,
                   ),
                 ),
+                const SizedBox(width: 12),
+                // Show Aceptar if asignada, Finalizar if aceptada
+                if (tarea.estado == EstadoTarea.asignada)
+                  Expanded(
+                    flex: 2,
+                    child: PremiumButton(
+                      text: 'Aceptar',
+                      icon: Icons.play_circle_outline,
+                      onPressed: () => _showAcceptTaskDialog(tarea),
+                      gradientColors: const [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
+                    ),
+                  )
+                else if (tarea.estado == EstadoTarea.aceptada)
+                  Expanded(
+                    flex: 2,
+                    child: PremiumButton(
+                      text: 'Finalizar',
+                      icon: Icons.check_circle_outline,
+                      onPressed: () => _showFinishTaskDialog(tarea),
+                      gradientColors: const [AppTheme.successGreen, AppTheme.successGreen],
+                    ),
+                  ),
               ],
             ),
           ],
-
-          const SizedBox(height: 20),
-
-          // Action Buttons
-          Row(
-            children: [
-              Expanded(
-                child: PremiumButton(
-                  text: 'Chat',
-                  icon: Icons.chat_bubble_outline,
-                  onPressed: () => _openChatWithCreator(tarea),
-                  isOutlined: true,
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Show Aceptar if asignada, Finalizar if aceptada
-              if (tarea.estado == EstadoTarea.asignada)
-                Expanded(
-                  flex: 2,
-                  child: PremiumButton(
-                    text: 'Aceptar',
-                    icon: Icons.play_circle_outline,
-                    onPressed: () => _showAcceptTaskDialog(tarea),
-                    gradientColors: const [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
-                  ),
-                )
-              else if (tarea.estado == EstadoTarea.aceptada)
-                Expanded(
-                  flex: 2,
-                  child: PremiumButton(
-                    text: 'Finalizar',
-                    icon: Icons.check_circle_outline,
-                    onPressed: () => _showFinishTaskDialog(tarea),
-                    gradientColors: const [AppTheme.successGreen, AppTheme.successGreen],
-                  ),
-                ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -658,73 +678,75 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
   }
 
   void _showFinishTaskDialog(Tarea tarea) {
-    final evidenciaController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Finalizar Tarea'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('¿Estás seguro de que deseas marcar "${tarea.titulo}" como finalizada?'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: evidenciaController,
-              decoration: const InputDecoration(
-                labelText: 'Evidencia (opcional)',
-                hintText: 'Describe el trabajo realizado...',
-                border: OutlineInputBorder(),
+    final fileUploadService = FileUploadService();
+    
+    FinishTaskDialog.show(
+      context,
+      tarea: tarea,
+      onFinish: (descripcion, archivos) async {
+        final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+        
+        // Primero subir las evidencias con archivos si hay
+        for (final archivo in archivos) {
+          try {
+            await fileUploadService.uploadEvidenciaTarea(
+              tarea.id,
+              descripcion: archivos.indexOf(archivo) == 0 ? descripcion : null,
+              file: archivo,
+            );
+          } catch (e) {
+            print('Error subiendo evidencia: $e');
+          }
+        }
+        
+        // Si solo hay descripción sin archivos, subirla como evidencia de texto
+        if (archivos.isEmpty && descripcion != null && descripcion.isNotEmpty) {
+          try {
+            await fileUploadService.uploadEvidenciaTarea(
+              tarea.id,
+              descripcion: descripcion,
+            );
+          } catch (e) {
+            print('Error subiendo evidencia de texto: $e');
+          }
+        }
+        
+        // Finalizar la tarea
+        final dto = FinalizarTareaDTO(
+          evidenciaTexto: descripcion,
+        );
+        
+        final success = await tareaProvider.finalizarTarea(tarea.id, dto);
+        
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: const [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('¡Tarea finalizada exitosamente!'),
+                ],
               ),
-              maxLines: 3,
+              backgroundColor: AppTheme.successGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
-              final dto = FinalizarTareaDTO(
-                evidenciaTexto: evidenciaController.text.isNotEmpty 
-                    ? evidenciaController.text 
-                    : null,
-              );
-
-              final success = await tareaProvider.finalizarTarea(tarea.id, dto);
-
-              if (!mounted) return;
-
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('¡Tarea finalizada exitosamente!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                await tareaProvider.cargarMisTareas();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(tareaProvider.error ?? 'Error al finalizar tarea'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+          );
+          await tareaProvider.cargarMisTareas();
+        } else if (!success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tareaProvider.error ?? 'Error al finalizar tarea'),
+              backgroundColor: AppTheme.dangerRed,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Finalizar'),
-          ),
-        ],
-      ),
+          );
+        }
+        
+        return success;
+      },
     );
   }
 

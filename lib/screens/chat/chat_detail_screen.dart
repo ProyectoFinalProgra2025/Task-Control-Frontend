@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../config/theme_config.dart';
 import '../../models/chat/chat_models.dart';
 import '../../services/chat_service.dart';
 import '../../services/chat_hub_service.dart';
+import '../../utils/date_utils.dart';
+import '../../widgets/profile_photo_widget.dart';
 import 'user_profile_screen.dart';
 
 /// Pantalla de detalle de chat - Conversación individual
@@ -202,6 +205,211 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
+  /// Adjuntar archivo (imagen, documento, audio, video)
+  Future<void> _attachFile() async {
+    // Mostrar modal con opciones
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.darkCard : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade400,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Adjuntar archivo',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildAttachOption(
+                  icon: Icons.image_rounded,
+                  label: 'Imagen',
+                  color: Colors.purple,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFile(FileType.image);
+                  },
+                ),
+                _buildAttachOption(
+                  icon: Icons.insert_drive_file_rounded,
+                  label: 'Documento',
+                  color: Colors.blue,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFile(FileType.custom, allowedExtensions: [
+                      'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'
+                    ]);
+                  },
+                ),
+                _buildAttachOption(
+                  icon: Icons.videocam_rounded,
+                  label: 'Video',
+                  color: Colors.red,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFile(FileType.video);
+                  },
+                ),
+                _buildAttachOption(
+                  icon: Icons.audiotrack_rounded,
+                  label: 'Audio',
+                  color: Colors.orange,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFile(FileType.audio);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttachOption({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickFile(FileType type, {List<String>? allowedExtensions}) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: type,
+        allowedExtensions: allowedExtensions,
+        withData: true, // Importante para web
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        
+        // Validar tamaño (máximo 50MB)
+        if (file.size > 50 * 1024 * 1024) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('El archivo es demasiado grande (máximo 50MB)'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Enviar archivo
+        await _sendFile(file);
+      }
+    } catch (e) {
+      print('[ChatDetailScreen] Error picking file: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al seleccionar archivo: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendFile(PlatformFile file) async {
+    setState(() => _isSending = true);
+
+    try {
+      final result = await _chatService.sendFile(
+        conversationId: widget.conversation.id,
+        file: file,
+      );
+
+      if (mounted) {
+        setState(() => _isSending = false);
+
+        if (result != null) {
+          // Crear mensaje local para mostrar inmediatamente
+          final message = ChatMessage.fromJson(result);
+          if (!_messages.any((m) => m.id == message.id)) {
+            setState(() {
+              _messages.insert(0, message);
+            });
+          }
+          _scrollToBottom();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Archivo enviado'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('[ChatDetailScreen] Error sending file: $e');
+      if (mounted) {
+        setState(() => _isSending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al enviar archivo: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _onTyping() {
     // Cancelar timer anterior
     _typingTimer?.cancel();
@@ -222,6 +430,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
     
     final otherUserId = widget.conversation.getOtherUserId(widget.currentUserId);
+    final otherUserPhoto = widget.conversation.getOtherUserPhoto(widget.currentUserId);
     if (otherUserId != null) {
       Navigator.push(
         context,
@@ -229,6 +438,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           builder: (_) => UserProfileScreen(
             userId: otherUserId,
             userName: _displayName,
+            fotoUrl: otherUserPhoto,
           ),
         ),
       );
@@ -274,6 +484,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Widget _buildHeader(bool isDark) {
+    final otherUserPhoto = _isGroup ? null : widget.conversation.getOtherUserPhoto(widget.currentUserId);
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
@@ -296,30 +508,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           // Avatar - Clickeable para ver perfil
           GestureDetector(
             onTap: () => _showUserProfile(),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: _isGroup
-                      ? [Colors.blue.shade400, Colors.blue.shade600]
-                      : [AppTheme.primaryPurple, AppTheme.primaryPurple.withOpacity(0.8)],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: _isGroup
-                    ? const Icon(Icons.group_rounded, color: Colors.white, size: 22)
-                    : Text(
-                        _displayName.isNotEmpty ? _displayName[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+            child: _isGroup
+                ? Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.blue.shade400, Colors.blue.shade600],
                       ),
-              ),
-            ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.group_rounded, color: Colors.white, size: 22),
+                    ),
+                  )
+                : UserAvatarWidget(
+                    fotoUrl: otherUserPhoto,
+                    nombreCompleto: _displayName,
+                    size: 44,
+                    backgroundColor: AppTheme.primaryPurple,
+                  ),
           ),
           const SizedBox(width: 12),
           // Nombre y estado - Clickeable para ver perfil
@@ -491,7 +699,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.75,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: message.contentType == MessageContentType.image
+                  ? const EdgeInsets.all(4)
+                  : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: isMe 
                     ? AppTheme.primaryPurple 
@@ -509,7 +719,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   // Mostrar nombre en grupos
                   if (_isGroup && !isMe)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
+                      padding: EdgeInsets.only(
+                        bottom: 4,
+                        left: message.contentType == MessageContentType.image ? 10 : 0,
+                      ),
                       child: Text(
                         message.senderName,
                         style: TextStyle(
@@ -520,41 +733,332 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       ),
                     ),
                   
-                  // Contenido del mensaje
-                  Text(
-                    message.content,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: isMe ? Colors.white : (isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-                    ),
-                  ),
+                  // Contenido del mensaje según tipo
+                  _buildMessageContent(message, isMe, isDark),
                   
                   const SizedBox(height: 4),
                   
                   // Hora y estado
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatMessageTime(message.sentAt),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isMe 
-                              ? Colors.white.withOpacity(0.7) 
-                              : (isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary),
+                  Padding(
+                    padding: message.contentType == MessageContentType.image
+                        ? const EdgeInsets.only(right: 8, bottom: 4)
+                        : EdgeInsets.zero,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatMessageTime(message.sentAt),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isMe 
+                                ? Colors.white.withOpacity(0.7) 
+                                : (isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary),
+                          ),
                         ),
-                      ),
-                      if (isMe) ...[
-                        const SizedBox(width: 4),
-                        _buildMessageStatusIcon(message.status, isMe),
+                        if (isMe) ...[
+                          const SizedBox(width: 4),
+                          _buildMessageStatusIcon(message.status, isMe),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Construye el contenido del mensaje según su tipo
+  Widget _buildMessageContent(ChatMessage message, bool isMe, bool isDark) {
+    switch (message.contentType) {
+      case MessageContentType.image:
+        return _buildImageContent(message, isMe, isDark);
+      case MessageContentType.document:
+        return _buildDocumentContent(message, isMe, isDark);
+      case MessageContentType.audio:
+        return _buildAudioContent(message, isMe, isDark);
+      case MessageContentType.video:
+        return _buildVideoContent(message, isMe, isDark);
+      case MessageContentType.text:
+        return Text(
+          message.content,
+          style: TextStyle(
+            fontSize: 15,
+            color: isMe ? Colors.white : (isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+          ),
+        );
+    }
+  }
+
+  /// Contenido de tipo imagen
+  Widget _buildImageContent(ChatMessage message, bool isMe, bool isDark) {
+    return GestureDetector(
+      onTap: () => _showImagePreview(message),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: message.fileUrl != null
+            ? Image.network(
+                message.fileUrl!,
+                width: 200,
+                height: 200,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    width: 200,
+                    height: 200,
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  print('[ChatDetailScreen] Error loading image: $error');
+                  return Container(
+                    width: 200,
+                    height: 200,
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                    child: const Center(
+                      child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                    ),
+                  );
+                },
+              )
+            : Container(
+                width: 200,
+                height: 200,
+                color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                child: const Center(
+                  child: Icon(Icons.image, size: 40, color: Colors.grey),
+                ),
+              ),
+      ),
+    );
+  }
+
+  /// Contenido de tipo documento
+  Widget _buildDocumentContent(ChatMessage message, bool isMe, bool isDark) {
+    final fileName = message.fileName ?? 'Documento';
+    final fileSize = message.fileSizeBytes != null
+        ? _formatFileSize(message.fileSizeBytes!)
+        : '';
+
+    return GestureDetector(
+      onTap: () => _openFile(message),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isMe 
+              ? Colors.white.withOpacity(0.15)
+              : (isDark ? Colors.white.withOpacity(0.1) : Colors.white),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.insert_drive_file, color: Colors.blue, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    fileName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: isMe ? Colors.white : (isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (fileSize.isNotEmpty)
+                    Text(
+                      fileSize,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isMe ? Colors.white70 : (isDark ? AppTheme.darkTextTertiary : AppTheme.lightTextTertiary),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.download_rounded,
+              size: 20,
+              color: isMe ? Colors.white70 : Colors.blue,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Contenido de tipo audio
+  Widget _buildAudioContent(ChatMessage message, bool isMe, bool isDark) {
+    final fileName = message.fileName ?? 'Audio';
+    
+    return GestureDetector(
+      onTap: () => _openFile(message),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isMe 
+              ? Colors.white.withOpacity(0.15)
+              : (isDark ? Colors.white.withOpacity(0.1) : Colors.white),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Icon(Icons.play_arrow_rounded, color: Colors.orange, size: 28),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                fileName,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isMe ? Colors.white : (isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Contenido de tipo video
+  Widget _buildVideoContent(ChatMessage message, bool isMe, bool isDark) {
+    return GestureDetector(
+      onTap: () => _openFile(message),
+      child: Container(
+        width: 200,
+        height: 150,
+        decoration: BoxDecoration(
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Thumbnail placeholder
+            const Icon(Icons.videocam, size: 40, color: Colors.grey),
+            // Play button
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: const Icon(Icons.play_arrow, color: Colors.white, size: 30),
+            ),
+            // Nombre del archivo
+            Positioned(
+              bottom: 8,
+              left: 8,
+              right: 8,
+              child: Text(
+                message.fileName ?? 'Video',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.white,
+                  shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Formatear tamaño de archivo
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
+  /// Mostrar preview de imagen
+  void _showImagePreview(ChatMessage message) {
+    if (message.fileUrl == null) return;
+    
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Imagen
+            InteractiveViewer(
+              child: Center(
+                child: Image.network(
+                  message.fileUrl!,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    );
+                  },
+                ),
+              ),
+            ),
+            // Botón cerrar
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Abrir archivo (para documentos, audio, video)
+  void _openFile(ChatMessage message) {
+    if (message.fileUrl == null) return;
+    
+    // TODO: Implementar apertura de archivo con url_launcher
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Abriendo: ${message.fileName ?? "archivo"}'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -593,9 +1097,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               Icons.add_rounded,
               color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
             ),
-            onPressed: () {
-              // TODO: Implementar adjuntar archivos
-            },
+            onPressed: _attachFile,
           ),
           
           // Campo de texto
@@ -669,8 +1171,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   String _formatMessageTime(DateTime dateTime) {
-    final hour = dateTime.hour.toString().padLeft(2, '0');
-    final minute = dateTime.minute.toString().padLeft(2, '0');
+    // Convertir a hora de Bolivia (UTC-4)
+    final boliviaTime = AppDateUtils.utcToBolivia(dateTime);
+    final hour = boliviaTime.hour.toString().padLeft(2, '0');
+    final minute = boliviaTime.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
   }
 }

@@ -4,6 +4,8 @@ import '../../config/theme_config.dart';
 import '../../models/chat/chat_models.dart';
 import '../../providers/usuario_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../widgets/profile_photo_widget.dart';
+import '../../utils/date_utils.dart';
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
 
@@ -355,6 +357,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final lastMessage = conversation.lastMessage;
     final unreadCount = conversation.unreadCount;
     final isGroup = conversation.type == ConversationType.group;
+    final otherUserPhoto = isGroup ? null : conversation.getOtherUserPhoto(_currentUserId ?? '');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -371,32 +374,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 // Avatar
                 Stack(
                   children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isGroup
-                              ? [Colors.blue.shade400, Colors.blue.shade600]
-                              : [AppTheme.primaryPurple, AppTheme.primaryPurple.withOpacity(0.8)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                    if (isGroup)
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.blue.shade400, Colors.blue.shade600],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
                         ),
-                        shape: BoxShape.circle,
+                        child: const Center(
+                          child: Icon(Icons.group_rounded, color: Colors.white, size: 28),
+                        ),
+                      )
+                    else
+                      UserAvatarWidget(
+                        fotoUrl: otherUserPhoto,
+                        nombreCompleto: displayName,
+                        size: 56,
+                        backgroundColor: AppTheme.primaryPurple,
                       ),
-                      child: Center(
-                        child: isGroup
-                            ? const Icon(Icons.group_rounded, color: Colors.white, size: 28)
-                            : Text(
-                                displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ),
                     // Badge de no leídos
                     if (unreadCount > 0)
                       Positioned(
@@ -577,21 +577,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final diff = now.difference(dateTime);
-    
-    if (diff.inDays == 0) {
-      // Hoy - mostrar hora
-      final hour = dateTime.hour.toString().padLeft(2, '0');
-      final minute = dateTime.minute.toString().padLeft(2, '0');
-      return '$hour:$minute';
-    } else if (diff.inDays == 1) {
-      return 'Ayer';
-    } else if (diff.inDays < 7) {
-      const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-      return days[dateTime.weekday - 1];
-    } else {
-      return '${dateTime.day}/${dateTime.month}';
-    }
+    // Usar utilidad de fecha que ajusta a Bolivia (UTC-4)
+    return AppDateUtils.formatRelativeDate(dateTime);
   }
 }

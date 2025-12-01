@@ -11,6 +11,8 @@ import '../../services/tarea_service.dart';
 import '../../services/usuario_service.dart';
 import '../../services/chat_service.dart';
 import '../../widgets/task/task_widgets.dart';
+import '../../widgets/task_documentos_widget.dart';
+import '../../widgets/task_evidencias_widget.dart';
 import '../chat/chat_detail_screen.dart';
 
 class AdminTaskDetailScreen extends StatefulWidget {
@@ -760,6 +762,25 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
               TaskSkillsSection(
                 skills: _tarea!.capacidadesRequeridas,
                 color: AppTheme.primaryBlue,
+              ),
+            ],
+
+            // Documentos Adjuntos
+            const SizedBox(height: 16),
+            TaskDocumentosWidget(
+              tareaId: widget.tareaId,
+              showTitle: true,
+              canDelete: _tarea!.estado == EstadoTarea.pendiente, // Admin puede eliminar si está pendiente
+            ),
+
+            // Evidencias (siempre visibles para admin cuando la tarea tiene estado avanzado)
+            if (_tarea!.estado == EstadoTarea.aceptada || 
+                _tarea!.estado == EstadoTarea.finalizada) ...[
+              const SizedBox(height: 16),
+              TaskEvidenciasWidget(
+                tareaId: widget.tareaId,
+                showTitle: true,
+                canDelete: false, // Admin no elimina evidencias del worker
               ),
             ],
 
