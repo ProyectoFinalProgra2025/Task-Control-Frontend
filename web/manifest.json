@@ -1,11 +1,11 @@
 {
-    "name": "task_control_frontend",
-    "short_name": "task_control_frontend",
+    "name": "TaskControl - Gestión de Tareas Empresarial",
+    "short_name": "TaskControl",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "TaskControl - Plataforma empresarial multi-tenant para gestión de tareas con roles jerárquicos, delegación de tareas y comunicación en tiempo real.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
