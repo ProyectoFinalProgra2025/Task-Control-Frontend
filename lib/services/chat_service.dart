@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:file_picker/file_picker.dart';
 import '../config/api_config.dart';
 import '../models/chat/chat_models.dart';
 import 'storage_service.dart';
@@ -354,6 +356,97 @@ class ChatService {
     } catch (e) {
       print('[ChatService] Error getting unread count: $e');
       return 0;
+    }
+  }
+
+  /// Enviar archivo en chat (imagen, documento, audio, video)
+  /// POST /api/chat/conversations/{id}/files
+  Future<Map<String, dynamic>?> sendFile({
+    required String conversationId,
+    required PlatformFile file,
+    String? replyToMessageId,
+  }) async {
+    try {
+      final token = await _storage.getAccessToken();
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/chat/conversations/$conversationId/files');
+
+      final request = http.MultipartRequest('POST', uri);
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Determinar content type
+      String? mimeType;
+      final extension = file.extension?.toLowerCase();
+      if (extension != null) {
+        final mimeTypes = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+          'pdf': 'application/pdf',
+          'doc': 'application/msword',
+          'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'xls': 'application/vnd.ms-excel',
+          'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'mp3': 'audio/mpeg',
+          'wav': 'audio/wav',
+          'mp4': 'video/mp4',
+          'mov': 'video/quicktime',
+          'txt': 'text/plain',
+          'zip': 'application/zip',
+        };
+        mimeType = mimeTypes[extension] ?? 'application/octet-stream';
+      }
+
+      // Agregar archivo
+      if (file.bytes != null) {
+        final multipartFile = http.MultipartFile.fromBytes(
+          'File',
+          file.bytes!,
+          filename: file.name,
+          contentType: mimeType != null ? MediaType.parse(mimeType) : null,
+        );
+        request.files.add(multipartFile);
+      } else if (file.path != null) {
+        final multipartFile = await http.MultipartFile.fromPath(
+          'File',
+          file.path!,
+          filename: file.name,
+          contentType: mimeType != null ? MediaType.parse(mimeType) : null,
+        );
+        request.files.add(multipartFile);
+      } else {
+        throw Exception('No file data available');
+      }
+
+      // Agregar replyToMessageId si existe
+      if (replyToMessageId != null && replyToMessageId.isNotEmpty) {
+        request.fields['ReplyToMessageId'] = replyToMessageId;
+      }
+
+      print('[ChatService] Sending file: ${file.name} to conversation $conversationId');
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('[ChatService] Send file response: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        print('[ChatService] File sent successfully: ${data['id']}');
+        return data;
+      } else {
+        print('[ChatService] Error sending file: ${response.body}');
+        throw Exception('Failed to send file: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('[ChatService] Error sending file: $e');
+      rethrow;
     }
   }
 }

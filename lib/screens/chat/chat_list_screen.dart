@@ -5,6 +5,7 @@ import '../../models/chat/chat_models.dart';
 import '../../providers/usuario_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../widgets/profile_photo_widget.dart';
+import '../../utils/date_utils.dart';
 import 'chat_detail_screen.dart';
 import 'new_chat_screen.dart';
 
@@ -576,21 +577,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final diff = now.difference(dateTime);
-    
-    if (diff.inDays == 0) {
-      // Hoy - mostrar hora
-      final hour = dateTime.hour.toString().padLeft(2, '0');
-      final minute = dateTime.minute.toString().padLeft(2, '0');
-      return '$hour:$minute';
-    } else if (diff.inDays == 1) {
-      return 'Ayer';
-    } else if (diff.inDays < 7) {
-      const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-      return days[dateTime.weekday - 1];
-    } else {
-      return '${dateTime.day}/${dateTime.month}';
-    }
+    // Usar utilidad de fecha que ajusta a Bolivia (UTC-4)
+    return AppDateUtils.formatRelativeDate(dateTime);
   }
 }
