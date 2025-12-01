@@ -83,15 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   backgroundColor: isDark
                       ? AppTheme.darkCard
                       : AppTheme.lightCard,
-                  leading: IconButton(
-                    icon: Icon(
-                      Icons.arrow_back_ios_rounded,
-                      color: isDark
-                          ? AppTheme.darkTextPrimary
-                          : AppTheme.lightTextPrimary,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  ),
+                  automaticallyImplyLeading: false,
                   title: Text(
                     'Profile',
                     style: TextStyle(
@@ -1173,78 +1165,156 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _handleLogout() async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final confirmed = await showDialog<bool>(
+    final result = await showDialog<Map<String, bool>?>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.dangerRed.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.logout_rounded,
-                color: AppTheme.dangerRed,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Log out',
-              style: TextStyle(
-                color: isDark
-                    ? AppTheme.darkTextPrimary
-                    : AppTheme.lightTextPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to log out?',
-          style: TextStyle(
-            color: isDark
-                ? AppTheme.darkTextSecondary
-                : AppTheme.lightTextSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.dangerRed,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Log out'),
-          ),
-        ],
-      ),
+      builder: (context) => _LogoutDialog(isDark: isDark),
     );
 
-    if (confirmed == true && mounted) {
-      await _authService.logout();
+    if (result != null && result['confirmed'] == true && mounted) {
+      final clearCredentials = result['clearCredentials'] ?? false;
+      await _authService.logout(clearRememberMe: clearCredentials);
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }
     }
+  }
+}
+
+// =====================================================================
+// Logout Dialog con opción de borrar credenciales
+// =====================================================================
+class _LogoutDialog extends StatefulWidget {
+  final bool isDark;
+
+  const _LogoutDialog({required this.isDark});
+
+  @override
+  State<_LogoutDialog> createState() => _LogoutDialogState();
+}
+
+class _LogoutDialogState extends State<_LogoutDialog> {
+  bool _clearCredentials = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: widget.isDark ? AppTheme.darkCard : AppTheme.lightCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.dangerRed.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.logout_rounded,
+              color: AppTheme.dangerRed,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Log out',
+            style: TextStyle(
+              color: widget.isDark
+                  ? AppTheme.darkTextPrimary
+                  : AppTheme.lightTextPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Are you sure you want to log out?',
+            style: TextStyle(
+              color: widget.isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _clearCredentials = !_clearCredentials;
+              });
+            },
+            child: Row(
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: _clearCredentials
+                        ? AppTheme.dangerRed
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(
+                      color: _clearCredentials
+                          ? AppTheme.dangerRed
+                          : Colors.grey.shade400,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: _clearCredentials
+                      ? const Icon(
+                          Icons.check,
+                          size: 14,
+                          color: Colors.white,
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Also clear saved credentials',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: widget.isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+              color: widget.isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, {
+            'confirmed': true,
+            'clearCredentials': _clearCredentials,
+          }),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.dangerRed,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text('Log out'),
+        ),
+      ],
+    );
   }
 }
 

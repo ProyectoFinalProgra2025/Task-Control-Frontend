@@ -57,37 +57,89 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _handleLogout() async {
+    bool clearCredentials = false;
+    
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.logout, color: Color(0xFFEF4444)),
-            SizedBox(width: 12),
-            Text('Cerrar Sesión'),
-          ],
-        ),
-        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              foregroundColor: Colors.white,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.logout, color: Color(0xFFEF4444)),
+                SizedBox(width: 12),
+                Text('Cerrar Sesión'),
+              ],
             ),
-            child: const Text('Cerrar Sesión'),
-          ),
-        ],
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('¿Estás seguro de que deseas cerrar sesión?'),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () {
+                    setDialogState(() {
+                      clearCredentials = !clearCredentials;
+                    });
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: clearCredentials
+                              ? const Color(0xFFEF4444)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: clearCredentials
+                                ? const Color(0xFFEF4444)
+                                : Colors.grey.shade400,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: clearCredentials
+                            ? const Icon(
+                                Icons.check,
+                                size: 14,
+                                color: Colors.white,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Borrar credenciales guardadas',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Cerrar Sesión'),
+              ),
+            ],
+          );
+        },
       ),
     );
 
     if (confirmed == true) {
-      await _authService.logout();
+      await _authService.logout(clearRememberMe: clearCredentials);
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }

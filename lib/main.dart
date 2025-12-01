@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'screens/splash_screen.dart';
-import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
@@ -56,7 +55,6 @@ class TaskControlApp extends StatelessWidget {
           themeMode: themeProvider.themeMode,
           home: const InitialRouteHandler(),
           routes: {
-            '/onboarding': (context) => const OnboardingScreen(),
             '/login': (context) => const LoginScreen(),
             '/signup': (context) => const SignUpScreen(),
             '/home': (context) => const HomeScreen(),
@@ -99,63 +97,33 @@ class _InitialRouteHandlerState extends State<InitialRouteHandler> {
     // Verificar token almacenado
     final token = await _storage.getAccessToken();
     
-    // TODO: Inicializar nuevo sistema de chat cuando esté listo
     if (token != null && token.isNotEmpty) {
-      debugPrint('✅ Usuario autenticado - Chat disponible cuando se implemente');
-    }
-
-    // ════════════════════════════════════════════════════════════
-    // MODO DESARROLLO: SIEMPRE MOSTRAR ONBOARDING
-    // TODO: Comentar línea siguiente y descomentar bloque para producción
-    // ════════════════════════════════════════════════════════════
-    Navigator.of(context).pushReplacementNamed('/onboarding');
-
-    // ════════════════════════════════════════════════════════════
-    // LÓGICA ORIGINAL - Descomentar para producción
-    // ════════════════════════════════════════════════════════════
-    /*
-    // 1. Verificar si está autenticado
-    final isAuthenticated = await _storage.isAuthenticated();
-    
-    if (isAuthenticated) {
-      // Verificar el rol del usuario para enviarlo a la pantalla correcta
+      debugPrint('✅ Usuario autenticado - Verificando sesión...');
+      
+      // Si hay token, verificar el rol y redirigir
       final userData = await _storage.getUserData();
       if (userData != null) {
-        final user = UserModel.fromJson(userData);
+        // Determinar ruta según rol
+        final rol = userData['rol'] as String?;
+        String route = '/home';
         
-        if (user.isAdminGeneral) {
-          // Admin General va al dashboard de super admin
-          Navigator.of(context).pushReplacementNamed('/super-admin');
-        } else if (user.isAdminEmpresa) {
-          // Admin de Empresa va al dashboard de admin
-          Navigator.of(context).pushReplacementNamed('/admin');
-        } else if (user.isManagerDepartamento) {
-          // Manager de Departamento va al dashboard de manager
-          Navigator.of(context).pushReplacementNamed('/manager');
+        if (rol == 'AdminGeneral') {
+          route = '/super-admin';
+        } else if (rol == 'AdminEmpresa') {
+          route = '/admin';
+        } else if (rol == 'ManagerDepartamento') {
+          route = '/manager';
         } else {
-          // Usuario normal va al home
-          Navigator.of(context).pushReplacementNamed('/home');
+          route = '/home';
         }
-      } else {
-        // Si no hay userData, ir al login
-        Navigator.of(context).pushReplacementNamed('/login');
+        
+        Navigator.of(context).pushReplacementNamed(route);
+        return;
       }
-      return;
     }
-
-    // 2. Verificar si ya completó el onboarding
-    final hasCompletedOnboarding = await _storage.hasCompletedOnboarding();
     
-    if (hasCompletedOnboarding) {
-      // Si ya vio el onboarding, ir al login con un pequeño delay para transición suave
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/login');
-    } else {
-      // Si no ha visto el onboarding, mostrarlo
-      Navigator.of(context).pushReplacementNamed('/onboarding');
-    }
-    */
+    // Si no hay token o no hay userData, ir al login
+    Navigator.of(context).pushReplacementNamed('/login');
   }
 
   @override

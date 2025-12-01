@@ -134,7 +134,8 @@ class AuthService {
 
   // ========== LOGOUT ==========
   
-  Future<void> logout() async {
+  /// Cierra sesión. Si [clearRememberMe] es true, también borra las credenciales guardadas.
+  Future<void> logout({bool clearRememberMe = false}) async {
     try {
       final refreshToken = await _storage.getRefreshToken();
       final accessToken = await _storage.getAccessToken();
@@ -154,7 +155,11 @@ class AuthService {
       // Continuar con el logout local aunque falle el servidor
     } finally {
       // Siempre limpiar datos locales
-      await _storage.clearAuth();
+      if (clearRememberMe) {
+        await _storage.clearAll(); // Limpia auth + remember me
+      } else {
+        await _storage.clearAuth(); // Solo limpia tokens y user data
+      }
     }
   }
 

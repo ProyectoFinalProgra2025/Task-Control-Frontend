@@ -8,6 +8,9 @@ class StorageService {
   static const String _keyUser = 'user_data';
   static const String _keyOnboardingCompleted = 'onboarding_completed';
   static const String _keyThemeMode = 'theme_mode';
+  static const String _keyRememberMe = 'remember_me';
+  static const String _keySavedEmail = 'saved_email';
+  static const String _keySavedPassword = 'saved_password';
 
   // ========== TOKENS ==========
   
@@ -105,5 +108,66 @@ class StorageService {
   Future<String?> getEmpresaId() async {
     final userData = await getUserData();
     return userData?['empresaId']?.toString();
+  }
+
+  // ========== REMEMBER ME ==========
+  
+  Future<void> saveRememberMe({
+    required bool rememberMe,
+    String? email,
+    String? password,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyRememberMe, rememberMe);
+    
+    if (rememberMe && email != null && password != null) {
+      // Guardar credenciales encriptadas (base64 simple por ahora)
+      await prefs.setString(_keySavedEmail, base64Encode(utf8.encode(email)));
+      await prefs.setString(_keySavedPassword, base64Encode(utf8.encode(password)));
+    } else if (!rememberMe) {
+      // Borrar credenciales si desactiva remember me
+      await prefs.remove(_keySavedEmail);
+      await prefs.remove(_keySavedPassword);
+    }
+  }
+
+  Future<bool> getRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyRememberMe) ?? false;
+  }
+
+  Future<Map<String, String>?> getSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rememberMe = prefs.getBool(_keyRememberMe) ?? false;
+    
+    if (!rememberMe) return null;
+    
+    final savedEmail = prefs.getString(_keySavedEmail);
+    final savedPassword = prefs.getString(_keySavedPassword);
+    
+    if (savedEmail == null || savedPassword == null) return null;
+    
+    try {
+      return {
+        'email': utf8.decode(base64Decode(savedEmail)),
+        'password': utf8.decode(base64Decode(savedPassword)),
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> clearRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyRememberMe);
+    await prefs.remove(_keySavedEmail);
+    await prefs.remove(_keySavedPassword);
+  }
+
+  // ========== CLEAR ALL (for complete logout) ==========
+  
+  Future<void> clearAll() async {
+    await clearAuth();
+    await clearRememberMe();
   }
 }
