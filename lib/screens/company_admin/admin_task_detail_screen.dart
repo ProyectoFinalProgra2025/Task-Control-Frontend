@@ -726,7 +726,10 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
                   value: _tarea!.createdByUsuarioNombre,
                   color: AppTheme.primaryBlue,
                 ),
-                if (_tarea!.asignadoANombre != null)
+                // Solo mostrar "Asignado a" si el worker ya aceptó la tarea
+                if (_tarea!.asignadoANombre != null && 
+                    (_tarea!.estado == EstadoTarea.aceptada || 
+                     _tarea!.estado == EstadoTarea.finalizada))
                   TaskInfoItem(
                     icon: Icons.assignment_ind_rounded,
                     label: 'Asignado a',
