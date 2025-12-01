@@ -6,7 +6,11 @@ import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/task/task_widgets.dart';
+import '../../widgets/task_documentos_widget.dart';
+import '../../widgets/task_evidencias_widget.dart';
+import '../../widgets/finish_task_dialog.dart';
 import '../../services/chat_service.dart';
+import '../../services/file_upload_service.dart';
 import '../chat/chat_detail_screen.dart';
 
 class WorkerTaskDetailScreen extends StatefulWidget {
@@ -155,6 +159,25 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
               ),
             ],
 
+            // Documentos Adjuntos
+            const SizedBox(height: 16),
+            TaskDocumentosWidget(
+              tareaId: widget.tareaId,
+              showTitle: true,
+              canDelete: false, // Worker no puede eliminar documentos
+            ),
+
+            // Evidencias (solo si la tarea está aceptada o finalizada)
+            if (_tarea!.estado == EstadoTarea.aceptada || 
+                _tarea!.estado == EstadoTarea.finalizada) ...[
+              const SizedBox(height: 16),
+              TaskEvidenciasWidget(
+                tareaId: widget.tareaId,
+                showTitle: true,
+                canDelete: _tarea!.estado == EstadoTarea.aceptada, // Solo puede eliminar si no está finalizada
+              ),
+            ],
+
             // Banner de rechazo si aplica
             if (_tarea!.delegacionAceptada == false && 
                 _tarea!.motivoRechazoJefe != null) ...[
@@ -291,105 +314,68 @@ class _WorkerTaskDetailScreenState extends State<WorkerTaskDetailScreen> {
   }
 
   Future<void> _finalizarTarea() async {
-    final evidenciaController = TextEditingController();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (_tarea == null) return;
+    
+    final fileUploadService = FileUploadService();
+    
+    FinishTaskDialog.show(
+      context,
+      tarea: _tarea!,
+      onFinish: (descripcion, archivos) async {
+        final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+        
+        // Subir evidencias con archivos si hay
+        for (final archivo in archivos) {
+          try {
+            await fileUploadService.uploadEvidenciaTarea(
+              widget.tareaId,
+              descripcion: archivos.indexOf(archivo) == 0 ? descripcion : null,
+              file: archivo,
+            );
+          } catch (e) {
+            print('Error subiendo evidencia: $e');
+          }
+        }
+        
+        // Si solo hay descripción sin archivos, subirla como evidencia de texto
+        if (archivos.isEmpty && descripcion != null && descripcion.isNotEmpty) {
+          try {
+            await fileUploadService.uploadEvidenciaTarea(
+              widget.tareaId,
+              descripcion: descripcion,
+            );
+          } catch (e) {
+            print('Error subiendo evidencia de texto: $e');
+          }
+        }
+        
+        // Finalizar la tarea
+        final dto = FinalizarTareaDTO(
+          evidenciaTexto: descripcion,
+        );
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppTheme.successGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.task_alt, color: AppTheme.successGreen, size: 24),
-            ),
-            const SizedBox(width: 12),
-            const Text('Finalizar Tarea', style: TextStyle(fontWeight: FontWeight.w800)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '¿Estás seguro de que deseas finalizar esta tarea?',
-              style: TextStyle(
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: evidenciaController,
-              decoration: InputDecoration(
-                labelText: 'Evidencia del trabajo',
-                hintText: 'Describe lo que realizaste...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.successGreen, width: 2),
-                ),
-              ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+        final success = await tareaProvider.finalizarTarea(widget.tareaId, dto);
+
+        if (!mounted) return false;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success 
+                ? '¡Tarea finalizada exitosamente!' 
+                : tareaProvider.error ?? 'Error al finalizar tarea'),
+            backgroundColor: success ? AppTheme.successGreen : AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successGreen,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Finalizar', style: TextStyle(fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+        );
+
+        if (success) {
+          _hasChanges = true;
+          await _cargarDetalle();
+        }
+        
+        return success;
+      },
     );
-
-    if (confirmed == true) {
-      final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
-      final dto = FinalizarTareaDTO(
-        evidenciaTexto: evidenciaController.text.isNotEmpty
-            ? evidenciaController.text
-            : null,
-      );
-
-      final success = await tareaProvider.finalizarTarea(widget.tareaId, dto);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success 
-              ? '¡Tarea finalizada exitosamente!' 
-              : tareaProvider.error ?? 'Error al finalizar tarea'),
-          backgroundColor: success ? AppTheme.successGreen : AppTheme.dangerRed,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-
-      if (success) {
-        _hasChanges = true;
-        await _cargarDetalle();
-      }
-    }
   }
 
   Future<void> _chatWithUser(String userId, String userName) async {

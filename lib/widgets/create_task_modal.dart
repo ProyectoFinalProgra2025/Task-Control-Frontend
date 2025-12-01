@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../models/tarea.dart';
 import '../models/usuario.dart';
 import '../models/enums/prioridad_tarea.dart';
 import '../models/enums/departamento.dart';
 import '../services/tarea_service.dart';
 import '../services/usuario_service.dart';
+import '../services/file_upload_service.dart';
 import '../config/capacidades.dart';
+import 'file_attachment_widget.dart';
 
 class CreateTaskModal extends StatefulWidget {
   const CreateTaskModal({super.key});
@@ -22,6 +25,7 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
   final _descriptionController = TextEditingController();
   final TareaService _tareaService = TareaService();
   final UsuarioService _usuarioService = UsuarioService();
+  final FileUploadService _fileUploadService = FileUploadService();
   
   PrioridadTarea _selectedPriority = PrioridadTarea.medium;
   Departamento? _selectedDepartment;
@@ -30,6 +34,9 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
   AsignacionMode _asignacionMode = AsignacionMode.ninguna;
   Usuario? _usuarioSeleccionado;
   bool _isLoading = false;
+  
+  // Archivos adjuntos
+  List<PlatformFile> _attachedFiles = [];
 
   @override
   void dispose() {
@@ -136,6 +143,18 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
 
         final tareaId = await _tareaService.createTarea(dto);
 
+        // Subir archivos adjuntos si hay
+        if (_attachedFiles.isNotEmpty) {
+          for (final file in _attachedFiles) {
+            try {
+              await _fileUploadService.uploadDocumentoTarea(tareaId, file);
+            } catch (e) {
+              print('Error subiendo archivo ${file.name}: $e');
+              // Continuar con los demás archivos
+            }
+          }
+        }
+
         // Ejecutar asignación según el modo seleccionado
         if (_asignacionMode == AsignacionMode.automatica) {
           await _tareaService.asignarAutomatico(tareaId);
@@ -149,6 +168,9 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
         if (!mounted) return;
 
         String mensaje = 'Tarea creada exitosamente';
+        if (_attachedFiles.isNotEmpty) {
+          mensaje += ' con ${_attachedFiles.length} archivo(s) adjunto(s)';
+        }
         if (_asignacionMode == AsignacionMode.automatica) {
           mensaje = 'Tarea creada y asignada automáticamente';
         } else if (_asignacionMode == AsignacionMode.manual) {
@@ -502,6 +524,19 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                           }
                           return null;
                         },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Archivos Adjuntos
+                      FileAttachmentWidget(
+                        selectedFiles: _attachedFiles,
+                        onFilesChanged: (files) {
+                          setState(() => _attachedFiles = files);
+                        },
+                        title: 'Archivos Adjuntos',
+                        hint: 'Adjuntar documentos de referencia (PDF, Excel, imágenes)',
+                        maxFiles: 5,
                       ),
 
                       const SizedBox(height: 20),
