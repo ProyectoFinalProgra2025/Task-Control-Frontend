@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
 import '../../providers/tarea_provider.dart';
 import '../../providers/admin_tarea_provider.dart';
-import '../../providers/chat_provider.dart';
-import '../../providers/realtime_provider.dart';
+import '../../providers/usuario_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/usuario.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../config/theme_config.dart';
 import '../../services/tarea_service.dart';
 import '../../services/usuario_service.dart';
-import '../../services/storage_service.dart';
+import '../../services/chat_service.dart';
 import '../../widgets/task/task_widgets.dart';
-import '../common/chat_detail_screen.dart';
+import '../chat/chat_detail_screen.dart';
 
 class AdminTaskDetailScreen extends StatefulWidget {
   final String tareaId;
@@ -25,7 +23,6 @@ class AdminTaskDetailScreen extends StatefulWidget {
 }
 
 class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
-  final StorageService _storage = StorageService();
   final TareaService _tareaService = TareaService();
   final UsuarioService _usuarioService = UsuarioService();
   
@@ -34,47 +31,11 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
   bool _isLoading = true;
   bool _isProcessing = false;
   bool _hasChanges = false; // Track if any changes were made
-  String? _loadingChatUserId;
-  StreamSubscription? _tareaEventSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _connectRealtime();
-      _subscribeToRealtimeEvents();
-    });
-  }
-
-  @override
-  void dispose() {
-    _tareaEventSubscription?.cancel();
-    super.dispose();
-  }
-  
-  Future<void> _connectRealtime() async {
-    try {
-      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-      final empresaId = await _storage.getEmpresaId();
-      if (empresaId != null) {
-        await realtimeProvider.connect(empresaId: empresaId);
-      }
-    } catch (e) {
-      debugPrint('Error connecting to realtime: $e');
-    }
-  }
-  
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
-      final eventTareaId = event['tareaId']?.toString();
-      if (eventTareaId == widget.tareaId) {
-        debugPrint('📝 Admin Task Detail: Task event for this task - reloading');
-        _loadData();
-      }
-    });
   }
 
   Future<void> _loadData() async {
@@ -90,9 +51,15 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
       ]);
 
       if (mounted) {
+        final allUsers = results[1] as List<Usuario>;
+        // Filtrar solo trabajadores activos (rol Usuario)
+        final workers = allUsers
+            .where((u) => u.rol == 'Usuario' && u.isActive)
+            .toList();
+        
         setState(() {
           _tarea = results[0] as Tarea?;
-          _trabajadores = results[1] as List<Usuario>;
+          _trabajadores = workers;
           _isLoading = false;
         });
       }
@@ -303,37 +270,121 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
   }
 
   Future<void> _chatWithUser(String recipientId, String recipientName) async {
-    if (recipientId.isEmpty) return;
+    if (recipientId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No se puede identificar al usuario'),
+          backgroundColor: AppTheme.warningOrange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
 
-    setState(() => _loadingChatUserId = recipientId);
+    // Obtener el ID del usuario actual
+    final usuarioProvider = Provider.of<UsuarioProvider>(context, listen: false);
+    final currentUserId = usuarioProvider.usuario?.id;
+    
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Error: No se pudo obtener tu información de usuario'),
+          backgroundColor: AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Mostrar loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppTheme.primaryBlue),
+              const SizedBox(height: 16),
+              Text(
+                'Abriendo chat con $recipientName...',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
 
     try {
-      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-      final chat = await chatProvider.createOneToOneChat(recipientId);
+      final chatService = ChatService();
+      
+      // Crear o obtener conversación directa
+      final conversationId = await chatService.getOrCreateDirectConversation(recipientId);
+      
+      if (conversationId == null) {
+        Navigator.pop(context); // Cerrar loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No se pudo iniciar el chat'),
+            backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
 
+      // Obtener la conversación completa
+      final conversation = await chatService.getConversation(conversationId);
+      
+      Navigator.pop(context); // Cerrar loading
+      
+      if (conversation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No se pudo cargar la conversación'),
+            backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+
+      // Navegar al chat
       if (!mounted) return;
-
-      setState(() => _loadingChatUserId = null);
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ChatDetailScreen(
-            chatId: chat.id,
-            recipientName: recipientName.isNotEmpty ? recipientName : 'Usuario',
-            isGroup: false,
+            conversation: conversation,
+            currentUserId: currentUserId,
           ),
         ),
       );
     } catch (e) {
-      if (mounted) {
-        setState(() => _loadingChatUserId = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al abrir chat: $e'),
-            backgroundColor: AppTheme.dangerRed,
-          ),
-        );
-      }
+      Navigator.pop(context); // Cerrar loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al abrir chat: $e'),
+          backgroundColor: AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     }
   }
 
@@ -347,6 +398,12 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
 
       return capacidadesRequeridas.every(capacidadesUsuario.contains);
     }).toList();
+
+    // Si no hay compatibles pero hay trabajadores, mostrar todos
+    final trabajadoresAMostrar = trabajadoresCompatibles.isEmpty && _trabajadores.isNotEmpty
+        ? _trabajadores
+        : trabajadoresCompatibles;
+    final mostrandoTodos = trabajadoresCompatibles.isEmpty && _trabajadores.isNotEmpty;
 
     showModalBottomSheet(
       context: context,
@@ -401,9 +458,13 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
                             ),
                           ),
                           Text(
-                            '${trabajadoresCompatibles.length} trabajadores compatibles',
+                            mostrandoTodos
+                                ? '${trabajadoresAMostrar.length} trabajadores (sin filtro de capacidades)'
+                                : '${trabajadoresAMostrar.length} trabajadores compatibles',
                             style: TextStyle(
-                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                              color: mostrandoTodos 
+                                  ? AppTheme.warningOrange 
+                                  : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                               fontSize: 14,
                             ),
                           ),
@@ -413,9 +474,36 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
                   ],
                 ),
               ),
+              if (mostrandoTodos)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningOrange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.warningOrange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: AppTheme.warningOrange, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'No hay trabajadores con las capacidades requeridas. Se muestran todos.',
+                          style: TextStyle(
+                            color: AppTheme.warningOrange,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 8),
               Divider(color: isDark ? Colors.white10 : Colors.black12),
               Expanded(
-                child: trabajadoresCompatibles.isEmpty
+                child: trabajadoresAMostrar.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -427,11 +515,19 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No hay trabajadores con las\ncapacidades requeridas',
+                              'No hay trabajadores disponibles\nen la empresa',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                                 fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Total cargados: ${_trabajadores.length}',
+                              style: TextStyle(
+                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -439,9 +535,9 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: trabajadoresCompatibles.length,
+                        itemCount: trabajadoresAMostrar.length,
                         itemBuilder: (context, index) {
-                          final trabajador = trabajadoresCompatibles[index];
+                          final trabajador = trabajadoresAMostrar[index];
                           return _WorkerListItem(
                             trabajador: trabajador,
                             capacidadesRequeridas: _tarea?.capacidadesRequeridas ?? [],
@@ -471,7 +567,7 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
         name: _tarea!.asignadoANombre!,
         role: 'Trabajador asignado',
         color: Colors.teal,
-        isLoading: _loadingChatUserId == _tarea!.asignadoAUsuarioId,
+        isLoading: false,
         onTap: () => _chatWithUser(
           _tarea!.asignadoAUsuarioId!,
           _tarea!.asignadoANombre!,
@@ -485,7 +581,7 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
         name: 'Jefe delegador',
         role: 'Delegó esta tarea',
         color: AppTheme.warningOrange,
-        isLoading: _loadingChatUserId == _tarea!.delegadoPorUsuarioId,
+        isLoading: false,
         onTap: () => _chatWithUser(
           _tarea!.delegadoPorUsuarioId!,
           'Jefe',
@@ -507,7 +603,7 @@ class _AdminTaskDetailScreenState extends State<AdminTaskDetailScreen> {
             : _tarea!.delegacionAceptada == false
                 ? AppTheme.dangerRed
                 : AppTheme.warningOrange,
-        isLoading: _loadingChatUserId == _tarea!.delegadoAUsuarioId,
+        isLoading: false,
         onTap: () => _chatWithUser(
           _tarea!.delegadoAUsuarioId!,
           'Jefe',

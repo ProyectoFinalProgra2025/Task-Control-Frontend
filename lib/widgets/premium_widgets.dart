@@ -158,6 +158,7 @@ class PremiumButton extends StatelessWidget {
   final bool isOutlined;
   final bool isFullWidth;
   final bool isLoading;
+  final bool isCompact;
 
   const PremiumButton({
     super.key,
@@ -168,6 +169,7 @@ class PremiumButton extends StatelessWidget {
     this.isOutlined = false,
     this.isFullWidth = false,
     this.isLoading = false,
+    this.isCompact = false,
   });
 
   @override
@@ -179,23 +181,23 @@ class PremiumButton extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (isLoading)
-          const SizedBox(
-            width: 16,
-            height: 16,
+          SizedBox(
+            width: isCompact ? 14 : 16,
+            height: isCompact ? 14 : 16,
             child: CircularProgressIndicator(
-              strokeWidth: 2,
+              strokeWidth: isCompact ? 1.5 : 2,
               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
             ),
           )
         else ...[
           if (icon != null) ...[
-            Icon(icon, size: AppTheme.iconSmall),
-            const SizedBox(width: AppTheme.spaceSmall),
+            Icon(icon, size: isCompact ? 16 : AppTheme.iconSmall),
+            SizedBox(width: isCompact ? 6 : AppTheme.spaceSmall),
           ],
           Text(
             text,
-            style: const TextStyle(
-              fontSize: AppTheme.fontSizeMedium,
+            style: TextStyle(
+              fontSize: isCompact ? 14 : AppTheme.fontSizeMedium,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.3,
             ),
@@ -210,9 +212,9 @@ class PremiumButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: colors.first,
           side: BorderSide(color: colors.first, width: 1.5),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppTheme.spaceXLarge,
-            vertical: AppTheme.spaceMedium,
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? AppTheme.spaceMedium : AppTheme.spaceXLarge,
+            vertical: isCompact ? AppTheme.spaceSmall : AppTheme.spaceMedium,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -244,9 +246,9 @@ class PremiumButton extends StatelessWidget {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppTheme.spaceXLarge,
-            vertical: AppTheme.spaceMedium,
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? AppTheme.spaceMedium : AppTheme.spaceXLarge,
+            vertical: isCompact ? AppTheme.spaceSmall : AppTheme.spaceMedium,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),

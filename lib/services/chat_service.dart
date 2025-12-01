@@ -1,307 +1,359 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
-import '../models/chat_model.dart';
-import '../models/chat_dtos.dart';
+import '../models/chat/chat_models.dart';
 import 'storage_service.dart';
 
+/// Servicio para operaciones HTTP del chat
+/// Sincronizado con ChatController del backend
 class ChatService {
   final StorageService _storage = StorageService();
 
-  Future<String?> _getAuthToken() async {
-    return await _storage.getAccessToken();
+  /// Headers con autorización
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _storage.getAccessToken();
+    return {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Authorization': 'Bearer $token',
+    };
   }
 
-  // Get all chats for current user
-  Future<List<ChatModel>> getChats() async {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+  // ==================== USERS SEARCH ====================
 
-    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatsEndpoint}');
-    final response = await http.get(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-    );
+  /// Buscar usuarios para chatear
+  /// GET /api/chat/users/search?term=xxx
+  Future<List<ChatUserSearchResult>> searchUsers(String query) async {
+    try {
+      final headers = await _getHeaders();
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/chat/users/search?term=${Uri.encodeComponent(query)}');
 
-    if (response.statusCode == 200) {
-      final List<dynamic> jsonList = jsonDecode(response.body);
-      return jsonList.map((json) => ChatModel.fromJson(json as Map<String, dynamic>)).toList();
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else {
-      throw Exception('Failed to load chats: ${response.statusCode}');
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((u) => ChatUserSearchResult.fromJson(u)).toList();
+      }
+      print('[ChatService] searchUsers status: ${response.statusCode}');
+      return [];
+    } catch (e) {
+      print('[ChatService] Error searching users: $e');
+      return [];
     }
   }
 
-  // Create 1:1 chat
-  Future<ChatModel> createOneToOneChat(String userId) async{
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+  // ==================== CONVERSATIONS ====================
 
-    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatsEndpoint}/one-to-one');
-    final dto = CreateOneToOneChatDto(userId: userId);
+  /// Obtener todas las conversaciones del usuario
+  /// GET /api/chat/conversations
+  Future<List<Conversation>> getConversations() async {
+    try {
+      final headers = await _getHeaders();
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/chat/conversations');
 
-    final response = await http.post(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-      body: jsonEncode(dto.toJson()),
-    );
+      final response = await http.get(uri, headers: headers);
 
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      final chatId = jsonResponse['id'] as String;
-      
-      // Fetch the created chat details
-      return await getChatById(chatId);
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else if (response.statusCode == 404) {
-      throw Exception('User not found');
-    } else {
-      throw Exception('Failed to create chat: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((c) => Conversation.fromJson(c)).toList();
+      }
+      print('[ChatService] getConversations status: ${response.statusCode}');
+      return [];
+    } catch (e) {
+      print('[ChatService] Error getting conversations: $e');
+      return [];
     }
   }
 
-  // Create group chat
-  Future<ChatModel> createGroupChat(String name, List<String> memberIds) async {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+  /// Obtener una conversación específica
+  /// GET /api/chat/conversations/{id}
+  Future<Conversation?> getConversation(String conversationId) async {
+    try {
+      final headers = await _getHeaders();
+      final uri =
+          Uri.parse('${ApiConfig.baseUrl}/api/chat/conversations/$conversationId');
 
-    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatsEndpoint}/group');
-    final dto = CreateGroupChatDto(name: name, memberIds: memberIds);
+      final response = await http.get(uri, headers: headers);
 
-    final response = await http.post(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-      body: jsonEncode(dto.toJson()),
-    );
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      final chatId = jsonResponse['id'] as String;
-      
-      // Fetch the created chat details
-      return await getChatById(chatId);
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else if (response.statusCode == 400) {
-      final jsonResponse = jsonDecode(response.body);
-      throw Exception(jsonResponse['message'] ?? 'Invalid data');
-    } else {
-      throw Exception('Failed to create group chat: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return Conversation.fromJson(data);
+      }
+      print('[ChatService] getConversation status: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      print('[ChatService] Error getting conversation: $e');
+      return null;
     }
   }
 
-  // Get chat by ID (helper method)
-  Future<ChatModel> getChatById(String chatId) async {
-    final chats = await getChats();
-    return chats.firstWhere(
-      (chat) => chat.id == chatId,
-      orElse: () => throw Exception('Chat not found'),
-    );
-  }
+  /// Crear o obtener conversación directa (1:1)
+  /// POST /api/chat/conversations/direct
+  /// Body: { "recipientUserId": "guid" }
+  Future<String?> getOrCreateDirectConversation(String otherUserId) async {
+    try {
+      final headers = await _getHeaders();
+      final uri =
+          Uri.parse('${ApiConfig.baseUrl}/api/chat/conversations/direct');
 
-  // Get messages from a chat
-  Future<List<MessageModel>> getMessages(String chatId, {int skip = 0, int take = 50}) async {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+      final response = await http.post(
+        uri,
+        headers: headers,
+        body: jsonEncode({'recipientUserId': otherUserId}),
+      );
 
-    final url = Uri.parse(
-      '${ApiConfig.baseUrl}${ApiConfig.chatMessagesEndpoint(chatId)}?skip=$skip&take=$take',
-    );
-
-    final response = await http.get(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> jsonList = jsonDecode(response.body);
-      return jsonList.map((json) => MessageModel.fromJson(json as Map<String, dynamic>)).toList();
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else if (response.statusCode == 403) {
-      throw Exception('You are not a member of this chat');
-    } else {
-      throw Exception('Failed to load messages: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['conversationId']?.toString();
+      }
+      print(
+          '[ChatService] createDirectConversation status: ${response.statusCode}');
+      print('[ChatService] createDirectConversation body: ${response.body}');
+      return null;
+    } catch (e) {
+      print('[ChatService] Error creating direct conversation: $e');
+      return null;
     }
   }
 
-  // Send message
-  Future<MessageModel> sendMessage(String chatId, String text) async {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+  /// Crear conversación grupal
+  /// POST /api/chat/conversations/group
+  /// Body: { "name": "string", "memberIds": ["guid1", "guid2"], "imageUrl": "string" }
+  Future<String?> createGroupConversation(
+    String groupName,
+    List<String> memberIds, {
+    String? imageUrl,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final uri =
+          Uri.parse('${ApiConfig.baseUrl}/api/chat/conversations/group');
 
-    final url = Uri.parse(
-      '${ApiConfig.baseUrl}${ApiConfig.chatMessagesEndpoint(chatId)}',
-    );
-    final dto = SendMessageDto(text: text);
+      final response = await http.post(
+        uri,
+        headers: headers,
+        body: jsonEncode({
+          'name': groupName,
+          'memberIds': memberIds,
+          if (imageUrl != null) 'imageUrl': imageUrl,
+        }),
+      );
 
-    final response = await http.post(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-      body: jsonEncode(dto.toJson()),
-    );
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      return MessageModel.fromJson(jsonResponse);
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else if (response.statusCode == 403) {
-      throw Exception('You are not a member of this chat');
-    } else if (response.statusCode == 400) {
-      final jsonResponse = jsonDecode(response.body);
-      throw Exception(jsonResponse['message'] ?? 'Invalid message');
-    } else {
-      throw Exception('Failed to send message: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['conversationId']?.toString();
+      }
+      print(
+          '[ChatService] createGroupConversation status: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      print('[ChatService] Error creating group conversation: $e');
+      return null;
     }
   }
 
-  // Add member to group chat
-  Future<void> addMember(String chatId, String userId) async{
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+  /// Actualizar conversación (nombre, imagen)
+  /// PUT /api/chat/conversations/{id}
+  /// Body: { "name": "string", "imageUrl": "string" }
+  Future<bool> updateConversation(
+    String conversationId, {
+    String? name,
+    String? imageUrl,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/chat/conversations/$conversationId');
 
-    final url = Uri.parse(
-      '${ApiConfig.baseUrl}${ApiConfig.chatMembersEndpoint(chatId)}',
-    );
-    final dto = AddMemberDto(userId: userId);
+      final response = await http.put(
+        uri,
+        headers: headers,
+        body: jsonEncode({
+          if (name != null) 'name': name,
+          if (imageUrl != null) 'imageUrl': imageUrl,
+        }),
+      );
 
-    final response = await http.post(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-      body: jsonEncode(dto.toJson()),
-    );
-
-    if (response.statusCode == 200) {
-      return;
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else if (response.statusCode == 403) {
-      throw Exception('You don\'t have permission to add members');
-    } else if (response.statusCode == 400) {
-      final jsonResponse = jsonDecode(response.body);
-      throw Exception(jsonResponse['message'] ?? 'Failed to add member');
-    } else if (response.statusCode == 409) {
-      throw Exception('User is already a member');
-    } else {
-      throw Exception('Failed to add member: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      print('[ChatService] Error updating conversation: $e');
+      return false;
     }
   }
 
-  // Search users
-  Future<List<UserSearchResult>> searchUsers(String query, {int take = 20}) async {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+  // ==================== MESSAGES ====================
 
-    final url = Uri.parse(
-      '${ApiConfig.baseUrl}${ApiConfig.usersSearchEndpoint}?q=$query&take=$take',
-    );
+  /// Obtener mensajes de una conversación
+  /// GET /api/chat/conversations/{id}/messages?skip=0&take=50
+  Future<List<ChatMessage>> getMessages(
+    String conversationId, {
+    int skip = 0,
+    int take = 50,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/chat/conversations/$conversationId/messages?skip=$skip&take=$take');
 
-    final response = await http.get(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-    );
+      final response = await http.get(uri, headers: headers);
 
-    if (response.statusCode == 200) {
-      final List<dynamic> jsonList = jsonDecode(response.body);
-      return jsonList.map((json) => UserSearchResult.fromJson(json as Map<String, dynamic>)).toList();
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else {
-      throw Exception('Failed to search users: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((m) => ChatMessage.fromJson(m)).toList();
+      }
+      print('[ChatService] getMessages status: ${response.statusCode}');
+      return [];
+    } catch (e) {
+      print('[ChatService] Error getting messages: $e');
+      return [];
     }
   }
 
-  // Marcar mensaje individual como leído
-  Future<void> markMessageAsRead(String messageId) async {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+  /// Enviar mensaje de texto
+  /// POST /api/chat/conversations/{id}/messages
+  /// Body: { "content": "string", "replyToMessageId": "guid" }
+  Future<ChatMessage?> sendMessage(
+    String conversationId,
+    String content, {
+    String? replyToMessageId,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/chat/conversations/$conversationId/messages');
 
-    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatMarkMessageReadEndpoint(messageId)}');
+      final response = await http.post(
+        uri,
+        headers: headers,
+        body: jsonEncode({
+          'content': content,
+          if (replyToMessageId != null) 'replyToMessageId': replyToMessageId,
+        }),
+      );
 
-    final response = await http.put(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-    );
-
-    if (response.statusCode == 200) {
-      return; // Success
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else if (response.statusCode == 404) {
-      throw Exception('Message not found');
-    } else {
-      throw Exception('Failed to mark message as read: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return ChatMessage.fromJson(data);
+      }
+      print('[ChatService] sendMessage status: ${response.statusCode}');
+      print('[ChatService] sendMessage body: ${response.body}');
+      return null;
+    } catch (e) {
+      print('[ChatService] Error sending message: $e');
+      return null;
     }
   }
 
-  // Marcar todos los mensajes de un chat como leídos
-  Future<void> markAllChatAsRead(String chatId) async {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+  /// Editar mensaje
+  /// PUT /api/chat/messages/{id}
+  /// Body: { "content": "string" }
+  Future<bool> editMessage(String messageId, String newContent) async {
+    try {
+      final headers = await _getHeaders();
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/chat/messages/$messageId');
 
-    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatMarkAllReadEndpoint(chatId)}');
+      final response = await http.put(
+        uri,
+        headers: headers,
+        body: jsonEncode({'content': newContent}),
+      );
 
-    final response = await http.put(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-    );
-
-    if (response.statusCode == 200) {
-      return; // Success
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else if (response.statusCode == 403) {
-      throw Exception('You are not a member of this chat');
-    } else {
-      throw Exception('Failed to mark all messages as read: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      print('[ChatService] Error editing message: $e');
+      return false;
     }
   }
 
-  // Obtener contador total de mensajes no leídos
-  Future<int> getUnreadCount() async {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+  /// Eliminar mensaje
+  /// DELETE /api/chat/messages/{id}
+  Future<bool> deleteMessage(String messageId) async {
+    try {
+      final headers = await _getHeaders();
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/chat/messages/$messageId');
 
-    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatUnreadCountEndpoint}');
+      final response = await http.delete(uri, headers: headers);
 
-    final response = await http.get(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-    );
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      return jsonResponse['data']['unreadCount'] as int;
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else {
-      throw Exception('Failed to get unread count: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      print('[ChatService] Error deleting message: $e');
+      return false;
     }
   }
 
-  // Obtener mensajes no leídos por chat (para badges)
-  Future<Map<String, int>> getUnreadByChat() async {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('No authentication token');
+  // ==================== READ/DELIVERY STATUS ====================
 
-    final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.chatUnreadByChatEndpoint}');
+  /// Marcar mensaje como entregado
+  /// POST /api/chat/messages/{id}/delivered
+  Future<bool> markMessageDelivered(String messageId) async {
+    try {
+      final headers = await _getHeaders();
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/chat/messages/$messageId/delivered');
 
-    final response = await http.get(
-      url,
-      headers: ApiConfig.headersWithAuth(token),
-    );
+      final response = await http.post(uri, headers: headers);
+      return response.statusCode == 200;
+    } catch (e) {
+      print('[ChatService] Error marking message delivered: $e');
+      return false;
+    }
+  }
 
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      final Map<String, dynamic> data = jsonResponse['data'];
-      return data.map((key, value) => MapEntry(key, value as int));
-    } else if (response.statusCode == 401) {
-      throw Exception('Unauthorized - please login again');
-    } else {
-      throw Exception('Failed to get unread by chat: ${response.statusCode}');
+  /// Marcar mensaje como leído
+  /// POST /api/chat/messages/{id}/read
+  Future<bool> markMessageRead(String messageId) async {
+    try {
+      final headers = await _getHeaders();
+      final uri =
+          Uri.parse('${ApiConfig.baseUrl}/api/chat/messages/$messageId/read');
+
+      final response = await http.post(uri, headers: headers);
+      return response.statusCode == 200;
+    } catch (e) {
+      print('[ChatService] Error marking message read: $e');
+      return false;
+    }
+  }
+
+  /// Marcar todos los mensajes de una conversación como leídos
+  /// POST /api/chat/conversations/{id}/read-all
+  Future<int> markAllMessagesRead(String conversationId) async {
+    try {
+      final headers = await _getHeaders();
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/chat/conversations/$conversationId/read-all');
+
+      final response = await http.post(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['count'] ?? 0;
+      }
+      return 0;
+    } catch (e) {
+      print('[ChatService] Error marking all messages read: $e');
+      return 0;
+    }
+  }
+
+  /// Obtener conteo de mensajes no leídos
+  /// GET /api/chat/conversations/{id}/unread-count
+  Future<int> getUnreadCount(String conversationId) async {
+    try {
+      final headers = await _getHeaders();
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/chat/conversations/$conversationId/unread-count');
+
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['unreadCount'] ?? 0;
+      }
+      return 0;
+    } catch (e) {
+      print('[ChatService] Error getting unread count: $e');
+      return 0;
     }
   }
 }

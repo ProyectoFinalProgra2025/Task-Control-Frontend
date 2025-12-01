@@ -10,18 +10,22 @@ import 'screens/company_admin/admin_main_screen.dart';
 import 'screens/area_manager/manager_main_screen.dart';
 import 'screens/super_admin/super_admin_main_screen.dart';
 import 'screens/worker/worker_main_screen.dart';
+import 'screens/chat/chat_list_screen.dart';
 import 'services/storage_service.dart';
+import 'services/chat_hub_service.dart';
 import 'config/theme_config.dart';
 import 'providers/theme_provider.dart' as theme_prov;
 import 'providers/tarea_provider.dart';
 import 'providers/admin_tarea_provider.dart';
 import 'providers/usuario_provider.dart';
 import 'providers/chat_provider.dart';
-import 'providers/realtime_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_ES', null);
+  
+  // Crear instancia singleton del servicio de SignalR
+  final chatHubService = ChatHubService();
   
   runApp(
     MultiProvider(
@@ -30,8 +34,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => TareaProvider()),
         ChangeNotifierProvider(create: (_) => AdminTareaProvider()),
         ChangeNotifierProvider(create: (_) => UsuarioProvider()),
-        ChangeNotifierProvider(create: (_) => ChatProvider()),
-        ChangeNotifierProvider(create: (_) => RealtimeProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider(hub: chatHubService)),
       ],
       child: const TaskControlApp(),
     ),
@@ -61,6 +64,9 @@ class TaskControlApp extends StatelessWidget {
             '/manager': (context) => const ManagerMainScreen(),
             '/super-admin': (context) => const SuperAdminMainScreen(),
             '/worker': (context) => const WorkerMainScreen(),
+            '/chat': (context) => const ChatListScreen(),
+            // Las rutas de chat detail y new requieren parámetros complejos
+            // Se navegan mediante Navigator.push con los parámetros necesarios
           },
         );
       },
@@ -93,26 +99,9 @@ class _InitialRouteHandlerState extends State<InitialRouteHandler> {
     // Verificar token almacenado
     final token = await _storage.getAccessToken();
     
-    // Si hay token, inicializar SignalR y ChatProvider automáticamente
+    // TODO: Inicializar nuevo sistema de chat cuando esté listo
     if (token != null && token.isNotEmpty) {
-      try {
-        final userData = await _storage.getUserData();
-        final empresaId = await _storage.getEmpresaId();
-        final userRole = userData?['rol'];
-        final isSuperAdmin = userRole == 1 || userRole == '1';
-
-        // Conectar ChatProvider con SignalR
-        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-        await chatProvider.connectSignalR(
-          empresaId: empresaId,
-          isSuperAdmin: isSuperAdmin,
-        );
-        await chatProvider.loadChats();
-        debugPrint('✅ ChatProvider initialized automatically on app start');
-      } catch (e) {
-        debugPrint('⚠️ Error initializing ChatProvider: $e');
-        // Continuar aunque falle - no es crítico
-      }
+      debugPrint('✅ Usuario autenticado - Chat disponible cuando se implemente');
     }
 
     // ════════════════════════════════════════════════════════════

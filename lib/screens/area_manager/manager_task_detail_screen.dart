@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
 import '../../providers/tarea_provider.dart';
 import '../../providers/admin_tarea_provider.dart';
-import '../../providers/chat_provider.dart';
-import '../../providers/realtime_provider.dart';
+import '../../providers/usuario_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/usuario.dart';
 import '../../config/theme_config.dart';
 import '../../services/tarea_service.dart';
 import '../../services/usuario_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/chat_service.dart';
 import '../../widgets/task/task_widgets.dart';
-import '../common/chat_detail_screen.dart';
+import '../chat/chat_detail_screen.dart';
 
 class ManagerTaskDetailScreen extends StatefulWidget {
   final String tareaId;
@@ -37,48 +36,12 @@ class _ManagerTaskDetailScreenState extends State<ManagerTaskDetailScreen> {
   bool _isLoading = true;
   bool _isProcessing = false;
   bool _hasChanges = false; // Track if any changes were made
-  String? _loadingChatUserId;
   String? _currentUserId; // ID del manager actual
-  StreamSubscription? _tareaEventSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _connectRealtime();
-      _subscribeToRealtimeEvents();
-    });
-  }
-
-  @override
-  void dispose() {
-    _tareaEventSubscription?.cancel();
-    super.dispose();
-  }
-  
-  Future<void> _connectRealtime() async {
-    try {
-      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-      final empresaId = await _storage.getEmpresaId();
-      if (empresaId != null) {
-        await realtimeProvider.connect(empresaId: empresaId);
-      }
-    } catch (e) {
-      debugPrint('Error connecting to realtime: $e');
-    }
-  }
-  
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
-      final eventTareaId = event['tareaId']?.toString();
-      if (eventTareaId == widget.tareaId) {
-        debugPrint('📝 Manager Task Detail: Task event for this task - reloading');
-        _loadData();
-      }
-    });
   }
 
   Future<void> _loadData() async {
@@ -872,37 +835,121 @@ class _ManagerTaskDetailScreenState extends State<ManagerTaskDetailScreen> {
   }
 
   Future<void> _chatWithUser(String recipientId, String recipientName) async {
-    if (recipientId.isEmpty) return;
+    if (recipientId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No se puede identificar al usuario'),
+          backgroundColor: AppTheme.warningOrange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
 
-    setState(() => _loadingChatUserId = recipientId);
+    // Obtener el ID del usuario actual
+    final usuarioProvider = Provider.of<UsuarioProvider>(context, listen: false);
+    final currentUserId = usuarioProvider.usuario?.id;
+    
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Error: No se pudo obtener tu información de usuario'),
+          backgroundColor: AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Mostrar loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppTheme.primaryBlue),
+              const SizedBox(height: 16),
+              Text(
+                'Abriendo chat con $recipientName...',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
 
     try {
-      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-      final chat = await chatProvider.createOneToOneChat(recipientId);
+      final chatService = ChatService();
+      
+      // Crear o obtener conversación directa
+      final conversationId = await chatService.getOrCreateDirectConversation(recipientId);
+      
+      if (conversationId == null) {
+        Navigator.pop(context); // Cerrar loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No se pudo iniciar el chat'),
+            backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
 
+      // Obtener la conversación completa
+      final conversation = await chatService.getConversation(conversationId);
+      
+      Navigator.pop(context); // Cerrar loading
+      
+      if (conversation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No se pudo cargar la conversación'),
+            backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+
+      // Navegar al chat
       if (!mounted) return;
-
-      setState(() => _loadingChatUserId = null);
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ChatDetailScreen(
-            chatId: chat.id,
-            recipientName: recipientName.isNotEmpty ? recipientName : 'Usuario',
-            isGroup: false,
+            conversation: conversation,
+            currentUserId: currentUserId,
           ),
         ),
       );
     } catch (e) {
-      if (mounted) {
-        setState(() => _loadingChatUserId = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al abrir chat: $e'),
-            backgroundColor: AppTheme.dangerRed,
-          ),
-        );
-      }
+      Navigator.pop(context); // Cerrar loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al abrir chat: $e'),
+          backgroundColor: AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     }
   }
 
@@ -1040,7 +1087,7 @@ class _ManagerTaskDetailScreenState extends State<ManagerTaskDetailScreen> {
         name: _tarea!.createdByUsuarioNombre,
         role: 'Creó esta tarea',
         color: AppTheme.primaryBlue,
-        isLoading: _loadingChatUserId == _tarea!.createdByUsuarioId,
+        isLoading: false,
         onTap: () => _chatWithUser(
           _tarea!.createdByUsuarioId,
           _tarea!.createdByUsuarioNombre,
@@ -1054,7 +1101,7 @@ class _ManagerTaskDetailScreenState extends State<ManagerTaskDetailScreen> {
         name: _tarea!.asignadoANombre!,
         role: 'Trabajador asignado',
         color: Colors.teal,
-        isLoading: _loadingChatUserId == _tarea!.asignadoAUsuarioId,
+        isLoading: false,
         onTap: () => _chatWithUser(
           _tarea!.asignadoAUsuarioId!,
           _tarea!.asignadoANombre!,

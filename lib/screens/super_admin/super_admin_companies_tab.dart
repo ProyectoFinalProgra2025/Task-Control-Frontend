@@ -1,11 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../services/empresa_service.dart';
 import '../../models/empresa_model.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/premium_widgets.dart';
-import '../../providers/realtime_provider.dart';
 
 class SuperAdminCompaniesTab extends StatefulWidget {
   const SuperAdminCompaniesTab({super.key});
@@ -21,7 +18,6 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
   List<EmpresaModel> _empresas = [];
   bool _isLoading = true;
   late AnimationController _animationController;
-  StreamSubscription? _empresaEventSubscription;
 
   @override
   void initState() {
@@ -31,66 +27,12 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
       duration: const Duration(milliseconds: 300),
     );
     _loadEmpresas();
-    _connectRealtime();
-    _subscribeToRealtimeEvents();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _empresaEventSubscription?.cancel();
     super.dispose();
-  }
-
-  Future<void> _connectRealtime() async {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    if (!realtimeProvider.isConnected) {
-      try {
-        await realtimeProvider.connect(isSuperAdmin: true);
-        print('SuperAdminCompaniesTab: ✅ Real-time enabled');
-      } catch (e) {
-        print('SuperAdminCompaniesTab: ⚠️ Real-time not available: $e');
-        // Continue without real-time
-      }
-    }
-  }
-
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    _empresaEventSubscription = realtimeProvider.empresaEventStream.listen((event) {
-      print('SuperAdminCompaniesTab: 🏢 Empresa ${event['eventType']}');
-      _loadEmpresas();
-      
-      if (mounted) {
-        final eventType = event['eventType'] as String;
-        final nombre = event['nombre'] as String? ?? 'Empresa';
-        String message = '';
-        
-        switch (eventType) {
-          case 'created':
-            message = '🆕 Nueva empresa: $nombre';
-            break;
-          case 'approved':
-            message = '✅ Empresa aprobada: $nombre';
-            break;
-          case 'rejected':
-            message = '❌ Empresa rechazada: $nombre';
-            break;
-        }
-        
-        if (message.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: AppTheme.primaryPurple,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-    });
   }
 
   Future<void> _loadEmpresas() async {
@@ -428,151 +370,199 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Section
-            Padding(
-              padding: const EdgeInsets.all(AppTheme.spaceRegular),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Título con gradiente
-                  ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: AppTheme.gradientPurple,
-                    ).createShader(bounds),
-                    child: Text(
-                      'Gestión de Empresas',
-                      style: TextStyle(
-                        fontSize: AppTheme.fontSizeHuge,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        height: 1.1,
-                        letterSpacing: -0.5,
+            // Header Section responsive
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isVerySmallScreen = constraints.maxWidth < 300;
+                final isSmallScreen = constraints.maxWidth < 350;
+
+                return Padding(
+                  padding: EdgeInsets.all(isVerySmallScreen ? 8 : AppTheme.spaceRegular),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Título responsive con gradiente
+                      ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: AppTheme.gradientPurple,
+                        ).createShader(bounds),
+                        child: Text(
+                          isVerySmallScreen ? 'Empresas' : 'Gestión de Empresas',
+                          style: TextStyle(
+                            fontSize: isVerySmallScreen ? 24 : (isSmallScreen ? 28 : AppTheme.fontSizeHuge),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            height: 1.1,
+                            letterSpacing: isSmallScreen ? -0.3 : -0.5,
+                          ),
+                        ),
                       ),
-                    ),
+                      SizedBox(height: isSmallScreen ? 6 : AppTheme.spaceXSmall),
+                      Text(
+                        isVerySmallScreen
+                            ? 'Administrar empresas'
+                            : 'Aprobar, rechazar o eliminar empresas del sistema',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 14 : AppTheme.fontSizeMedium,
+                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                          fontWeight: FontWeight.w500,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppTheme.spaceXSmall),
-                  Text(
-                    'Aprobar, rechazar o eliminar empresas del sistema',
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeMedium,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
 
-            // Modern Tab Bar
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: AppTheme.spaceRegular),
-              padding: const EdgeInsets.all(AppTheme.spaceXSmall),
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-                borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-                border: Border.all(
-                  color: isDark
-                      ? AppTheme.darkBorder.withOpacity(0.5)
-                      : AppTheme.lightBorder,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+            // Modern Tab Bar responsive
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isVerySmallScreen = constraints.maxWidth < 300;
+                final isSmallScreen = constraints.maxWidth < 350;
+
+                return Container(
+                  margin: EdgeInsets.symmetric(
+                    horizontal: isVerySmallScreen ? 8 : AppTheme.spaceRegular,
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  _buildModernTab('Pending', 'Pendientes', Icons.pending_actions_rounded, isDark),
-                  _buildModernTab('Approved', 'Aprobadas', Icons.check_circle_rounded, isDark),
-                  _buildModernTab('Rejected', 'Rechazadas', Icons.cancel_rounded, isDark),
-                ],
-              ),
+                  padding: EdgeInsets.all(isVerySmallScreen ? 4 : AppTheme.spaceXSmall),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                    borderRadius: BorderRadius.circular(isVerySmallScreen ? 8 : AppTheme.radiusLarge),
+                    border: Border.all(
+                      color: isDark
+                          ? AppTheme.darkBorder.withOpacity(0.5)
+                          : AppTheme.lightBorder,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+                        blurRadius: isSmallScreen ? 6 : 10,
+                        offset: Offset(0, isSmallScreen ? 1 : 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      _buildModernTab('Pending', isVerySmallScreen ? 'Pend.' : 'Pendientes', Icons.pending_actions_rounded, isDark, isCompact: isVerySmallScreen),
+                      _buildModernTab('Approved', isVerySmallScreen ? 'Aprob.' : 'Aprobadas', Icons.check_circle_rounded, isDark, isCompact: isVerySmallScreen),
+                      _buildModernTab('Rejected', isVerySmallScreen ? 'Rech.' : 'Rechazadas', Icons.cancel_rounded, isDark, isCompact: isVerySmallScreen),
+                    ],
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: AppTheme.spaceRegular),
 
-            // Company List
+            // Company List responsive
             Expanded(
               child: _isLoading
                   ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: AppTheme.gradientPurple,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isVerySmallScreen = constraints.maxWidth < 300;
+                          final isSmallScreen = constraints.maxWidth < 350;
+
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: isVerySmallScreen ? 50 : 60,
+                                height: isVerySmallScreen ? 50 : 60,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: AppTheme.gradientPurple,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppTheme.primaryPurple.withOpacity(0.3),
+                                      blurRadius: isSmallScreen ? 12 : 16,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                    strokeWidth: isSmallScreen ? 2.5 : 3,
+                                  ),
+                                ),
                               ),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                strokeWidth: 3,
+                              SizedBox(height: isSmallScreen ? 12 : AppTheme.spaceRegular),
+                              Text(
+                                isVerySmallScreen ? 'Cargando...' : 'Cargando empresas...',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: isSmallScreen ? 14 : AppTheme.fontSizeMedium,
+                                ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: AppTheme.spaceRegular),
-                          Text(
-                            'Cargando empresas...',
-                            style: TextStyle(
-                              color: isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.lightTextSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                            ],
+                          );
+                        },
                       ),
                     )
                   : _empresas.isEmpty
                       ? Center(
-                          child: PremiumEmptyState(
-                            icon: Icons.business_rounded,
-                            title: 'No hay empresas',
-                            subtitle: _selectedTab == "Pending"
-                                ? "No hay empresas pendientes de aprobación"
-                                : _selectedTab == "Approved"
-                                    ? "No hay empresas aprobadas"
-                                    : "No hay empresas rechazadas",
-                            isDark: isDark,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final isVerySmallScreen = constraints.maxWidth < 300;
+
+                              return PremiumEmptyState(
+                                icon: Icons.business_rounded,
+                                title: 'No hay empresas',
+                                subtitle: _selectedTab == "Pending"
+                                    ? (isVerySmallScreen ? "Sin pendientes" : "No hay empresas pendientes de aprobación")
+                                    : _selectedTab == "Approved"
+                                        ? (isVerySmallScreen ? "Sin aprobadas" : "No hay empresas aprobadas")
+                                        : (isVerySmallScreen ? "Sin rechazadas" : "No hay empresas rechazadas"),
+                                isDark: isDark,
+                              );
+                            },
                           ),
                         )
                       : RefreshIndicator(
                           onRefresh: _loadEmpresas,
                           color: AppTheme.primaryPurple,
                           strokeWidth: 3,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppTheme.spaceRegular,
-                              0,
-                              AppTheme.spaceRegular,
-                              100,
-                            ),
-                            physics: const AlwaysScrollableScrollPhysics(
-                              parent: BouncingScrollPhysics(),
-                            ),
-                            itemCount: _empresas.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: AppTheme.spaceMedium),
-                            itemBuilder: (context, index) {
-                              return FadeTransition(
-                                opacity: _animationController,
-                                child: SlideTransition(
-                                  position: Tween<Offset>(
-                                    begin: const Offset(0, 0.1),
-                                    end: Offset.zero,
-                                  ).animate(_animationController),
-                                  child: _buildPremiumCompanyCard(
-                                    empresa: _empresas[index],
-                                    isDark: isDark,
-                                  ),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final isVerySmallScreen = constraints.maxWidth < 300;
+
+                              return ListView.separated(
+                                padding: EdgeInsets.fromLTRB(
+                                  isVerySmallScreen ? 8 : AppTheme.spaceRegular,
+                                  0,
+                                  isVerySmallScreen ? 8 : AppTheme.spaceRegular,
+                                  100,
                                 ),
+                                physics: const AlwaysScrollableScrollPhysics(
+                                  parent: BouncingScrollPhysics(),
+                                ),
+                                itemCount: _empresas.length,
+                                separatorBuilder: (context, index) =>
+                                    SizedBox(height: isVerySmallScreen ? 8 : AppTheme.spaceMedium),
+                                itemBuilder: (context, index) {
+                                  return FadeTransition(
+                                    opacity: _animationController,
+                                    child: SlideTransition(
+                                      position: Tween<Offset>(
+                                        begin: const Offset(0, 0.1),
+                                        end: Offset.zero,
+                                      ).animate(_animationController),
+                                      child: _buildPremiumCompanyCard(
+                                        empresa: _empresas[index],
+                                        isDark: isDark,
+                                        isCompact: isVerySmallScreen,
+                                      ),
+                                    ),
+                                  );
+                                },
                               );
                             },
                           ),
@@ -584,7 +574,7 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
     );
   }
 
-  Widget _buildModernTab(String value, String label, IconData icon, bool isDark) {
+  Widget _buildModernTab(String value, String label, IconData icon, bool isDark, {bool isCompact = false}) {
     final isActive = _selectedTab == value;
 
     Color getTabColor() {
@@ -601,7 +591,10 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
         },
         child: AnimatedContainer(
           duration: AppTheme.animationNormal,
-          padding: const EdgeInsets.symmetric(vertical: AppTheme.spaceMedium),
+          padding: EdgeInsets.symmetric(
+            vertical: isCompact ? 8 : AppTheme.spaceMedium,
+            horizontal: isCompact ? 4 : 8,
+          ),
           decoration: BoxDecoration(
             gradient: isActive
                 ? LinearGradient(
@@ -611,13 +604,13 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
                     ],
                   )
                 : null,
-            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderRadius: BorderRadius.circular(isCompact ? 6 : AppTheme.radiusMedium),
             boxShadow: isActive
                 ? [
                     BoxShadow(
                       color: getTabColor().withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      blurRadius: isCompact ? 4 : 8,
+                      offset: Offset(0, isCompact ? 1 : 2),
                     ),
                   ]
                 : null,
@@ -627,28 +620,30 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
             children: [
               Icon(
                 icon,
-                size: 18,
+                size: isCompact ? 14 : 18,
                 color: isActive
                     ? Colors.white
                     : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
               ),
-              const SizedBox(width: AppTheme.spaceXSmall),
-              Flexible(
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeSmall,
-                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                    color: isActive
-                        ? Colors.white
-                        : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                    letterSpacing: 0.3,
+              if (!isCompact) ...[
+                const SizedBox(width: AppTheme.spaceXSmall),
+                Flexible(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: isCompact ? 11 : AppTheme.fontSizeSmall,
+                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                      color: isActive
+                          ? Colors.white
+                          : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                      letterSpacing: 0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -659,164 +654,210 @@ class _SuperAdminCompaniesTabState extends State<SuperAdminCompaniesTab>
   Widget _buildPremiumCompanyCard({
     required EmpresaModel empresa,
     required bool isDark,
+    bool isCompact = false,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-        border: Border.all(
-          color: isDark
-              ? AppTheme.darkBorder.withOpacity(0.5)
-              : AppTheme.lightBorder,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spaceRegular),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                // Icon con gradiente
-                Container(
-                  padding: const EdgeInsets.all(AppTheme.spaceMedium),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: AppTheme.gradientPurple,
-                    ),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryPurple.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.business_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: AppTheme.spaceMedium),
-                // Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        empresa.nombre,
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeLarge,
-                          fontWeight: FontWeight.w700,
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.lightTextPrimary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (empresa.direccion != null) ...[
-                        const SizedBox(height: AppTheme.spaceXSmall),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_rounded,
-                              size: 14,
-                              color: isDark
-                                  ? AppTheme.darkTextTertiary
-                                  : AppTheme.lightTextTertiary,
-                            ),
-                            const SizedBox(width: AppTheme.spaceXSmall),
-                            Expanded(
-                              child: Text(
-                                empresa.direccion!,
-                                style: TextStyle(
-                                  fontSize: AppTheme.fontSizeSmall,
-                                  color: isDark
-                                      ? AppTheme.darkTextSecondary
-                                      : AppTheme.lightTextSecondary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppTheme.spaceSmall),
-                // Status badge
-                TaskStateBadge(
-                  text: empresa.estadoDisplayName,
-                  color: _getStatusColor(empresa.estado),
-                ),
-              ],
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isVerySmallScreen = constraints.maxWidth < 300;
+        final isSmallScreen = constraints.maxWidth < 350;
+        final useCompactLayout = isCompact || isVerySmallScreen;
 
-            if (empresa.telefono != null) ...[
-              const SizedBox(height: AppTheme.spaceMedium),
-              InfoRow(
-                icon: Icons.phone_rounded,
-                text: empresa.telefono!,
-                isDark: isDark,
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+            borderRadius: BorderRadius.circular(isVerySmallScreen ? 12 : AppTheme.radiusXLarge),
+            border: Border.all(
+              color: isDark
+                  ? AppTheme.darkBorder.withOpacity(0.5)
+                  : AppTheme.lightBorder,
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+                blurRadius: isSmallScreen ? 6 : 10,
+                offset: Offset(0, isSmallScreen ? 2 : 4),
               ),
             ],
-
-            const SizedBox(height: AppTheme.spaceRegular),
-
-            // Action Buttons
-            Row(
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(useCompactLayout ? 12 : AppTheme.spaceRegular),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (_selectedTab == 'Pending') ...[
-                  Expanded(
-                    child: PremiumButton(
-                      text: 'Aprobar',
-                      onPressed: () => _aprobarEmpresa(empresa.id, empresa.nombre),
-                      gradientColors: [AppTheme.successGreen, const Color(0xFF059669)],
-                      icon: Icons.check_rounded,
-                      isFullWidth: true,
+                // Header responsivo
+                Row(
+                  children: [
+                    // Icon con gradiente responsivo
+                    Container(
+                      padding: EdgeInsets.all(useCompactLayout ? 10 : AppTheme.spaceMedium),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: AppTheme.gradientPurple,
+                        ),
+                        borderRadius: BorderRadius.circular(useCompactLayout ? 10 : AppTheme.radiusLarge),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryPurple.withOpacity(0.3),
+                            blurRadius: isSmallScreen ? 6 : 8,
+                            offset: Offset(0, isSmallScreen ? 1 : 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.business_rounded,
+                        color: Colors.white,
+                        size: useCompactLayout ? 18 : 24,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppTheme.spaceSmall),
-                  Expanded(
-                    child: PremiumButton(
-                      text: 'Rechazar',
-                      onPressed: () => _rechazarEmpresa(empresa.id, empresa.nombre),
-                      gradientColors: [AppTheme.dangerRed, const Color(0xFFDC2626)],
-                      icon: Icons.close_rounded,
-                      isFullWidth: true,
+                    SizedBox(width: useCompactLayout ? 10 : AppTheme.spaceMedium),
+                    // Info responsiva
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            empresa.nombre,
+                            style: TextStyle(
+                              fontSize: useCompactLayout ? 14 : (isSmallScreen ? 16 : AppTheme.fontSizeLarge),
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? AppTheme.darkTextPrimary
+                                  : AppTheme.lightTextPrimary,
+                            ),
+                            maxLines: isVerySmallScreen ? 2 : 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (empresa.direccion != null && !useCompactLayout) ...[
+                            SizedBox(height: isSmallScreen ? 2 : AppTheme.spaceXSmall),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on_rounded,
+                                  size: isSmallScreen ? 12 : 14,
+                                  color: isDark
+                                      ? AppTheme.darkTextTertiary
+                                      : AppTheme.lightTextTertiary,
+                                ),
+                                SizedBox(width: isSmallScreen ? 4 : AppTheme.spaceXSmall),
+                                Expanded(
+                                  child: Text(
+                                    empresa.direccion!,
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 12 : AppTheme.fontSizeSmall,
+                                      color: isDark
+                                          ? AppTheme.darkTextSecondary
+                                          : AppTheme.lightTextSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
+                    if (!useCompactLayout) ...[
+                      SizedBox(width: isSmallScreen ? 6 : AppTheme.spaceSmall),
+                      // Status badge
+                      TaskStateBadge(
+                        text: empresa.estadoDisplayName,
+                        color: _getStatusColor(empresa.estado),
+                      ),
+                    ],
+                  ],
+                ),
+
+                // Teléfono responsivo
+                if (empresa.telefono != null && !useCompactLayout) ...[
+                  SizedBox(height: isSmallScreen ? 8 : AppTheme.spaceMedium),
+                  InfoRow(
+                    icon: Icons.phone_rounded,
+                    text: empresa.telefono!,
+                    isDark: isDark,
                   ),
                 ],
-                if (_selectedTab != 'Pending') ...[
-                  Expanded(
-                    child: PremiumButton(
-                      text: 'Eliminar',
-                      onPressed: () => _eliminarEmpresa(empresa.id, empresa.nombre),
-                      gradientColors: [AppTheme.dangerRed, const Color(0xFFDC2626)],
-                      icon: Icons.delete_rounded,
-                      isFullWidth: true,
+
+                SizedBox(height: useCompactLayout ? 10 : AppTheme.spaceRegular),
+
+                // Action Buttons responsivos
+                if (_selectedTab == 'Pending') ...[
+                  if (useCompactLayout) ...[
+                    // Compact vertical layout for very small screens
+                    Column(
+                      children: [
+                        PremiumButton(
+                          text: 'Aprobar',
+                          onPressed: () => _aprobarEmpresa(empresa.id, empresa.nombre),
+                          gradientColors: [AppTheme.successGreen, const Color(0xFF059669)],
+                          icon: Icons.check_rounded,
+                          isFullWidth: true,
+                          isCompact: true,
+                        ),
+                        SizedBox(height: isSmallScreen ? 6 : AppTheme.spaceSmall),
+                        PremiumButton(
+                          text: 'Rechazar',
+                          onPressed: () => _rechazarEmpresa(empresa.id, empresa.nombre),
+                          gradientColors: [AppTheme.dangerRed, const Color(0xFFDC2626)],
+                          icon: Icons.close_rounded,
+                          isFullWidth: true,
+                          isCompact: true,
+                        ),
+                      ],
                     ),
+                  ] else ...[
+                    // Normal horizontal layout
+                    Row(
+                      children: [
+                        Expanded(
+                          child: PremiumButton(
+                            text: 'Aprobar',
+                            onPressed: () => _aprobarEmpresa(empresa.id, empresa.nombre),
+                            gradientColors: [AppTheme.successGreen, const Color(0xFF059669)],
+                            icon: Icons.check_rounded,
+                            isFullWidth: true,
+                          ),
+                        ),
+                        SizedBox(width: isSmallScreen ? 6 : AppTheme.spaceSmall),
+                        Expanded(
+                          child: PremiumButton(
+                            text: 'Rechazar',
+                            onPressed: () => _rechazarEmpresa(empresa.id, empresa.nombre),
+                            gradientColors: [AppTheme.dangerRed, const Color(0xFFDC2626)],
+                            icon: Icons.close_rounded,
+                            isFullWidth: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ] else if (!useCompactLayout) ...[
+                  // Delete button for non-pending companies
+                  PremiumButton(
+                    text: 'Eliminar',
+                    onPressed: () => _eliminarEmpresa(empresa.id, empresa.nombre),
+                    gradientColors: [AppTheme.dangerRed, const Color(0xFFDC2626)],
+                    icon: Icons.delete_rounded,
+                    isFullWidth: true,
+                  ),
+                ] else ...[
+                  // Compact delete button
+                  PremiumButton(
+                    text: 'Eliminar',
+                    onPressed: () => _eliminarEmpresa(empresa.id, empresa.nombre),
+                    gradientColors: [AppTheme.dangerRed, const Color(0xFFDC2626)],
+                    icon: Icons.delete_rounded,
+                    isFullWidth: true,
+                    isCompact: true,
                   ),
                 ],
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

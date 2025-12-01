@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'manager_home_tab.dart';
 import '../common/chat_list_screen.dart';
 import 'manager_tasks_tab.dart';
@@ -8,7 +7,6 @@ import 'manager_profile_tab.dart';
 import '../../widgets/create_task_modal.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../config/theme_config.dart';
-import '../../providers/chat_provider.dart';
 
 /// Main screen for Area Managers (ManagerDepartamento)
 /// Combines functionality from both AdminEmpresa and Usuario (Worker)
@@ -32,15 +30,6 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
 
   void _navigateTo(int index) {
     setState(() => _currentIndex = index);
-    // Refresh chats when navigating to chat tab
-    if (index == 1) {
-      _refreshChats();
-    }
-  }
-
-  void _refreshChats() {
-    final chatProvider = context.read<ChatProvider>();
-    chatProvider.refreshChats();
   }
 
   void _showCreateTaskModal() {
@@ -74,9 +63,10 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: Consumer<ChatProvider>(
-        builder: (context, chatProvider, child) {
-          final unreadCount = chatProvider.totalUnreadCount;
+      bottomNavigationBar: Builder(
+        builder: (context) {
+          // TODO: Implementar contador de mensajes no leídos con nuevo backend
+          const unreadCount = 0;
           
           return Container(
             decoration: BoxDecoration(
@@ -106,56 +96,66 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    PremiumNavItem(
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home_rounded,
-                      label: 'Home',
-                      isActive: _currentIndex == 0,
-                      activeColor: AppTheme.successGreen,
-                      isDark: isDark,
-                      onTap: () => _navigateTo(0),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home_rounded,
+                        label: 'Home',
+                        isActive: _currentIndex == 0,
+                        activeColor: AppTheme.successGreen,
+                        isDark: isDark,
+                        onTap: () => _navigateTo(0),
+                      ),
                     ),
-                    PremiumNavItem(
-                      icon: Icons.chat_bubble_outline,
-                      activeIcon: Icons.chat_bubble_rounded,
-                      label: 'Chats',
-                      isActive: _currentIndex == 1,
-                      activeColor: AppTheme.successGreen,
-                      isDark: isDark,
-                      badgeCount: unreadCount,
-                      onTap: () => _navigateTo(1),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.chat_bubble_outline,
+                        activeIcon: Icons.chat_bubble_rounded,
+                        label: 'Chats',
+                        isActive: _currentIndex == 1,
+                        activeColor: AppTheme.successGreen,
+                        isDark: isDark,
+                        badgeCount: unreadCount,
+                        onTap: () => _navigateTo(1),
+                      ),
                     ),
-                PremiumNavItem(
-                  icon: Icons.assignment_outlined,
-                  activeIcon: Icons.assignment_rounded,
-                  label: 'Tasks',
-                  isActive: _currentIndex == 2,
-                  activeColor: AppTheme.successGreen,
-                  isDark: isDark,
-                  onTap: () => _navigateTo(2),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.assignment_outlined,
+                        activeIcon: Icons.assignment_rounded,
+                        label: 'Tasks',
+                        isActive: _currentIndex == 2,
+                        activeColor: AppTheme.successGreen,
+                        isDark: isDark,
+                        onTap: () => _navigateTo(2),
+                      ),
+                    ),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.people_outline,
+                        activeIcon: Icons.people_rounded,
+                        label: 'Team',
+                        isActive: _currentIndex == 3,
+                        activeColor: AppTheme.successGreen,
+                        isDark: isDark,
+                        onTap: () => _navigateTo(3),
+                      ),
+                    ),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.person_outline,
+                        activeIcon: Icons.person_rounded,
+                        label: 'Profile',
+                        isActive: _currentIndex == 4,
+                        activeColor: AppTheme.successGreen,
+                        isDark: isDark,
+                        onTap: () => _navigateTo(4),
+                      ),
+                    ),
+                  ],
                 ),
-                PremiumNavItem(
-                  icon: Icons.people_outline,
-                  activeIcon: Icons.people_rounded,
-                  label: 'Team',
-                  isActive: _currentIndex == 3,
-                  activeColor: AppTheme.successGreen,
-                  isDark: isDark,
-                  onTap: () => _navigateTo(3),
-                ),
-                PremiumNavItem(
-                  icon: Icons.person_outline,
-                  activeIcon: Icons.person_rounded,
-                  label: 'Profile',
-                  isActive: _currentIndex == 4,
-                  activeColor: AppTheme.successGreen,
-                  isDark: isDark,
-                  onTap: () => _navigateTo(4),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
         );
         },
       ),

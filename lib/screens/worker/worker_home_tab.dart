@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
 import '../../widgets/theme_toggle_button.dart';
 import '../../widgets/task_progress_indicator.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/usuario_provider.dart';
-import '../../providers/chat_provider.dart';
-import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../config/theme_config.dart';
-import '../../services/storage_service.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
+import '../../services/chat_service.dart';
+import '../chat/chat_detail_screen.dart';
 import 'worker_tasks_list_screen.dart';
-import '../common/chat_detail_screen.dart';
 
 class WorkerHomeTab extends StatefulWidget {
   const WorkerHomeTab({super.key});
@@ -22,67 +21,29 @@ class WorkerHomeTab extends StatefulWidget {
   State<WorkerHomeTab> createState() => _WorkerHomeTabState();
 }
 
-class _WorkerHomeTabState extends State<WorkerHomeTab> {
-  final StorageService _storage = StorageService();
-  StreamSubscription? _tareaEventSubscription;
-  
+class _WorkerHomeTabState extends State<WorkerHomeTab> with TareaRealtimeMixin {
   @override
   void initState() {
     super.initState();
+    initRealtime(); // Conectar realtime
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
-      _connectRealtime();
-      _subscribeToRealtimeEvents();
     });
   }
   
   @override
   void dispose() {
-    _tareaEventSubscription?.cancel();
+    disposeRealtime();
     super.dispose();
   }
-  
-  Future<void> _connectRealtime() async {
-    try {
-      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-      final empresaId = await _storage.getEmpresaId();
-      if (empresaId != null) {
-        await realtimeProvider.connect(empresaId: empresaId);
-      }
-    } catch (e) {
-      debugPrint('Error connecting to realtime: $e');
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+      tareaProvider.silentRefresh();
     }
-  }
-  
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
-      debugPrint('💼 Worker Home: Tarea event received: ${event['action']}');
-      _loadData();
-      
-      if (mounted) {
-        final action = event['action'] ?? '';
-        String message = '';
-        if (action == 'tarea:assigned') {
-          message = 'Nueva tarea asignada';
-        } else if (action == 'tarea:accepted') {
-          message = 'Tarea aceptada';
-        } else if (action == 'tarea:completed') {
-          message = 'Tarea completada';
-        }
-        
-        if (message.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    });
   }
 
   Future<void> _loadData() async {
@@ -140,64 +101,79 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: const LinearGradient(
-                                        colors: [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppTheme.primaryBlue.withOpacity(0.3),
-                                          blurRadius: 12,
-                                          offset: const Offset(0, 4),
+                              Flexible(
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: const LinearGradient(
+                                          colors: [AppTheme.primaryBlue, Color(0xFF8B5CF6)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
                                         ),
-                                      ],
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppTheme.primaryBlue.withOpacity(0.3),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          userInitials,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    child: Center(
-                                      child: Text(
-                                        userInitials,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                          letterSpacing: -0.5,
-                                        ),
+                                    const SizedBox(width: 12),
+                                    Flexible(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Hola, $firstName',
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w900,
+                                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                              letterSpacing: -0.5,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'Worker',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppTheme.primaryBlue,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              RealtimeConnectionIndicator(
+                                                isConnected: isRealtimeConnected,
+                                                onReconnect: reconnectRealtime,
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Hola, $firstName',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w900,
-                                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                          letterSpacing: -0.5,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Worker',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.primaryBlue,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                               const ThemeToggleButton(),
                             ],
@@ -452,31 +428,41 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
           const SizedBox(height: 20),
 
           // Task Info
-          Row(
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
             children: [
-              Icon(Icons.tag, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-              const SizedBox(width: 6),
-              Text(
-                '#${tarea.id}',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                ),
-              ),
-              const SizedBox(width: 16),
-              if (tarea.dueDate != null) ...[
-                Icon(Icons.calendar_today, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                const SizedBox(width: 6),
-                Text(
-                  '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tag, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    '#${tarea.id}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    ),
                   ),
+                ],
+              ),
+              if (tarea.dueDate != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.calendar_today, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${tarea.dueDate!.day}/${tarea.dueDate!.month}/${tarea.dueDate!.year}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
             ],
           ),
 
@@ -546,55 +532,117 @@ class _WorkerHomeTabState extends State<WorkerHomeTab> {
   Future<void> _openChatWithCreator(Tarea tarea) async {
     if (tarea.createdByUsuarioId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Esta tarea no tiene un creador asignado'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('No se puede identificar al creador de la tarea'),
+          backgroundColor: AppTheme.warningOrange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
       return;
     }
 
-    try {
-      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-      
-      // Show loading
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(
-          child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+    // Obtener el ID del usuario actual
+    final usuarioProvider = Provider.of<UsuarioProvider>(context, listen: false);
+    final currentUserId = usuarioProvider.usuario?.id;
+    
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Error: No se pudo obtener tu información de usuario'),
+          backgroundColor: AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
+      return;
+    }
 
-      // Create or get existing chat with creator
-      final chat = await chatProvider.createOneToOneChat(tarea.createdByUsuarioId);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Mostrar loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppTheme.primaryBlue),
+              const SizedBox(height: 16),
+              Text(
+                'Abriendo chat con ${tarea.createdByUsuarioNombre}...',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final chatService = ChatService();
+      
+      // Crear o obtener conversación directa
+      final conversationId = await chatService.getOrCreateDirectConversation(tarea.createdByUsuarioId);
+      
+      if (conversationId == null) {
+        Navigator.pop(context); // Cerrar loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No se pudo iniciar el chat'),
+            backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+
+      // Obtener la conversación completa
+      final conversation = await chatService.getConversation(conversationId);
+      
+      Navigator.pop(context); // Cerrar loading
+      
+      if (conversation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No se pudo cargar la conversación'),
+            backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+
+      // Navegar al chat
       if (!mounted) return;
-
-      // Close loading dialog
-      Navigator.of(context).pop();
-
-      // Navigate to chat
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ChatDetailScreen(
-            chatId: chat.id,
-            recipientName: tarea.createdByUsuarioNombre,
-            isGroup: false,
+            conversation: conversation,
+            currentUserId: currentUserId,
           ),
         ),
       );
     } catch (e) {
-      if (!mounted) return;
-      
-      // Close loading if still showing
-      Navigator.of(context, rootNavigator: true).pop();
-      
+      Navigator.pop(context); // Cerrar loading
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al abrir chat: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }

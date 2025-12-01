@@ -1,472 +1,380 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../models/chat_model.dart';
+import '../models/chat/chat_models.dart';
 import '../services/chat_service.dart';
-import '../services/signalr_service.dart';
+import '../services/chat_hub_service.dart';
 import '../services/storage_service.dart';
 
-class ChatProvider with ChangeNotifier {
-  final ChatService _chatService = ChatService();
-  final SignalRService _signalRService = SignalRService();
+/// ChatProvider sincronizado con el backend
+/// Usa ChatService para HTTP y ChatHubService para SignalR
+class ChatProvider extends ChangeNotifier {
+  final ChatHubService hub;
+  final ChatService _api = ChatService();
   final StorageService _storage = StorageService();
 
-  List<ChatModel> _chats = [];
-  final Map<String, List<MessageModel>> _messagesByChat = {};
-  bool _isLoading = false;
-  String? _error;
-  ChatModel? _currentChat;
-  StreamSubscription? _messageSubscription;
-  StreamSubscription? _newChatSubscription;
-  StreamSubscription? _messageReadSubscription;
-  StreamSubscription? _messagesReadSubscription;
-  Timer? _pollingTimer;
-  String? _currentUserId;
+  ChatProvider({required this.hub});
+
+  String? _token;
+  String? _userId;
+  StreamSubscription<Map<String, dynamic>>? _msgSub;
+  StreamSubscription<Map<String, dynamic>>? _deliveredSub;
+  StreamSubscription<Map<String, dynamic>>? _readSub;
+  StreamSubscription<Map<String, dynamic>>? _typingSub;
+  StreamSubscription<bool>? _connSub;
+
+  bool _loading = false;
+  bool _connected = false;
+  List<Conversation> _conversations = [];
+  final Map<String, List<ChatMessage>> _messages = {};
+  String? _activeConversationId;
+  
+  // Usuarios escribiendo por conversación
+  final Map<String, Set<String>> _typingUsers = {};
 
   // Getters
-  List<ChatModel> get chats => _chats;
-  Map<String, List<MessageModel>> get messagesByChat => _messagesByChat;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
-  ChatModel? get currentChat => _currentChat;
-  bool get isSignalRConnected => _signalRService.isConnected;
-  
-  // Get total unread messages count across all chats
-  int get totalUnreadCount {
-    return _chats.fold(0, (sum, chat) => sum + chat.unreadCount);
+  bool get loading => _loading;
+  bool get connected => _connected;
+  List<Conversation> get conversations => _conversations;
+  String? get userId => _userId;
+  String? get activeConversationId => _activeConversationId;
+
+  List<ChatMessage> get activeMessages {
+    if (_activeConversationId == null) return [];
+    return _messages[_activeConversationId] ?? [];
   }
 
-  ChatProvider() {
-    _initializeCurrentUser();
-    _subscribeToMessages();
+  int get totalUnreadCount =>
+      _conversations.fold(0, (sum, c) => sum + c.unreadCount);
+
+  /// Obtener usuarios que están escribiendo en la conversación activa
+  Set<String> get typingUsersInActiveConversation {
+    if (_activeConversationId == null) return {};
+    return _typingUsers[_activeConversationId] ?? {};
   }
 
-  Future<void> _initializeCurrentUser() async {
+  /// Inicializar con token del usuario
+  Future<void> initialize() async {
+    print('[ChatProvider] Inicializando...');
+    final token = await _storage.getAccessToken();
     final userData = await _storage.getUserData();
-    if (userData != null) {
-      _currentUserId = userData['id']?.toString();
+    final userId = userData?['id']?.toString();
+
+    if (token == null || userId == null) {
+      print('[ChatProvider] No hay token o userId');
+      return;
     }
-  }
-
-  // Subscribe to SignalR messages
-  void _subscribeToMessages() {
-    _messageSubscription = _signalRService.messageStream.listen(
-      (message) {
-        addIncomingMessage(message);
-      },
-      onError: (error) {
-        print('ChatProvider: Error in message stream: $error');
-      },
-    );
-
-    // Suscribirse a notificaciones de chats nuevos
-    _newChatSubscription = _signalRService.newChatStream.listen(
-      (chatId) {
-        _handleNewChat(chatId);
-      },
-      onError: (error) {
-        print('ChatProvider: Error in newChat stream: $error');
-      },
-    );
-
-    // Suscribirse a eventos de mensaje leído
-    _messageReadSubscription = _signalRService.messageReadStream.listen(
-      (data) {
-        _handleMessageRead(data);
-      },
-      onError: (error) {
-        print('ChatProvider: Error in messageRead stream: $error');
-      },
-    );
-
-    // Suscribirse a eventos de múltiples mensajes leídos
-    _messagesReadSubscription = _signalRService.messagesReadStream.listen(
-      (data) {
-        _handleMessagesRead(data);
-      },
-      onError: (error) {
-        print('ChatProvider: Error in messagesRead stream: $error');
-      },
-    );
-  }
-
-  // Manejar evento de mensaje individual leído
-  void _handleMessageRead(Map<String, dynamic> data) {
-    final messageId = data['messageId']?.toString();
-    final chatId = data['chatId']?.toString();
-    final readAt = data['readAt']?.toString();
-    
-    if (messageId == null || chatId == null) return;
-    
-    // Actualizar el mensaje en caché
-    if (_messagesByChat[chatId] != null) {
-      final messageIndex = _messagesByChat[chatId]!.indexWhere((m) => m.id == messageId);
-      if (messageIndex != -1) {
-        final oldMessage = _messagesByChat[chatId]![messageIndex];
-        _messagesByChat[chatId]![messageIndex] = MessageModel(
-          id: oldMessage.id,
-          chatId: oldMessage.chatId,
-          senderId: oldMessage.senderId,
-          body: oldMessage.body,
-          createdAt: oldMessage.createdAt,
-          isRead: true,
-          readAt: readAt != null ? DateTime.tryParse(readAt) : DateTime.now(),
-        );
-        notifyListeners();
-      }
+    if (_token == token && _connected) {
+      print('[ChatProvider] Ya inicializado con el mismo token');
+      return;
     }
-  }
 
-  // Manejar evento de múltiples mensajes leídos
-  void _handleMessagesRead(Map<String, dynamic> data) {
-    final chatId = data['chatId']?.toString();
-    final messageIds = (data['messageIds'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
-    final readAt = data['readAt']?.toString();
-    
-    if (chatId == null || messageIds.isEmpty) return;
-    
-    // Actualizar los mensajes en caché
-    if (_messagesByChat[chatId] != null) {
-      bool updated = false;
-      for (int i = 0; i < _messagesByChat[chatId]!.length; i++) {
-        final message = _messagesByChat[chatId]![i];
-        if (messageIds.contains(message.id) && !message.isRead) {
-          _messagesByChat[chatId]![i] = MessageModel(
-            id: message.id,
-            chatId: message.chatId,
-            senderId: message.senderId,
-            body: message.body,
-            createdAt: message.createdAt,
-            isRead: true,
-            readAt: readAt != null ? DateTime.tryParse(readAt) : DateTime.now(),
-          );
-          updated = true;
-        }
-      }
-      if (updated) {
-        notifyListeners();
-      }
+    _token = token;
+    _userId = userId;
+    print('[ChatProvider] UserId: $_userId');
+
+    // Conectar hub
+    final ok = await hub.connect(token);
+    if (!ok) {
+      print('[ChatProvider] ❌ Error conectando al hub');
+      return;
     }
-  }
 
-  // Manejar notificación de chat nuevo
-  Future<void> _handleNewChat(String chatId) async {
-    print('ChatProvider: Received notification for new chat: $chatId');
+    // Suscribirse a streams (DESPUÉS de conectar exitosamente)
+    await _cancelSubscriptions();
 
-    // Verificar si ya tenemos este chat
-    final exists = _chats.any((c) => c.id == chatId);
-    if (!exists) {
-      // Recargar todos los chats para obtener el nuevo
-      await loadChats();
-    }
-  }
-
-  // Connect to SignalR
-  Future<void> connectSignalR({String? empresaId, bool isSuperAdmin = false}) async {
-    try {
-      final token = await _storage.getAccessToken();
-      if (token == null) {
-        throw Exception('No authentication token');
-      }
-
-      await _signalRService.connect(token);
-      
-      // Join appropriate groups based on user role
-      if (isSuperAdmin) {
-        await _signalRService.joinSuperAdminGroup();
-      } else if (empresaId != null) {
-        await _signalRService.joinEmpresaGroup(empresaId);
-      }
-      
+    _msgSub = hub.onMessage.listen(_handleMessage);
+    _deliveredSub = hub.onMessageDelivered.listen(_handleDelivered);
+    _readSub = hub.onMessageRead.listen(_handleRead);
+    _typingSub = hub.onTyping.listen(_handleTyping);
+    _connSub = hub.onConnectionStateChanged.listen((connected) {
+      _connected = connected;
       notifyListeners();
-    } catch (e) {
-      print('ChatProvider: Failed to connect SignalR: $e');
-      _error = 'Failed to connect to chat service';
-      notifyListeners();
-    }
-  }
-
-  // Disconnect from SignalR
-  Future<void> disconnectSignalR() async {
-    await _signalRService.disconnect();
-    notifyListeners();
-  }
-
-  // Load all chats
-  Future<void> loadChats() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      _chats = await _chatService.getChats();
-      _error = null;
-    } catch (e) {
-      _error = 'Failed to load chats: $e';
-      print('ChatProvider: $error');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Load messages for a specific chat
-  Future<void> loadMessages(String chatId, {int skip = 0, int take = 50}) async {
-    try {
-      final messages = await _chatService.getMessages(chatId, skip: skip, take: take);
-      _messagesByChat[chatId] = messages;
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to load messages: $e';
-      print('ChatProvider: $_error');
-      notifyListeners();
-    }
-  }
-
-  // Send a message
-  Future<void> sendMessage(String chatId, String text) async {
-    try {
-      final message = await _chatService.sendMessage(chatId, text);
-
-      // Add message to local cache immediately for sender
-      if (_messagesByChat[chatId] != null) {
-        // Check if message already exists (to prevent duplicates)
-        final exists = _messagesByChat[chatId]!.any((m) => m.id == message.id);
-        if (!exists) {
-          _messagesByChat[chatId]!.add(message);
-          notifyListeners();
-        }
-      }
-
-      _error = null;
-    } catch (e) {
-      _error = 'Failed to send message: $e';
-      print('ChatProvider: $_error');
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  // Add incoming message from SignalR
-  void addIncomingMessage(MessageModel message) async {
-    final userData = await _storage.getUserData();
-    final currentUserId = userData?['id']?.toString();
-
-    // Add to messages cache - SIEMPRE agregar aunque no exista la lista
-    if (_messagesByChat[message.chatId] != null) {
-      // Check if message already exists
-      final exists = _messagesByChat[message.chatId]!.any((m) => m.id == message.id);
-      if (!exists) {
-        _messagesByChat[message.chatId]!.add(message);
-        print('ChatProvider: Added message to existing chat ${message.chatId}');
-      }
-    } else {
-      // Si el chat no está en caché, crear la lista con este mensaje
-      _messagesByChat[message.chatId] = [message];
-      print('ChatProvider: Created new message list for chat ${message.chatId}');
-    }
-
-    // Update last message in chat list and increment unread if not from current user
-    final chatIndex = _chats.indexWhere((c) => c.id == message.chatId);
-    if (chatIndex != -1) {
-      final oldChat = _chats[chatIndex];
-      final isFromOtherUser = message.senderId != currentUserId;
-      final isNotInCurrentChat = _currentChat?.id != message.chatId;
-
-      // Increment unread count if message is from another user and chat is not open
-      final newUnreadCount = (isFromOtherUser && isNotInCurrentChat)
-          ? oldChat.unreadCount + 1
-          : oldChat.unreadCount;
-
-      final updatedChat = ChatModel(
-        id: oldChat.id,
-        type: oldChat.type,
-        name: oldChat.name,
-        members: oldChat.members,
-        lastMessage: message,
-        createdAt: oldChat.createdAt,
-        unreadCount: newUnreadCount,
-      );
-
-      _chats.removeAt(chatIndex);
-      _chats.insert(0, updatedChat);
-      print('ChatProvider: Updated chat list for chat ${message.chatId}');
-    } else {
-      print('ChatProvider: Warning - received message for unknown chat ${message.chatId}');
-    }
-
-    // CRÍTICO: Siempre notificar cambios para actualizar la UI
-    notifyListeners();
-  }
-  
-  // Mark chat as read when opening it - now calls API
-  Future<void> markChatAsRead(String chatId) async {
-    try {
-      // Llamar al API para marcar todos los mensajes como leídos
-      await _chatService.markAllChatAsRead(chatId);
-      
-      // Actualizar localmente
-      final chatIndex = _chats.indexWhere((c) => c.id == chatId);
-      if (chatIndex != -1) {
-        _chats[chatIndex].unreadCount = 0;
-        
-        // También marcar los mensajes en caché como leídos
-        if (_messagesByChat[chatId] != null) {
-          for (int i = 0; i < _messagesByChat[chatId]!.length; i++) {
-            final msg = _messagesByChat[chatId]![i];
-            if (!msg.isRead && msg.senderId != _currentUserId) {
-              _messagesByChat[chatId]![i] = MessageModel(
-                id: msg.id,
-                chatId: msg.chatId,
-                senderId: msg.senderId,
-                body: msg.body,
-                createdAt: msg.createdAt,
-                isRead: true,
-                readAt: DateTime.now(),
-              );
-            }
-          }
-        }
-        
-        notifyListeners();
-      }
-    } catch (e) {
-      print('ChatProvider: Error marking chat as read: $e');
-    }
-  }
-
-  // Start polling for chat updates (llamar cuando la app está en primer plano)
-  void startPolling({Duration interval = const Duration(seconds: 30)}) {
-    stopPolling(); // Cancelar cualquier polling anterior
-    _pollingTimer = Timer.periodic(interval, (_) {
-      refreshChats();
     });
-    print('ChatProvider: Started polling with interval ${interval.inSeconds}s');
+
+    _connected = true;
+    notifyListeners();
+
+    // Cargar conversaciones
+    await loadConversations();
+    print('[ChatProvider] ✅ Inicializado correctamente');
   }
 
-  // Stop polling
-  void stopPolling() {
-    _pollingTimer?.cancel();
-    _pollingTimer = null;
+  Future<void> _cancelSubscriptions() async {
+    await _msgSub?.cancel();
+    await _deliveredSub?.cancel();
+    await _readSub?.cancel();
+    await _typingSub?.cancel();
+    await _connSub?.cancel();
   }
 
-  // Refresh chats silently (for polling or when returning to screen)
-  Future<void> refreshChats() async {
-    try {
-      final newChats = await _chatService.getChats();
-      _chats = newChats;
-      notifyListeners();
-      print('ChatProvider: Refreshed ${newChats.length} chats');
-    } catch (e) {
-      print('ChatProvider: Error refreshing chats: $e');
-    }
-  }
-
-  // Create 1:1 chat
-  Future<ChatModel> createOneToOneChat(String userId) async {
-    _isLoading = true;
-    _error = null;
+  /// Cargar conversaciones
+  Future<void> loadConversations() async {
+    if (_token == null) return;
+    _loading = true;
     notifyListeners();
 
     try {
-      final chat = await _chatService.createOneToOneChat(userId);
+      _conversations = await _api.getConversations();
+      print('[ChatProvider] Cargadas ${_conversations.length} conversaciones');
+    } catch (e) {
+      print('[ChatProvider] Error cargando conversaciones: $e');
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Buscar usuarios para iniciar chat
+  Future<List<ChatUserSearchResult>> searchUsers(String query) async {
+    return await _api.searchUsers(query);
+  }
+
+  /// Crear o obtener conversación directa con un usuario
+  Future<String?> getOrCreateDirectConversation(String otherUserId) async {
+    final conversationId = await _api.getOrCreateDirectConversation(otherUserId);
+    if (conversationId != null) {
+      await loadConversations(); // Refrescar lista
+    }
+    return conversationId;
+  }
+
+  /// Crear conversación grupal
+  Future<String?> createGroupConversation(
+    String groupName,
+    List<String> memberIds, {
+    String? imageUrl,
+  }) async {
+    final conversationId = await _api.createGroupConversation(
+      groupName, 
+      memberIds, 
+      imageUrl: imageUrl,
+    );
+    if (conversationId != null) {
+      await loadConversations(); // Refrescar lista
+    }
+    return conversationId;
+  }
+
+  /// Entrar a conversación
+  Future<void> enterConversation(String id) async {
+    print('[ChatProvider] Entrando a conversación: $id');
+    _activeConversationId = id;
+    await hub.joinConversation(id);
+    await loadMessages(id);
+    await markAllRead(id);
+    notifyListeners();
+  }
+
+  /// Salir de conversación
+  Future<void> leaveConversation() async {
+    if (_activeConversationId != null) {
+      print('[ChatProvider] Saliendo de conversación: $_activeConversationId');
+      await hub.leaveConversation(_activeConversationId!);
+      _activeConversationId = null;
+      notifyListeners();
+    }
+  }
+
+  /// Cargar mensajes
+  Future<void> loadMessages(String conversationId, {int skip = 0, int take = 50}) async {
+    if (_token == null) return;
+    try {
+      final msgs = await _api.getMessages(conversationId, skip: skip, take: take);
       
-      // Add to local list if not already present
-      if (!_chats.any((c) => c.id == chat.id)) {
-        _chats.insert(0, chat);
+      if (skip == 0) {
+        _messages[conversationId] = msgs;
+      } else {
+        // Cargar más mensajes (paginación)
+        _messages[conversationId] = [...(_messages[conversationId] ?? []), ...msgs];
+      }
+      
+      print('[ChatProvider] Cargados ${msgs.length} mensajes para conversación $conversationId');
+      notifyListeners();
+    } catch (e) {
+      print('[ChatProvider] Error cargando mensajes: $e');
+    }
+  }
+
+  /// Enviar mensaje
+  Future<void> sendMessage(String text, {String? replyToMessageId}) async {
+    if (_activeConversationId == null || text.trim().isEmpty) return;
+    
+    try {
+      final msg = await _api.sendMessage(
+        _activeConversationId!, 
+        text.trim(),
+        replyToMessageId: replyToMessageId,
+      );
+      if (msg != null) {
+        _appendMessage(_activeConversationId!, msg);
+        print('[ChatProvider] ✅ Mensaje enviado: ${msg.id}');
+      }
+    } catch (e) {
+      print('[ChatProvider] Error enviando mensaje: $e');
+    }
+  }
+
+  /// Editar mensaje
+  Future<bool> editMessage(String messageId, String newContent) async {
+    final success = await _api.editMessage(messageId, newContent);
+    if (success) {
+      // Actualizar mensaje localmente
+      for (final entry in _messages.entries) {
+        final idx = entry.value.indexWhere((m) => m.id == messageId);
+        if (idx != -1) {
+          // Recargar mensajes para obtener la versión actualizada
+          await loadMessages(entry.key);
+          break;
+        }
+      }
+    }
+    return success;
+  }
+
+  /// Eliminar mensaje
+  Future<bool> deleteMessage(String messageId) async {
+    final success = await _api.deleteMessage(messageId);
+    if (success) {
+      // Remover mensaje localmente
+      for (final entry in _messages.entries) {
+        entry.value.removeWhere((m) => m.id == messageId);
+      }
+      notifyListeners();
+    }
+    return success;
+  }
+
+  /// Enviar indicador de escritura
+  Future<void> sendTypingIndicator() async {
+    if (_activeConversationId == null) return;
+    await hub.sendTypingIndicator(_activeConversationId!);
+  }
+
+  /// Marcar todos como leídos
+  Future<void> markAllRead(String conversationId) async {
+    final msgs = _messages[conversationId];
+    if (msgs == null || msgs.isEmpty) return;
+
+    for (final m in msgs) {
+      if (m.senderId != _userId && m.status != MessageStatus.read) {
+        await _api.markMessageRead(m.id);
+      }
+    }
+    
+    // Actualizar contador local
+    final idx = _conversations.indexWhere((c) => c.id == conversationId);
+    if (idx != -1) {
+      await loadConversations(); // Refrescar para actualizar contadores
+    }
+  }
+
+  /// Handlers de eventos SignalR
+  void _handleMessage(Map<String, dynamic> data) {
+    try {
+      print('[ChatProvider] 📨 Mensaje recibido: $data');
+      final msg = ChatMessage.fromJson(data);
+      _appendMessage(msg.conversationId, msg);
+
+      // Marcar como delivered
+      if (msg.senderId != _userId) {
+        _api.markMessageDelivered(msg.id);
+
+        // Marcar como read si está en conversación activa
+        if (_activeConversationId == msg.conversationId) {
+          _api.markMessageRead(msg.id);
+        }
       }
 
-      _error = null;
-      return chat;
+      // Actualizar lista de conversaciones
+      loadConversations();
     } catch (e) {
-      _error = 'Failed to create chat: $e';
-      print('ChatProvider: $_error');
-      rethrow;
-    } finally {
-      _isLoading = false;
+      print('[ChatProvider] Error procesando mensaje: $e');
+    }
+  }
+
+  void _handleDelivered(Map<String, dynamic> data) {
+    final msgId = data['messageId']?.toString();
+    if (msgId == null) return;
+    print('[ChatProvider] ✓ Mensaje entregado: $msgId');
+    _updateMessageStatus(msgId, MessageStatus.delivered);
+  }
+
+  void _handleRead(Map<String, dynamic> data) {
+    final msgId = data['messageId']?.toString();
+    if (msgId == null) return;
+    print('[ChatProvider] ✓✓ Mensaje leído: $msgId');
+    _updateMessageStatus(msgId, MessageStatus.read);
+  }
+
+  void _handleTyping(Map<String, dynamic> data) {
+    final conversationId = data['conversationId']?.toString();
+    final senderId = data['senderId']?.toString();
+    final senderName = data['senderName']?.toString() ?? 'Usuario';
+    final isTyping = data['isTyping'] == true;
+    
+    if (conversationId == null || senderId == null) return;
+    if (senderId == _userId) return; // Ignorar propios eventos
+    
+    print('[ChatProvider] ⌨️ Typing: $senderName (typing: $isTyping)');
+    
+    _typingUsers.putIfAbsent(conversationId, () => {});
+    
+    if (isTyping) {
+      _typingUsers[conversationId]!.add(senderName);
+    } else {
+      _typingUsers[conversationId]!.remove(senderName);
+    }
+    
+    notifyListeners();
+    
+    // Auto-limpiar después de 5 segundos si no hay actualización
+    if (isTyping) {
+      Future.delayed(const Duration(seconds: 5), () {
+        _typingUsers[conversationId]?.remove(senderName);
+        notifyListeners();
+      });
+    }
+  }
+
+  void _appendMessage(String conversationId, ChatMessage msg) {
+    final list = _messages.putIfAbsent(conversationId, () => []);
+    if (!list.any((m) => m.id == msg.id)) {
+      // Insertar al principio (mensajes más recientes primero)
+      list.insert(0, msg);
       notifyListeners();
     }
   }
 
-  // Create group chat
-  Future<ChatModel> createGroupChat(String name, List<String> memberIds) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final chat = await _chatService.createGroupChat(name, memberIds);
-      
-      // Add to local list
-      _chats.insert(0, chat);
-
-      _error = null;
-      return chat;
-    } catch (e) {
-      _error = 'Failed to create group chat: $e';
-      print('ChatProvider: $_error');
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Search users
-  Future<List<UserSearchResult>> searchUsers(String query) async {
-    try {
-      return await _chatService.searchUsers(query);
-    } catch (e) {
-      print('ChatProvider: Failed to search users: $e');
-      return [];
-    }
-  }
-
-  // Set current chat
-  void setCurrentChat(ChatModel? chat) {
-    _currentChat = chat;
-    notifyListeners();
-  }
-
-  // Join chat room via SignalR
-  Future<void> joinChatRoom(String chatId) async {
-    try {
-      if (!_signalRService.isConnected) {
-        await connectSignalR();
+  void _updateMessageStatus(String msgId, MessageStatus status) {
+    for (final entry in _messages.entries) {
+      final list = entry.value;
+      final idx = list.indexWhere((m) => m.id == msgId);
+      if (idx != -1) {
+        final old = list[idx];
+        list[idx] = old.copyWithStatus(status);
+        notifyListeners();
+        return;
       }
-      await _signalRService.joinChat(chatId);
-    } catch (e) {
-      print('ChatProvider: Failed to join chat room: $e');
     }
   }
 
-  // Leave chat room via SignalR
-  Future<void> leaveChatRoom(String chatId) async {
-    try {
-      await _signalRService.leaveChat(chatId);
-    } catch (e) {
-      print('ChatProvider: Failed to leave chat room: $e');
-    }
-  }
-
-  // Get messages for a chat (from cache or load)
-  List<MessageModel> getMessages(String chatId) {
-    return _messagesByChat[chatId] ?? [];
-  }
-
-  // Clear error
-  void clearError() {
-    _error = null;
+  /// Reiniciar provider (para logout)
+  Future<void> reset() async {
+    await _cancelSubscriptions();
+    await hub.disconnect();
+    _token = null;
+    _userId = null;
+    _connected = false;
+    _conversations = [];
+    _messages.clear();
+    _activeConversationId = null;
+    _typingUsers.clear();
     notifyListeners();
   }
 
   @override
   void dispose() {
-    _messageSubscription?.cancel();
-    _newChatSubscription?.cancel();
-    _messageReadSubscription?.cancel();
-    _messagesReadSubscription?.cancel();
-    stopPolling();
-    _signalRService.dispose();
+    _cancelSubscriptions();
     super.dispose();
   }
 }

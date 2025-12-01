@@ -1,7 +1,7 @@
 class ApiConfig {
   // URL base del API - Cambiar para producción
-  static const String baseUrl = 'https://api.taskcontrol.work'; // Producción
-  // static const String baseUrl = 'http://localhost:5080'; // Desarrollo
+  // static const String baseUrl = 'https://api.taskcontrol.work'; // Producción
+  static const String baseUrl = 'http://localhost:5080'; 
   
   // Endpoints de autenticación
   static const String loginEndpoint = '/api/Auth/login';
@@ -18,20 +18,15 @@ class ApiConfig {
   // Endpoints de usuarios
   static const String usuariosEndpoint = '/api/Usuarios';
   
-  // Endpoints de chat
-  static const String usersSearchEndpoint = '/api/users/search';
-  static const String chatsEndpoint = '/api/chats';
-  static String chatMessagesEndpoint(String chatId) => '/api/chats/$chatId/messages';
-  static String chatMembersEndpoint(String chatId) => '/api/chats/$chatId/members';
-
-  // Endpoints de lectura de mensajes
-  static String chatMarkMessageReadEndpoint(String messageId) => '/api/chats/messages/$messageId/mark-read';
-  static String chatMarkAllReadEndpoint(String chatId) => '/api/chats/$chatId/mark-all-read';
-  static const String chatUnreadCountEndpoint = '/api/chats/unread-count';
-  static const String chatUnreadByChatEndpoint = '/api/chats/unread-by-chat';
-  
-  // SignalR Hub
-  static String get signalRHubUrl => '$baseUrl/apphub';
+  // Endpoints de chat - COMPLETAMENTE IMPLEMENTADOS
+  static const String chatUsersSearchEndpoint = '/api/chat/users/search';
+  static const String chatConversationsEndpoint = '/api/chat/conversations';
+  static const String chatMessagesEndpoint = '/api/chat/conversations/{id}/messages';
+  static const String chatFilesEndpoint = '/api/chat/conversations/{id}/files';
+  static const String chatMessageDeliveredEndpoint = '/api/chat/messages/{id}/delivered';
+  static const String chatMessageReadEndpoint = '/api/chat/messages/{id}/read';
+  static const String chatMessagesReadAllEndpoint = '/api/chat/conversations/{id}/read-all';
+  static const String chatUnreadCountEndpoint = '/api/chat/conversations/{id}/unread-count';
   
   // Headers comunes
   static Map<String, String> get headers => {

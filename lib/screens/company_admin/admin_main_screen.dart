@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'admin_home_tab.dart';
 import '../common/chat_list_screen.dart';
 import 'admin_tasks_tab.dart';
@@ -7,7 +6,6 @@ import 'admin_profile_tab.dart';
 import '../../widgets/create_task_modal.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../config/theme_config.dart';
-import '../../providers/chat_provider.dart';
 
 class AdminMainScreen extends StatefulWidget {
   const AdminMainScreen({super.key});
@@ -34,15 +32,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
 
   void _navigateTo(int index) {
     setState(() => _currentIndex = index);
-    // Refresh chats when navigating to chat tab
-    if (index == 1) {
-      _refreshChats();
-    }
-  }
-
-  void _refreshChats() {
-    final chatProvider = context.read<ChatProvider>();
-    chatProvider.refreshChats();
   }
 
   void _showCreateTaskModal() {
@@ -63,9 +52,10 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: Consumer<ChatProvider>(
-        builder: (context, chatProvider, child) {
-          final unreadCount = chatProvider.totalUnreadCount;
+      bottomNavigationBar: Builder(
+        builder: (context) {
+          // TODO: Implementar contador de mensajes no leídos con nuevo backend
+          const unreadCount = 0;
           
           return Container(
             decoration: BoxDecoration(
@@ -93,51 +83,59 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                   vertical: AppTheme.spaceSmall,
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    PremiumNavItem(
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home_rounded,
-                      label: 'Home',
-                      isActive: _currentIndex == 0,
-                      activeColor: AppTheme.primaryBlue,
-                      isDark: isDark,
-                      onTap: () => _navigateTo(0),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home_rounded,
+                        label: 'Home',
+                        isActive: _currentIndex == 0,
+                        activeColor: AppTheme.primaryBlue,
+                        isDark: isDark,
+                        onTap: () => _navigateTo(0),
+                      ),
                     ),
-                    PremiumNavItem(
-                      icon: Icons.chat_bubble_outline,
-                      activeIcon: Icons.chat_bubble_rounded,
-                      label: 'Chats',
-                      isActive: _currentIndex == 1,
-                      activeColor: AppTheme.primaryBlue,
-                      isDark: isDark,
-                      badgeCount: unreadCount,
-                      onTap: () => _navigateTo(1),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.chat_bubble_outline,
+                        activeIcon: Icons.chat_bubble_rounded,
+                        label: 'Chats',
+                        isActive: _currentIndex == 1,
+                        activeColor: AppTheme.primaryBlue,
+                        isDark: isDark,
+                        badgeCount: unreadCount,
+                        onTap: () => _navigateTo(1),
+                      ),
                     ),
-                // Center FAB for creating tasks
-                _buildCenterFAB(),
-                PremiumNavItem(
-                  icon: Icons.assignment_outlined,
-                  activeIcon: Icons.assignment_rounded,
-                  label: 'Tasks',
-                  isActive: _currentIndex == 2,
-                  activeColor: AppTheme.primaryBlue,
-                  isDark: isDark,
-                  onTap: () => _navigateTo(2),
+                    // Center FAB for creating tasks
+                    _buildCenterFAB(),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.assignment_outlined,
+                        activeIcon: Icons.assignment_rounded,
+                        label: 'Tasks',
+                        isActive: _currentIndex == 2,
+                        activeColor: AppTheme.primaryBlue,
+                        isDark: isDark,
+                        onTap: () => _navigateTo(2),
+                      ),
+                    ),
+                    Flexible(
+                      child: PremiumNavItem(
+                        icon: Icons.person_outline,
+                        activeIcon: Icons.person_rounded,
+                        label: 'Profile',
+                        isActive: _currentIndex == 3,
+                        activeColor: AppTheme.primaryBlue,
+                        isDark: isDark,
+                        onTap: () => _navigateTo(3),
+                      ),
+                    ),
+                  ],
                 ),
-                PremiumNavItem(
-                  icon: Icons.person_outline,
-                  activeIcon: Icons.person_rounded,
-                  label: 'Profile',
-                  isActive: _currentIndex == 3,
-                  activeColor: AppTheme.primaryBlue,
-                  isDark: isDark,
-                  onTap: () => _navigateTo(3),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
         );
         },
       ),

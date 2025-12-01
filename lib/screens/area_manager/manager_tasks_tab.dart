@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
 import '../../providers/tarea_provider.dart';
 import '../../providers/admin_tarea_provider.dart';
-import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../models/enums/prioridad_tarea.dart';
 import '../../config/theme_config.dart';
-import '../../services/storage_service.dart';
 import '../../widgets/task/task_widgets.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
 import 'manager_task_detail_screen.dart';
 
 /// ManagerTasksTab - Pantalla híbrida de tareas para Area Manager
@@ -23,9 +22,7 @@ class ManagerTasksTab extends StatefulWidget {
   State<ManagerTasksTab> createState() => _ManagerTasksTabState();
 }
 
-class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderStateMixin {
-  final StorageService _storage = StorageService();
-  
+class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderStateMixin, TareaRealtimeMixin {
   // Main tabs: Mis Tareas / Departamento
   late TabController _mainTabController;
   
@@ -36,7 +33,6 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderSt
   PrioridadTarea? _filtroPrioridad;
   String? _searchQuery;
   
-  StreamSubscription? _tareaEventSubscription;
   bool _isAcceptingTask = false;
 
   @override
@@ -45,10 +41,10 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderSt
     _mainTabController = TabController(length: 2, vsync: this);
     _deptTabController = TabController(length: 4, vsync: this);
     
+    initRealtime(); // Conectar realtime
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAllData();
-      _connectRealtime();
-      _subscribeToRealtimeEvents();
     });
   }
 
@@ -56,8 +52,19 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderSt
   void dispose() {
     _mainTabController.dispose();
     _deptTabController.dispose();
-    _tareaEventSubscription?.cancel();
+    disposeRealtime();
     super.dispose();
+  }
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+      final adminProvider = Provider.of<AdminTareaProvider>(context, listen: false);
+      tareaProvider.silentRefresh();
+      adminProvider.silentRefresh();
+    }
   }
   
   Future<void> _loadAllData() async {
@@ -65,51 +72,6 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderSt
     Provider.of<TareaProvider>(context, listen: false).cargarMisTareas();
     // Cargar TODAS las tareas del departamento
     Provider.of<AdminTareaProvider>(context, listen: false).cargarTodasLasTareas();
-  }
-  
-  Future<void> _connectRealtime() async {
-    try {
-      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-      final empresaId = await _storage.getEmpresaId();
-      if (empresaId != null) {
-        await realtimeProvider.connect(empresaId: empresaId);
-      }
-    } catch (e) {
-      debugPrint('Error connecting to realtime: $e');
-    }
-  }
-  
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
-      debugPrint('📋 Manager Tasks: Tarea event received: ${event['action']}');
-      _loadAllData();
-      
-      if (mounted) {
-        final action = event['action'] ?? '';
-        String message = '';
-        if (action == 'tarea:created') {
-          message = 'Nueva tarea creada';
-        } else if (action == 'tarea:assigned') {
-          message = 'Tarea asignada';
-        } else if (action == 'tarea:accepted') {
-          message = 'Tarea aceptada';
-        } else if (action == 'tarea:completed') {
-          message = 'Tarea completada';
-        }
-        
-        if (message.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    });
   }
 
   @override
@@ -152,111 +114,131 @@ class _ManagerTasksTabState extends State<ManagerTasksTab> with TickerProviderSt
           ),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isSmall = constraints.maxWidth < 350;
+          final isMedium = constraints.maxWidth < 400;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppTheme.successGreen, Color(0xFF059669)],
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(isSmall ? 6 : 10),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [AppTheme.successGreen, Color(0xFF059669)],
+                                ),
+                                borderRadius: BorderRadius.circular(isSmall ? 8 : 12),
+                              ),
+                              child: Icon(Icons.task_alt_rounded, color: Colors.white, size: isSmall ? 18 : 24),
                             ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.task_alt_rounded, color: Colors.white, size: 24),
+                            SizedBox(width: isSmall ? 8 : 12),
+                            Flexible(
+                              child: Text(
+                                isSmall ? 'Tareas' : 'Gestión de Tareas',
+                                style: TextStyle(
+                                  fontSize: isSmall ? 18 : (isMedium ? 22 : 26),
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                  letterSpacing: -0.3,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            RealtimeConnectionIndicator(
+                              isConnected: isRealtimeConnected,
+                              onReconnect: reconnectRealtime,
+                              connectedColor: AppTheme.successGreen,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(height: 4),
                         Text(
-                          'Gestión de Tareas',
+                          isSmall ? 'Supervisa tu trabajo' : 'Supervisa tu trabajo y el de tu departamento',
                           style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                            letterSpacing: -0.3,
+                            fontSize: isSmall ? 12 : 14,
+                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            fontWeight: FontWeight.w500,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Supervisa tu trabajo y el de tu departamento',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  ),
+                  // Search Button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
                     ),
+                    child: IconButton(
+                      icon: Icon(Icons.search_rounded, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary, size: isSmall ? 20 : 24),
+                      onPressed: () => _showSearchDialog(isDark),
+                      padding: EdgeInsets.all(isSmall ? 6 : 8),
+                      constraints: BoxConstraints(minWidth: isSmall ? 32 : 40, minHeight: isSmall ? 32 : 40),
+                    ),
+                  ),
+                  SizedBox(width: isSmall ? 4 : 8),
+                  // Filter Button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
+                    ),
+                    child: IconButton(
+                      icon: Icon(Icons.filter_list_rounded, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary, size: isSmall ? 20 : 24),
+                      onPressed: () => _showFiltersSheet(isDark),
+                      padding: EdgeInsets.all(isSmall ? 6 : 8),
+                      constraints: BoxConstraints(minWidth: isSmall ? 32 : 40, minHeight: isSmall ? 32 : 40),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Main Tab Bar: Mis Tareas / Departamento
+              Container(
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.black : Colors.grey[100])?.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TabBar(
+                  controller: _mainTabController,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.successGreen, Color(0xFF059669)],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  dividerColor: Colors.transparent,
+                  tabs: const [
+                    Tab(text: '👤 Mis Tareas'),
+                    Tab(text: '👥 Departamento'),
                   ],
                 ),
               ),
-              // Search Button
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.search_rounded, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-                  onPressed: () => _showSearchDialog(isDark),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Filter Button
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: isDark ? AppTheme.darkBorder.withOpacity(0.3) : AppTheme.lightBorder),
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.filter_list_rounded, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-                  onPressed: () => _showFiltersSheet(isDark),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Main Tab Bar: Mis Tareas / Departamento
-          Container(
-            decoration: BoxDecoration(
-              color: (isDark ? Colors.black : Colors.grey[100])?.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TabBar(
-              controller: _mainTabController,
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.successGreen, Color(0xFF059669)],
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              labelColor: Colors.white,
-              unselectedLabelColor: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-              dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(text: '👤 Mis Tareas'),
-                Tab(text: '👥 Departamento'),
+              // Active Filters Chips
+              if (_filtroPrioridad != null || _searchQuery != null) ...[
+                const SizedBox(height: 12),
+                _buildActiveFiltersChips(isDark),
               ],
-            ),
-          ),
-          // Active Filters Chips
-          if (_filtroPrioridad != null || _searchQuery != null) ...[
-            const SizedBox(height: 12),
-            _buildActiveFiltersChips(isDark),
-          ],
-        ],
+            ],
+          );
+        },
       ),
     );
   }

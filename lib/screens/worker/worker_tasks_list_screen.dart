@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
 import '../../providers/tarea_provider.dart';
-import '../../providers/realtime_provider.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../models/enums/prioridad_tarea.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../widgets/task/task_widgets.dart';
-import '../../services/storage_service.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
 import 'worker_task_detail_screen.dart';
 
 class WorkerTasksListScreen extends StatefulWidget {
@@ -19,72 +18,32 @@ class WorkerTasksListScreen extends StatefulWidget {
   State<WorkerTasksListScreen> createState() => _WorkerTasksListScreenState();
 }
 
-class _WorkerTasksListScreenState extends State<WorkerTasksListScreen> {
-  final StorageService _storage = StorageService();
+class _WorkerTasksListScreenState extends State<WorkerTasksListScreen> with TareaRealtimeMixin {
   EstadoTarea? _filtroEstado;
   PrioridadTarea? _filtroPrioridad;
-  StreamSubscription? _tareaEventSubscription;
 
   @override
   void initState() {
     super.initState();
+    initRealtime(); // Conectar realtime
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<TareaProvider>(context, listen: false).cargarMisTareas();
-      _connectRealtime();
-      _subscribeToRealtimeEvents();
     });
   }
   
   @override
   void dispose() {
-    _tareaEventSubscription?.cancel();
+    disposeRealtime();
     super.dispose();
   }
-  
-  Future<void> _connectRealtime() async {
-    try {
-      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-      final empresaId = await _storage.getEmpresaId();
-      if (empresaId != null) {
-        await realtimeProvider.connect(empresaId: empresaId);
-      }
-    } catch (e) {
-      debugPrint('Error connecting to realtime: $e');
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      final tareaProvider = Provider.of<TareaProvider>(context, listen: false);
+      tareaProvider.silentRefresh();
     }
-  }
-  
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
-      debugPrint('📋 Worker Tasks List: Tarea event received: ${event['action']}');
-      Provider.of<TareaProvider>(context, listen: false).cargarMisTareas(
-        estado: _filtroEstado,
-        prioridad: _filtroPrioridad,
-      );
-      
-      if (mounted) {
-        final action = event['action'] ?? '';
-        String message = '';
-        if (action == 'tarea:assigned') {
-          message = 'Nueva tarea asignada';
-        } else if (action == 'tarea:accepted') {
-          message = 'Tarea aceptada';
-        } else if (action == 'tarea:completed') {
-          message = 'Tarea completada';
-        }
-        
-        if (message.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    });
   }
 
   Future<void> _aplicarFiltros() async {
@@ -102,13 +61,23 @@ class _WorkerTasksListScreenState extends State<WorkerTasksListScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text(
-          'Mis Tareas',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
-            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Mis Tareas',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            RealtimeConnectionIndicator(
+              isConnected: isRealtimeConnected,
+              onReconnect: reconnectRealtime,
+            ),
+          ],
         ),
         backgroundColor: isDark ? AppTheme.darkCard : AppTheme.lightCard,
         elevation: 0,

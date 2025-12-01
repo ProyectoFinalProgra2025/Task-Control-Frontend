@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'dart:async';
 import '../../widgets/create_task_modal.dart';
 import '../../widgets/theme_toggle_button.dart';
 import '../../widgets/calendar/task_calendar_widget.dart';
@@ -11,10 +9,11 @@ import '../../services/storage_service.dart';
 import '../../models/usuario.dart';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
 import 'team_management_screen.dart';
 import 'admin_task_detail_screen.dart';
 import '../../config/theme_config.dart';
-import '../../providers/realtime_provider.dart';
 
 class AdminHomeTab extends StatefulWidget {
   final VoidCallback? onNavigateToTasks;
@@ -25,7 +24,7 @@ class AdminHomeTab extends StatefulWidget {
   State<AdminHomeTab> createState() => _AdminHomeTabState();
 }
 
-class _AdminHomeTabState extends State<AdminHomeTab> {
+class _AdminHomeTabState extends State<AdminHomeTab> with TareaRealtimeMixin {
   final UsuarioService _usuarioService = UsuarioService();
   final EmpresaService _empresaService = EmpresaService();
   final TareaService _tareaService = TareaService();
@@ -37,78 +36,50 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   List<Tarea> _todasLasTareas = []; // Para el calendario
   bool _isLoading = true;
   String? _error;
-  
-  StreamSubscription? _tareaEventSubscription;
-  StreamSubscription? _usuarioEventSubscription;
 
   @override
   void initState() {
     super.initState();
+    initRealtime(); // Conectar realtime
     _loadData();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _connectRealtime();
-      _subscribeToRealtimeEvents();
-    });
   }
-  
+
   @override
   void dispose() {
-    _tareaEventSubscription?.cancel();
-    _usuarioEventSubscription?.cancel();
+    disposeRealtime();
     super.dispose();
   }
-  
-  Future<void> _connectRealtime() async {
-    try {
-      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-      final empresaId = await _storage.getEmpresaId();
-      if (empresaId != null) {
-        await realtimeProvider.connect(empresaId: empresaId);
-      }
-    } catch (e) {
-      debugPrint('Error connecting to realtime: $e');
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      _silentRefresh();
     }
   }
-  
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    // Subscribe to tarea events
-    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
-      debugPrint('📊 Admin Home: Tarea event received: ${event['action']}');
-      _loadData(); // Reload stats and recent tasks
-      
-      // Show notification
-      if (mounted) {
-        final action = event['action'] ?? '';
-        String message = '';
-        if (action == 'tarea:created') {
-          message = 'Nueva tarea creada';
-        } else if (action == 'tarea:assigned') {
-          message = 'Tarea asignada';
-        } else if (action == 'tarea:accepted') {
-          message = 'Tarea aceptada';
-        } else if (action == 'tarea:completed') {
-          message = 'Tarea completada';
-        }
-        
-        if (message.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+
+  Future<void> _silentRefresh() async {
+    try {
+      final empresaId = await _storage.getEmpresaId();
+      if (empresaId != null) {
+        final stats = await _empresaService.obtenerEstadisticas(empresaId);
+        final todasTareas = await _tareaService.getTareas();
+        final tareasOngoing = todasTareas
+            .where((t) => t.estado == EstadoTarea.asignada || t.estado == EstadoTarea.aceptada)
+            .take(5)
+            .toList();
+
+        if (mounted) {
+          setState(() {
+            _estadisticas = stats;
+            _todasLasTareas = todasTareas;
+            _tareasRecientes = tareasOngoing;
+          });
         }
       }
-    });
-    
-    // Subscribe to usuario events
-    _usuarioEventSubscription = realtimeProvider.usuarioEventStream.listen((event) {
-      debugPrint('📊 Admin Home: Usuario event received: ${event['action']}');
-      _loadData(); // Reload stats when team members change
-    });
+    } catch (_) {
+      // Silencioso
+    }
   }
 
   Future<void> _loadData() async {
@@ -275,28 +246,39 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryBlue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.business_rounded, size: 14, color: AppTheme.primaryBlue),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    empresaNombre,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.primaryBlue,
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.business_rounded, size: 14, color: AppTheme.primaryBlue),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        empresaNombre,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.primaryBlue,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
+                            ),
+                            const SizedBox(width: 8),
+                            RealtimeConnectionIndicator(
+                              isConnected: isRealtimeConnected,
+                              onReconnect: reconnectRealtime,
                             ),
                           ],
                         ),
@@ -372,7 +354,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                     crossAxisCount: 2,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 1.6,
+                    childAspectRatio: 1.3,
                     children: [
                       _buildMetricCard(
                         title: 'Total',

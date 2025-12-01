@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
-import '../providers/chat_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -119,15 +117,8 @@ class _LoginScreenState extends State<LoginScreen>
 
       if (!mounted) return;
 
-      // Inicializar ChatProvider automáticamente después del login
-      try {
-        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-        chatProvider.connectSignalR();
-        chatProvider.loadChats();
-        debugPrint('✅ ChatProvider initialized after login');
-      } catch (e) {
-        debugPrint('⚠️ Error initializing ChatProvider: $e');
-      }
+      // TODO: Implementar chat con nuevo backend
+      // El sistema de chat estará disponible pronto
 
       // Login exitoso - navegar según el rol del usuario
       String route = '/home';

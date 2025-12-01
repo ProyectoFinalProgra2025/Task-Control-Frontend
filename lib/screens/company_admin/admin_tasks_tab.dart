@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'dart:async';
 import '../../models/tarea.dart';
 import '../../models/enums/estado_tarea.dart';
 import '../../models/enums/prioridad_tarea.dart';
@@ -8,9 +6,9 @@ import '../../models/enums/departamento.dart';
 import '../../services/tarea_service.dart';
 import '../../config/theme_config.dart';
 import '../../widgets/task/task_widgets.dart';
+import '../../mixins/tarea_realtime_mixin.dart';
+import '../../services/tarea_realtime_service.dart';
 import 'admin_task_detail_screen.dart';
-import '../../providers/realtime_provider.dart';
-import '../../services/storage_service.dart';
 
 class AdminTasksTab extends StatefulWidget {
   const AdminTasksTab({super.key});
@@ -19,9 +17,8 @@ class AdminTasksTab extends StatefulWidget {
   State<AdminTasksTab> createState() => _AdminTasksTabState();
 }
 
-class _AdminTasksTabState extends State<AdminTasksTab> with SingleTickerProviderStateMixin {
+class _AdminTasksTabState extends State<AdminTasksTab> with SingleTickerProviderStateMixin, TareaRealtimeMixin {
   final TareaService _tareaService = TareaService();
-  final StorageService _storage = StorageService();
   List<Tarea> _tareas = [];
   bool _isLoading = true;
   String? _error;
@@ -33,70 +30,46 @@ class _AdminTasksTabState extends State<AdminTasksTab> with SingleTickerProvider
 
   late TabController _tabController;
   final List<String> _tabs = ['Todas', 'Pendientes', 'En Progreso', 'Completadas'];
-  
-  StreamSubscription? _tareaEventSubscription;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    initRealtime(); // Conectar realtime
     _loadTareas();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _connectRealtime();
-      _subscribeToRealtimeEvents();
-    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _tareaEventSubscription?.cancel();
+    disposeRealtime();
     super.dispose();
   }
-  
-  Future<void> _connectRealtime() async {
-    try {
-      final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-      final empresaId = await _storage.getEmpresaId();
-      if (empresaId != null) {
-        await realtimeProvider.connect(empresaId: empresaId);
-      }
-    } catch (e) {
-      debugPrint('Error connecting to realtime: $e');
+
+  @override
+  void onTareaEvent(TareaEvent event) {
+    // Cuando llega un evento de tarea, refrescar silenciosamente
+    if (event.isTareaEvent && mounted) {
+      _silentRefresh();
     }
   }
-  
-  void _subscribeToRealtimeEvents() {
-    final realtimeProvider = Provider.of<RealtimeProvider>(context, listen: false);
-    
-    _tareaEventSubscription = realtimeProvider.tareaEventStream.listen((event) {
-      debugPrint('📋 Admin Tasks: Tarea event received: ${event['action']}');
-      _loadTareas(); // Reload task list
-      
+
+  Future<void> _silentRefresh() async {
+    try {
+      final tareas = await _tareaService.getTareas(
+        estado: _selectedEstado,
+        prioridad: _selectedPrioridad,
+        departamento: _selectedDepartamento,
+      );
+
       if (mounted) {
-        final action = event['action'] ?? '';
-        String message = '';
-        if (action == 'tarea:created') {
-          message = 'Nueva tarea creada';
-        } else if (action == 'tarea:assigned') {
-          message = 'Tarea asignada a un trabajador';
-        } else if (action == 'tarea:accepted') {
-          message = 'Tarea aceptada';
-        } else if (action == 'tarea:completed') {
-          message = 'Tarea completada';
-        }
-        
-        if (message.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        setState(() {
+          _tareas = tareas;
+        });
       }
-    });
+    } catch (_) {
+      // Silencioso
+    }
   }
 
   Future<void> _loadTareas() async {
@@ -260,14 +233,26 @@ class _AdminTasksTabState extends State<AdminTasksTab> with SingleTickerProvider
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Gestión de Tareas',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w900,
-                                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                letterSpacing: -0.3,
-                              ),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'Gestión de Tareas',
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w900,
+                                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                      letterSpacing: -0.3,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                RealtimeConnectionIndicator(
+                                  isConnected: isRealtimeConnected,
+                                  onReconnect: reconnectRealtime,
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 4),
                             Text(
