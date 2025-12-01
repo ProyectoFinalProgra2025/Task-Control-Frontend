@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:intl/intl.dart';
 import '../models/tarea.dart';
 import '../models/usuario.dart';
 import '../models/enums/prioridad_tarea.dart';
@@ -222,29 +223,48 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
           ),
           child: Column(
             children: [
-              // Header
+              // Header moderno con gradiente
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: borderColor)),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0A6CFF), Color(0xFF11C3FF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: Row(
                   children: [
-                    const SizedBox(width: 48),
-                    Expanded(
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.add_task_rounded, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
                       child: Text(
                         'Crear Nueva Tarea',
-                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
                         ),
                       ),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: textSecondary),
-                      onPressed: () => Navigator.of(context).pop(),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
                     ),
                   ],
                 ),
@@ -259,35 +279,61 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       // Task Name
-                      Text(
-                        'Título de la Tarea *',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: textSecondary,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF0A6CFF), Color(0xFF11C3FF)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.title_rounded, color: Colors.white, size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Título de la Tarea',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const Text(
+                            ' *',
+                            style: TextStyle(color: Color(0xFFEF4444), fontSize: 16, fontWeight: FontWeight.w700),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       TextFormField(
                         controller: _taskNameController,
+                        style: TextStyle(color: textPrimary, fontWeight: FontWeight.w500),
                         decoration: InputDecoration(
-                          hintText: 'Ingrese el título de la tarea',
+                          hintText: 'Ej: Revisar inventario mensual',
+                          hintStyle: TextStyle(color: textSecondary.withOpacity(0.6)),
                           filled: true,
                           fillColor: cardColor,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: borderColor),
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: borderColor),
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderColor.withOpacity(0.5)),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
                             borderSide: const BorderSide(
-                              color: Color(0xFF005A9C),
+                              color: Color(0xFF0A6CFF),
                               width: 2,
                             ),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: Color(0xFFEF4444)),
                           ),
                         ),
                         validator: (value) {
@@ -298,30 +344,56 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                         },
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
                       // Priority
-                      Text(
-                        'Prioridad *',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: textSecondary,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFF59E0B), Color(0xFFF97316)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.flag_rounded, color: Colors.white, size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Prioridad',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const Text(
+                            ' *',
+                            style: TextStyle(color: Color(0xFFEF4444), fontSize: 16, fontWeight: FontWeight.w700),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       DropdownButtonFormField<PrioridadTarea>(
                         value: _selectedPriority,
+                        style: TextStyle(color: textPrimary, fontWeight: FontWeight.w500),
+                        dropdownColor: cardColor,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: cardColor,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: borderColor),
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: borderColor),
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderColor.withOpacity(0.5)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: Color(0xFF0A6CFF), width: 2),
                           ),
                         ),
                         items: PrioridadTarea.values
@@ -337,33 +409,55 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                         },
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
                       // Department
-                      Text(
-                        'Departamento',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: textSecondary,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.business_rounded, color: Colors.white, size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Departamento',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       DropdownButtonFormField<Departamento>(
                         value: _selectedDepartment,
+                        style: TextStyle(color: textPrimary, fontWeight: FontWeight.w500),
+                        dropdownColor: cardColor,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: cardColor,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: borderColor),
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: borderColor),
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderColor.withOpacity(0.5)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: Color(0xFF0A6CFF), width: 2),
                           ),
                         ),
-                        hint: const Text('Seleccione un departamento'),
+                        hint: Text('Seleccione un departamento', style: TextStyle(color: textSecondary.withOpacity(0.6))),
                         items: Departamento.principales
                             .map((dept) => DropdownMenuItem(
                                   value: dept,
@@ -373,107 +467,176 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                         onChanged: (value) => setState(() => _selectedDepartment = value),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
                       // Due Date
-                      Text(
-                        'Fecha de Vencimiento',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: textSecondary,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.event_rounded, color: Colors.white, size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Fecha de Vencimiento',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       InkWell(
                         onTap: _selectDueDate,
+                        borderRadius: BorderRadius.circular(14),
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: cardColor,
-                            border: Border.all(color: borderColor),
-                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: borderColor.withOpacity(0.5)),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.calendar_today, color: textSecondary),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.calendar_today_rounded, color: Color(0xFF10B981), size: 20),
+                              ),
                               const SizedBox(width: 12),
-                              Text(
-                                _dueDate == null
-                                    ? 'Seleccionar fecha'
-                                    : '${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: _dueDate == null ? textSecondary : textPrimary,
+                              Expanded(
+                                child: Text(
+                                  _dueDate == null
+                                      ? 'Seleccionar fecha de vencimiento'
+                                      : DateFormat('EEEE, d MMMM yyyy', 'es_ES').format(_dueDate!),
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: _dueDate == null ? FontWeight.w400 : FontWeight.w600,
+                                    color: _dueDate == null ? textSecondary.withOpacity(0.6) : textPrimary,
+                                  ),
                                 ),
                               ),
+                              Icon(Icons.chevron_right_rounded, color: textSecondary, size: 20),
                             ],
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
                       // Capacidades Requeridas
-                      Text(
-                        'Capacidades Requeridas',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: textSecondary,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFEF4444), Color(0xFFF97316)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Capacidades Requeridas',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       InkWell(
                         onTap: _showCapacidadesSelector,
+                        borderRadius: BorderRadius.circular(14),
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: cardColor,
-                            border: Border.all(color: borderColor),
-                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: borderColor.withOpacity(0.5)),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.psychology, color: textSecondary),
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.psychology_rounded, color: Color(0xFFEF4444), size: 20),
+                                  ),
                                   const SizedBox(width: 12),
-                                  Text(
-                                    _selectedCapacidades.isEmpty
-                                        ? 'Seleccionar capacidades'
-                                        : '${_selectedCapacidades.length} capacidad(es) seleccionada(s)',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: _selectedCapacidades.isEmpty
-                                          ? textSecondary
-                                          : textPrimary,
+                                  Expanded(
+                                    child: Text(
+                                      _selectedCapacidades.isEmpty
+                                          ? 'Seleccionar habilidades requeridas'
+                                          : '${_selectedCapacidades.length} habilidad(es) seleccionada(s)',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: _selectedCapacidades.isEmpty ? FontWeight.w400 : FontWeight.w600,
+                                        color: _selectedCapacidades.isEmpty
+                                            ? textSecondary.withOpacity(0.6)
+                                            : textPrimary,
+                                      ),
                                     ),
                                   ),
-                                  const Spacer(),
-                                  Icon(Icons.chevron_right, color: textSecondary),
+                                  Icon(Icons.chevron_right_rounded, color: textSecondary, size: 20),
                                 ],
                               ),
                               if (_selectedCapacidades.isNotEmpty) ...[
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 14),
                                 Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: _selectedCapacidades
-                                      .map((cap) => Chip(
-                                            label: Text(
-                                              cap,
-                                              style: const TextStyle(fontSize: 12),
+                                      .map((cap) => Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              gradient: const LinearGradient(
+                                                colors: [Color(0xFFEF4444), Color(0xFFF97316)],
+                                              ),
+                                              borderRadius: BorderRadius.circular(8),
                                             ),
-                                            backgroundColor:
-                                                const Color(0xFF005A9C).withOpacity(0.1),
-                                            deleteIcon: const Icon(Icons.close, size: 16),
-                                            onDeleted: () {
-                                              setState(() {
-                                                _selectedCapacidades.remove(cap);
-                                              });
-                                            },
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  cap,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    setState(() {
+                                                      _selectedCapacidades.remove(cap);
+                                                    });
+                                                  },
+                                                  child: const Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                                                ),
+                                              ],
+                                            ),
                                           ))
                                       .toList(),
                                 ),
@@ -483,39 +646,65 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
                       // Description
-                      Text(
-                        'Descripción *',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: textSecondary,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF0A6CFF), Color(0xFF11C3FF)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.description_rounded, color: Colors.white, size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Descripción',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const Text(
+                            ' *',
+                            style: TextStyle(color: Color(0xFFEF4444), fontSize: 16, fontWeight: FontWeight.w700),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       TextFormField(
                         controller: _descriptionController,
                         maxLines: 5,
+                        style: TextStyle(color: textPrimary, fontWeight: FontWeight.w500, height: 1.5),
                         decoration: InputDecoration(
-                          hintText: 'Ingrese la descripción de la tarea...',
+                          hintText: 'Describe los detalles de la tarea, objetivos y requisitos especiales...',
+                          hintStyle: TextStyle(color: textSecondary.withOpacity(0.6)),
                           filled: true,
                           fillColor: cardColor,
+                          contentPadding: const EdgeInsets.all(16),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: borderColor),
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: borderColor),
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderColor.withOpacity(0.5)),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
                             borderSide: const BorderSide(
-                              color: Color(0xFF005A9C),
+                              color: Color(0xFF0A6CFF),
                               width: 2,
                             ),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: Color(0xFFEF4444)),
                           ),
                         ),
                         validator: (value) {
@@ -539,43 +728,81 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                         maxFiles: 5,
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 28),
 
                       // Modo de Asignación
-                      Text(
-                        'Asignación',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: textSecondary,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF0A6CFF), Color(0xFF11C3FF)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Modo de Asignación',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 14),
                       
                       // Sin asignación
                       InkWell(
                         onTap: () => setState(() => _asignacionMode = AsignacionMode.ninguna),
+                        borderRadius: BorderRadius.circular(14),
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: _asignacionMode == AsignacionMode.ninguna
-                                ? const Color(0xFF005A9C).withOpacity(0.1)
-                                : cardColor,
+                            gradient: _asignacionMode == AsignacionMode.ninguna
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF0A6CFF), Color(0xFF11C3FF)],
+                                  )
+                                : null,
+                            color: _asignacionMode == AsignacionMode.ninguna ? null : cardColor,
                             border: Border.all(
                               color: _asignacionMode == AsignacionMode.ninguna
-                                  ? const Color(0xFF005A9C)
-                                  : borderColor,
-                              width: _asignacionMode == AsignacionMode.ninguna ? 2 : 1,
+                                  ? Colors.transparent
+                                  : borderColor.withOpacity(0.5),
+                              width: 1,
                             ),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: _asignacionMode == AsignacionMode.ninguna
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFF0A6CFF).withOpacity(0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : null,
                           ),
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.pending_actions,
-                                color: _asignacionMode == AsignacionMode.ninguna
-                                    ? const Color(0xFF005A9C)
-                                    : textSecondary,
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: _asignacionMode == AsignacionMode.ninguna
+                                      ? Colors.white.withOpacity(0.2)
+                                      : const Color(0xFF6B7280).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.schedule_rounded,
+                                  color: _asignacionMode == AsignacionMode.ninguna
+                                      ? Colors.white
+                                      : const Color(0xFF6B7280),
+                                  size: 20,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -585,16 +812,21 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                                     Text(
                                       'Sin Asignación',
                                       style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                        color: textPrimary,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: _asignacionMode == AsignacionMode.ninguna
+                                            ? Colors.white
+                                            : textPrimary,
                                       ),
                                     ),
+                                    const SizedBox(height: 2),
                                     Text(
-                                      'Asignar más tarde',
+                                      'Asignar manualmente después',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: textSecondary,
+                                        color: _asignacionMode == AsignacionMode.ninguna
+                                            ? Colors.white.withOpacity(0.8)
+                                            : textSecondary,
                                       ),
                                     ),
                                   ],
@@ -602,8 +834,9 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                               ),
                               if (_asignacionMode == AsignacionMode.ninguna)
                                 const Icon(
-                                  Icons.check_circle,
-                                  color: Color(0xFF005A9C),
+                                  Icons.check_circle_rounded,
+                                  color: Colors.white,
+                                  size: 24,
                                 ),
                             ],
                           ),
@@ -615,27 +848,50 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                       // Asignación Automática
                       InkWell(
                         onTap: () => setState(() => _asignacionMode = AsignacionMode.automatica),
+                        borderRadius: BorderRadius.circular(14),
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: _asignacionMode == AsignacionMode.automatica
-                                ? const Color(0xFF005A9C).withOpacity(0.1)
-                                : cardColor,
+                            gradient: _asignacionMode == AsignacionMode.automatica
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                                  )
+                                : null,
+                            color: _asignacionMode == AsignacionMode.automatica ? null : cardColor,
                             border: Border.all(
                               color: _asignacionMode == AsignacionMode.automatica
-                                  ? const Color(0xFF005A9C)
-                                  : borderColor,
-                              width: _asignacionMode == AsignacionMode.automatica ? 2 : 1,
+                                  ? Colors.transparent
+                                  : borderColor.withOpacity(0.5),
+                              width: 1,
                             ),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: _asignacionMode == AsignacionMode.automatica
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFF8B5CF6).withOpacity(0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : null,
                           ),
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.auto_fix_high,
-                                color: _asignacionMode == AsignacionMode.automatica
-                                    ? const Color(0xFF005A9C)
-                                    : textSecondary,
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: _asignacionMode == AsignacionMode.automatica
+                                      ? Colors.white.withOpacity(0.2)
+                                      : const Color(0xFF8B5CF6).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: _asignacionMode == AsignacionMode.automatica
+                                      ? Colors.white
+                                      : const Color(0xFF8B5CF6),
+                                  size: 20,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -645,16 +901,21 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                                     Text(
                                       'Asignación Automática',
                                       style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                        color: textPrimary,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: _asignacionMode == AsignacionMode.automatica
+                                            ? Colors.white
+                                            : textPrimary,
                                       ),
                                     ),
+                                    const SizedBox(height: 2),
                                     Text(
-                                      'El sistema seleccionará al mejor candidato',
+                                      'IA selecciona al mejor candidato',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: textSecondary,
+                                        color: _asignacionMode == AsignacionMode.automatica
+                                            ? Colors.white.withOpacity(0.8)
+                                            : textSecondary,
                                       ),
                                     ),
                                   ],
@@ -662,8 +923,9 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                               ),
                               if (_asignacionMode == AsignacionMode.automatica)
                                 const Icon(
-                                  Icons.check_circle,
-                                  color: Color(0xFF005A9C),
+                                  Icons.check_circle_rounded,
+                                  color: Colors.white,
+                                  size: 24,
                                 ),
                             ],
                           ),
@@ -680,29 +942,52 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                             _selectUsuarioManual();
                           }
                         },
+                        borderRadius: BorderRadius.circular(14),
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: _asignacionMode == AsignacionMode.manual
-                                ? const Color(0xFF005A9C).withOpacity(0.1)
-                                : cardColor,
+                            gradient: _asignacionMode == AsignacionMode.manual
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                                  )
+                                : null,
+                            color: _asignacionMode == AsignacionMode.manual ? null : cardColor,
                             border: Border.all(
                               color: _asignacionMode == AsignacionMode.manual
-                                  ? const Color(0xFF005A9C)
-                                  : borderColor,
-                              width: _asignacionMode == AsignacionMode.manual ? 2 : 1,
+                                  ? Colors.transparent
+                                  : borderColor.withOpacity(0.5),
+                              width: 1,
                             ),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: _asignacionMode == AsignacionMode.manual
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFF10B981).withOpacity(0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : null,
                           ),
                           child: Column(
                             children: [
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.person_add,
-                                    color: _asignacionMode == AsignacionMode.manual
-                                        ? const Color(0xFF005A9C)
-                                        : textSecondary,
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: _asignacionMode == AsignacionMode.manual
+                                          ? Colors.white.withOpacity(0.2)
+                                          : const Color(0xFF10B981).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      Icons.person_add_alt_rounded,
+                                      color: _asignacionMode == AsignacionMode.manual
+                                          ? Colors.white
+                                          : const Color(0xFF10B981),
+                                      size: 20,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -712,18 +997,23 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                                         Text(
                                           'Asignación Manual',
                                           style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                            color: textPrimary,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                            color: _asignacionMode == AsignacionMode.manual
+                                                ? Colors.white
+                                                : textPrimary,
                                           ),
                                         ),
+                                        const SizedBox(height: 2),
                                         Text(
                                           _usuarioSeleccionado == null
-                                              ? 'Seleccionar trabajador'
+                                              ? 'Elegir trabajador específico'
                                               : _usuarioSeleccionado!.nombreCompleto,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: textSecondary,
+                                            color: _asignacionMode == AsignacionMode.manual
+                                                ? Colors.white.withOpacity(0.8)
+                                                : textSecondary,
                                           ),
                                         ),
                                       ],
@@ -731,55 +1021,97 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                                   ),
                                   if (_asignacionMode == AsignacionMode.manual)
                                     const Icon(
-                                      Icons.check_circle,
-                                      color: Color(0xFF005A9C),
+                                      Icons.check_circle_rounded,
+                                      color: Colors.white,
+                                      size: 24,
                                     ),
                                 ],
                               ),
                               if (_asignacionMode == AsignacionMode.manual && _usuarioSeleccionado != null) ...[
                                 const SizedBox(height: 12),
-                                Divider(color: borderColor),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    CircleAvatar(
-                                      backgroundColor: const Color(0xFF005A9C),
-                                      child: Text(
-                                        _usuarioSeleccionado!.nombreCompleto[0].toUpperCase(),
-                                        style: const TextStyle(
+                                Container(
+                                  height: 1,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.white.withOpacity(0.0),
+                                        Colors.white.withOpacity(0.3),
+                                        Colors.white.withOpacity(0.0),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
                                           color: Colors.white,
-                                          fontWeight: FontWeight.bold,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            _usuarioSeleccionado!.nombreCompleto[0].toUpperCase(),
+                                            style: const TextStyle(
+                                              color: Color(0xFF10B981),
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 18,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            _usuarioSeleccionado!.nombreCompleto,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: textPrimary,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              _usuarioSeleccionado!.nombreCompleto,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
                                             ),
-                                          ),
-                                          Text(
-                                            _usuarioSeleccionado!.email,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: textSecondary,
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              _usuarioSeleccionado!.email,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.white.withOpacity(0.7),
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    TextButton(
-                                      onPressed: _selectUsuarioManual,
-                                      child: const Text('Cambiar'),
-                                    ),
-                                  ],
+                                      TextButton(
+                                        onPressed: _selectUsuarioManual,
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.white,
+                                          backgroundColor: Colors.white.withOpacity(0.2),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Cambiar',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ],
@@ -789,34 +1121,68 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
 
                       const SizedBox(height: 32),
 
-                      // Submit Button
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _submitTask,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF005A9C),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 56),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          disabledBackgroundColor: Colors.grey,
+                      // Submit Button moderno con gradiente
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: _isLoading
+                              ? null
+                              : const LinearGradient(
+                                  colors: [Color(0xFF10B981), Color(0xFF059669)],
+                                ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: _isLoading
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: const Color(0xFF10B981).withOpacity(0.4),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _submitTask,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isLoading ? Colors.grey[600] : Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shadowColor: Colors.transparent,
+                            minimumSize: const Size(double.infinity, 60),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 3,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(Icons.check_rounded, size: 20),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Crear Tarea',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              )
-                            : const Text(
-                                'Crear Tarea',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                        ),
                       ),
                       const SizedBox(height: 32),
                     ],

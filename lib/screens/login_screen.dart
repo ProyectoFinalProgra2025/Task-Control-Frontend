@@ -556,14 +556,16 @@ class _LoginScreenState extends State<LoginScreen>
     FocusNode? nextFocus,
     ValueChanged<String>? onSubmitted,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: isDark ? const Color(0xFF1A1F2E) : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: focusNode.hasFocus
               ? AppTheme.primaryBlue.withOpacity(0.5)
-              : Colors.grey.shade200,
+              : (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade200),
           width: focusNode.hasFocus ? 1.5 : 1,
         ),
       ),
@@ -572,7 +574,11 @@ class _LoginScreenState extends State<LoginScreen>
         focusNode: focusNode,
         keyboardType: keyboardType,
         obscureText: isPassword ? obscureText : false,
-        style: const TextStyle(fontSize: 15, color: Color.fromARGB(255, 255, 255, 255)),
+        style: TextStyle(
+          fontSize: 15,
+          color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+          fontWeight: FontWeight.w500,
+        ),
         textInputAction:
             nextFocus != null ? TextInputAction.next : TextInputAction.done,
         onSubmitted: onSubmitted ??
@@ -586,12 +592,12 @@ class _LoginScreenState extends State<LoginScreen>
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(
-            color: Colors.grey.shade400,
+            color: isDark ? Colors.white.withOpacity(0.4) : Colors.grey.shade400,
             fontSize: 15,
           ),
           prefixIcon: Icon(
             prefixIcon,
-            color: Colors.grey.shade500,
+            color: isDark ? Colors.white.withOpacity(0.6) : Colors.grey.shade500,
             size: 22,
           ),
           suffixIcon: isPassword
@@ -600,7 +606,7 @@ class _LoginScreenState extends State<LoginScreen>
                     obscureText
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
-                    color: Colors.grey.shade500,
+                    color: isDark ? Colors.white.withOpacity(0.6) : Colors.grey.shade500,
                     size: 22,
                   ),
                   onPressed: onToggleVisibility,

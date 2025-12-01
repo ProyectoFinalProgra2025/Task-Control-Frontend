@@ -48,20 +48,82 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   }
 
   Future<void> _deleteUsuario(String id, String nombre) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text('¿Está seguro de eliminar a $nombre?'),
+        backgroundColor: isDark ? const Color(0xFF1A1F2E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.warning_rounded,
+                color: Color(0xFFEF4444),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Confirmar eliminación',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF1A1F2E),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            '¿Está seguro de eliminar a $nombre? Esta acción no se puede deshacer.',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.white70 : Colors.black54,
+              height: 1.5,
+            ),
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            style: TextButton.styleFrom(
+              foregroundColor: isDark ? Colors.white70 : Colors.black54,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
-          TextButton(
+          const SizedBox(width: 8),
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -103,27 +165,83 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF101622) : const Color(0xFFf6f6f8);
-    final cardColor = isDark ? const Color(0xFF192233) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1F2937);
-    final textSecondary = isDark ? const Color(0xFF92a4c9) : const Color(0xFF64748b);
+    final backgroundColor = isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xFF1A1F2E) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1A1F2E);
+    final textSecondary = isDark ? Colors.white60 : Colors.black54;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: backgroundColor,
         elevation: 0,
-        title: Text(
-          'Gestión de Equipo',
-          style: TextStyle(color: textPrimary, fontWeight: FontWeight.bold),
+        centerTitle: false,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_rounded,
+            color: textPrimary,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
         ),
-        iconTheme: IconThemeData(color: textPrimary),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B82F6).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.groups_rounded,
+                color: Color(0xFF3B82F6),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Gestión de Equipo',
+              style: TextStyle(
+                color: textPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+              ),
+            ),
+          ],
+        ),
         actions: [
-          // Botón de importación masiva CSV
-          IconButton(
-            onPressed: _navigateToImportCsv,
-            icon: Icon(Icons.upload_file, color: textPrimary),
-            tooltip: 'Importar desde CSV',
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: Material(
+              color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: _navigateToImportCsv,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.file_upload_outlined,
+                        color: textPrimary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Importar CSV',
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -176,13 +294,34 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                         },
                       ),
                     ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreateUserModal,
-        backgroundColor: const Color(0xFF135BEC),
-        icon: const Icon(Icons.person_add, color: Colors.white),
-        label: const Text(
-          'Crear Usuario',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF3B82F6).withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: _showCreateUserModal,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          icon: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 22),
+          label: const Text(
+            'Crear Usuario',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              letterSpacing: 0.3,
+            ),
+          ),
         ),
       ),
     );
@@ -209,36 +348,57 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
     required Color textSecondary,
     required bool isDark,
   }) {
-    return Card(
-      color: cardColor,
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: isDark ? 0 : 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black26 : Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: const Color(0xFF135bec).withOpacity(0.1),
-                  child: Text(
-                    _getInitials(usuario.nombreCompleto),
-                    style: const TextStyle(
-                      color: Color(0xFF135bec),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        _getInitials(usuario.nombreCompleto),
+                        style: const TextStyle(
+                          color: Color(0xFF3B82F6),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,94 +407,160 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                         usuario.nombreCompleto,
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           color: textPrimary,
+                          letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        usuario.email,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: textSecondary,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.mail_outline_rounded,
+                            size: 14,
+                            color: textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              usuario.email,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: PopupMenuButton<String>(
+                    icon: Icon(Icons.more_horiz_rounded, color: textPrimary, size: 20),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    color: cardColor,
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _deleteUsuario(usuario.id, usuario.nombreCompleto);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Eliminar',
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, color: textPrimary),
-                  onSelected: (value) {
-                    if (value == 'delete') {
-                      _deleteUsuario(usuario.id, usuario.nombreCompleto);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, color: Colors.red, size: 20),
-                          SizedBox(width: 8),
-                          Text('Eliminar', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
-            const SizedBox(height: 12),
-            Divider(color: isDark ? const Color(0xFF324467) : const Color(0xFFE5E7EB)),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            const SizedBox(height: 14),
+            Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    (isDark ? Colors.white : Colors.black).withOpacity(0.08),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
               children: [
                 _buildInfoChip(
-                  icon: Icons.badge,
-                  label: 'ID: ${usuario.id}',
+                  icon: Icons.fingerprint_rounded,
+                  label: usuario.id.substring(0, 8),
                   color: textSecondary,
                   isDark: isDark,
                 ),
-                _buildInfoChip(
-                  icon: Icons.business_center,
-                  label: usuario.departamento ?? 'Sin depto',
-                  color: textSecondary,
-                  isDark: isDark,
-                ),
+                const SizedBox(width: 8),
+                if (usuario.departamento != null)
+                  _buildInfoChip(
+                    icon: Icons.apartment_rounded,
+                    label: usuario.departamento!,
+                    color: const Color(0xFF3B82F6),
+                    isDark: isDark,
+                    isHighlight: true,
+                  ),
               ],
             ),
             if (usuario.capacidades.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Capacidades:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: textPrimary,
-                ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.psychology_rounded,
+                      size: 14,
+                      color: Color(0xFF8B5CF6),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Habilidades',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary,
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 6,
+                runSpacing: 6,
                 children: usuario.capacidades.map((cap) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF135bec).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFF8B5CF6).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: const Color(0xFF135bec).withOpacity(0.3),
+                        color: const Color(0xFF8B5CF6).withOpacity(0.2),
                       ),
                     ),
                     child: Text(
                       cap.nombre,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF135bec),
+                        color: Color(0xFF8B5CF6),
                       ),
                     ),
                   );
@@ -352,21 +578,31 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
     required String label,
     required Color color,
     required bool isDark,
+    bool isHighlight = false,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF324467).withOpacity(0.3) : Colors.grey.shade100,
+        color: isHighlight 
+            ? color.withOpacity(0.1) 
+            : (isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.04)),
         borderRadius: BorderRadius.circular(8),
+        border: isHighlight 
+            ? Border.all(color: color.withOpacity(0.3), width: 1) 
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
+          const SizedBox(width: 5),
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: color),
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: isHighlight ? FontWeight.w600 : FontWeight.w500,
+            ),
           ),
         ],
       ),

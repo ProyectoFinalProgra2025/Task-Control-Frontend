@@ -83,15 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   backgroundColor: isDark
                       ? AppTheme.darkCard
                       : AppTheme.lightCard,
-                  leading: IconButton(
-                    icon: Icon(
-                      Icons.arrow_back_ios_rounded,
-                      color: isDark
-                          ? AppTheme.darkTextPrimary
-                          : AppTheme.lightTextPrimary,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  ),
+                  automaticallyImplyLeading: false,
                   title: Text(
                     'Profile',
                     style: TextStyle(
